@@ -357,6 +357,211 @@
     });
   }
 
+  function toggleCollapsiblePanel(panel, trigger, expanded) {
+    const isOpen = expanded ?? trigger.getAttribute('aria-expanded') !== 'true';
+    trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    panel.hidden = !isOpen;
+    trigger.classList.toggle('is-open', isOpen);
+
+    const labelShow = trigger.dataset.labelShow || 'Show details';
+    const labelHide = trigger.dataset.labelHide || 'Hide details';
+    if (trigger.classList.contains('collapsible-card__toggle')) {
+      trigger.textContent = isOpen ? labelHide : labelShow;
+    }
+  }
+
+  function bindCollapsibleTrigger(trigger, panel) {
+    trigger.addEventListener('click', () => toggleCollapsiblePanel(panel, trigger));
+  }
+
+  function isAccordionSubheader(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el.matches('h3, h4')) return true;
+    if (!el.matches('p')) return false;
+    const strong = el.querySelector(':scope > strong');
+    if (!strong) return false;
+    return el.textContent.trim() === strong.textContent.trim();
+  }
+
+  function wrapAccordionSections(container) {
+    if (!container || container.dataset.accordionReady === 'true') return;
+    container.dataset.accordionReady = 'true';
+
+    const items = Array.from(container.children);
+    let index = 0;
+
+    while (index < items.length) {
+      const el = items[index];
+      if (!isAccordionSubheader(el)) {
+        index += 1;
+        continue;
+      }
+
+      const title = el.textContent.trim();
+      el.remove();
+
+      const section = document.createElement('div');
+      section.className = 'content-accordion';
+
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'content-accordion__trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.innerHTML = `<span class="content-accordion__title">${title}</span><span class="content-accordion__icon" aria-hidden="true"></span>`;
+
+      const panel = document.createElement('div');
+      panel.className = 'content-accordion__panel';
+      panel.hidden = true;
+
+      index += 1;
+      while (index < items.length) {
+        const next = items[index];
+        if (isAccordionSubheader(next)) break;
+        if (next.matches('.community-card__actions')) break;
+        panel.appendChild(next);
+        index += 1;
+      }
+
+      section.appendChild(trigger);
+      section.appendChild(panel);
+      container.appendChild(section);
+      bindCollapsibleTrigger(trigger, panel);
+    }
+  }
+
+  function initTopicCards(root) {
+    root.querySelectorAll('.community-card__body > ul > li, .community-program ul > li').forEach((li) => {
+      if (li.classList.contains('topic-card')) return;
+
+      const strong = li.querySelector(':scope > strong');
+      if (!strong) return;
+
+      const title = strong.textContent.replace(/:\s*$/, '').trim();
+      const detail = document.createElement('div');
+      strong.remove();
+      detail.innerHTML = li.innerHTML.trim();
+      if (!detail.textContent.trim()) return;
+
+      li.classList.add('topic-card');
+      li.innerHTML = '';
+
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'topic-card__trigger';
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.innerHTML = `<span class="topic-card__title">${title}</span><span class="topic-card__chevron" aria-hidden="true"></span>`;
+
+      const panel = document.createElement('div');
+      panel.className = 'topic-card__panel';
+      panel.hidden = true;
+      panel.appendChild(detail);
+
+      li.appendChild(trigger);
+      li.appendChild(panel);
+      bindCollapsibleTrigger(trigger, panel);
+    });
+  }
+
+  function addMainCardToggle(headerEl, panelEl, labelShow, labelHide) {
+    const panelId = `collapsible-${Math.random().toString(36).slice(2, 9)}`;
+    panelEl.id = panelId;
+    panelEl.classList.add('collapsible-card__panel');
+    panelEl.hidden = true;
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'collapsible-card__toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-controls', panelId);
+    toggle.dataset.labelShow = labelShow;
+    toggle.dataset.labelHide = labelHide;
+    toggle.textContent = labelShow;
+
+    headerEl.classList.add('collapsible-card__header');
+    headerEl.appendChild(toggle);
+    bindCollapsibleTrigger(toggle, panelEl);
+  }
+
+  function initCollapsibleSections() {
+    const page = document.body.dataset.page;
+    if (page !== 'community' && page !== 'welfare') return;
+
+    if (page === 'welfare') {
+      document.querySelectorAll('.welfare-card').forEach((card) => {
+        if (card.dataset.collapsibleReady === 'true') return;
+        card.dataset.collapsibleReady = 'true';
+        card.classList.add('collapsible-card');
+
+        const eyebrow = card.querySelector(':scope > .eyebrow');
+        const heading = card.querySelector(':scope > h2');
+        if (!heading) return;
+
+        const header = document.createElement('div');
+        header.className = 'collapsible-card__header';
+        if (eyebrow) header.appendChild(eyebrow);
+        header.appendChild(heading);
+
+        const panel = document.createElement('div');
+        panel.className = 'collapsible-card__panel';
+        panel.hidden = true;
+
+        Array.from(card.children).forEach((child) => {
+          if (child !== eyebrow && child !== heading) panel.appendChild(child);
+        });
+
+        card.appendChild(header);
+        card.appendChild(panel);
+        addMainCardToggle(header, panel, 'Read more', 'Show less');
+      });
+    }
+
+    if (page === 'community') {
+      document.querySelectorAll('.community-card:not(.community-enquiry-cta)').forEach((card) => {
+        if (card.dataset.collapsibleReady === 'true') return;
+        card.dataset.collapsibleReady = 'true';
+        card.classList.add('collapsible-card');
+
+        const banner = card.querySelector('.community-section-banner__content, .community-sports__hero-content');
+        const inner = card.querySelector('.community-card__inner');
+        const programs = card.querySelector('.community-programs');
+
+        if (banner && inner) {
+          addMainCardToggle(banner, inner, 'Show program details', 'Hide details');
+          wrapAccordionSections(inner.querySelector('.community-card__body'));
+          initTopicCards(inner);
+          return;
+        }
+
+        const sportsHero = card.querySelector('.community-sports__hero-content');
+        if (sportsHero) {
+          const lead = sportsHero.querySelector('.community-card__lead');
+          const panel = document.createElement('div');
+          panel.className = 'collapsible-card__panel';
+          Array.from(sportsHero.children).forEach((child) => {
+            if (child === lead || child.matches('.eyebrow, h2')) return;
+            panel.appendChild(child);
+          });
+          sportsHero.appendChild(panel);
+          addMainCardToggle(sportsHero, panel, 'Show more', 'Show less');
+          return;
+        }
+
+        if (programs) {
+          const headerBits = card.querySelectorAll(':scope > .eyebrow, :scope > h2, :scope > .community-card__lead');
+          const header = document.createElement('div');
+          header.className = 'collapsible-card__header collapsible-card__header--stacked';
+          headerBits.forEach((el) => header.appendChild(el));
+          card.insertBefore(header, programs);
+          addMainCardToggle(header, programs, 'Show groups & programs', 'Hide groups');
+          card.querySelectorAll('.community-program').forEach((panel) => {
+            wrapAccordionSections(panel);
+            initTopicCards(panel);
+          });
+        }
+      });
+    }
+  }
+
   function initPageSubnav() {
     const subnav = document.querySelector('.page-subnav');
     if (!subnav) return;
@@ -450,6 +655,7 @@
   initEventFilters();
   initPastEventsToggle();
   initCommunityPrograms();
+  initCollapsibleSections();
   initPageSubnav();
   initScrollReveal();
   initScrollProgress();

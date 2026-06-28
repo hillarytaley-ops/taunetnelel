@@ -146,7 +146,7 @@ body[data-page="community"] .community-hero__card p {
 }
 
 .community-section--card {
-  padding: 1rem 0;
+  padding: 0.65rem 0;
   background: var(--color-bg);
 }
 
@@ -209,6 +209,14 @@ body[data-page="community"] .community-hero__card p {
   margin: 2rem 0 1rem;
   color: var(--color-text);
   text-align: center;
+}
+
+.community-card__body > .content-accordion:first-child {
+  margin-top: 0.35rem;
+}
+
+.content-accordion + .content-accordion {
+  margin-top: 0.5rem;
 }
 
 .community-card__body > ul,
