@@ -1,4 +1,6 @@
 /* Taunet Nelel — Modern UI (theme colors retained) */
+@import url('../floating-social/floating-social.css');
+
 :root {
   --color-primary: #8b4513;
   --color-primary-dark: #6d3610;

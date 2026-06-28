@@ -1,21 +1,22 @@
 /* Floating social folder (left) + WhatsApp (right) — aligned on same row */
 
 :root {
-  --float-contact-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  --float-contact-bottom: calc(1.25rem + var(--tribal-strip-h, 0px) + env(safe-area-inset-bottom, 0px));
 }
 
 body.has-mobile-join-fab {
-  --float-contact-bottom: max(4.75rem, calc(1.25rem + env(safe-area-inset-bottom, 0px)));
+  --float-contact-bottom: calc(4.75rem + var(--tribal-strip-h, 0px) + env(safe-area-inset-bottom, 0px));
 }
 
 .floating-social-folder {
   position: fixed;
-  left: max(0px, env(safe-area-inset-left, 0px));
+  left: 0;
   right: auto;
   top: auto;
   bottom: var(--float-contact-bottom);
+  padding-left: env(safe-area-inset-left, 0px);
   transform: none;
-  z-index: 998;
+  z-index: 1001;
   display: flex;
   align-items: flex-end;
   pointer-events: none;
@@ -115,11 +116,12 @@ body.has-mobile-join-fab {
 
 .whatsapp-float {
   position: fixed;
-  right: max(0px, env(safe-area-inset-right, 0px));
+  right: 0;
   left: auto;
   top: auto;
   bottom: var(--float-contact-bottom);
-  z-index: 999;
+  padding-right: env(safe-area-inset-right, 0px);
+  z-index: 1001;
   width: 56px;
   height: 56px;
   background: #25d366;
@@ -142,13 +144,37 @@ body.has-mobile-join-fab {
 }
 
 @media (max-width: 768px) {
+  .floating-social-folder {
+    left: 0;
+    bottom: var(--float-contact-bottom);
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
   .floating-social-folder__toggle {
     width: 2.45rem;
+    min-height: 3.5rem;
     padding: 0.55rem 0.4rem;
   }
 
   .floating-social-folder__toggle-label {
     font-size: 0.58rem;
+  }
+
+  .whatsapp-float {
+    right: 0;
+    bottom: var(--float-contact-bottom);
+    width: 2.65rem;
+    height: 3.5rem;
+    min-height: 3.5rem;
+    padding: 0;
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    padding-right: env(safe-area-inset-right, 0px);
+    box-sizing: border-box;
+  }
+
+  .whatsapp-float svg {
+    width: 1.75rem;
+    height: 1.75rem;
   }
 }
 

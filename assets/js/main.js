@@ -833,7 +833,7 @@
       '';
 
     const script = document.createElement('script');
-    script.src = `${base}assets/floating-social/floating-social.js`;
+    script.src = `${base}assets/floating-social/floating-social.js?v=5`;
     script.defer = true;
     document.body.appendChild(script);
   }
