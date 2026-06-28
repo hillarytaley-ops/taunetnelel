@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Membership | Taunet Nelel Members</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/members.css">
+</head>
+<body>
+  <div class="members-mobile-header">
+    <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:36px;filter:brightness(0) invert(1)"></a>
+    <button class="members-menu-toggle" aria-label="Menu">☰</button>
+  </div>
+  <div class="members-layout">
+    <aside class="members-sidebar">
+      <a href="../index.html" class="logo"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel"></a>
+      <ul class="members-nav">
+        <li><a href="dashboard.html"><span class="icon">⌂</span> Dashboard</a></li>
+        <li><a href="events.html"><span class="icon">◷</span> My Events</a></li>
+        <li><a href="membership.html" class="active"><span class="icon">★</span> Membership</a></li>
+        <li><a href="resources.html"><span class="icon">▤</span> Resources</a></li>
+        <li><a href="welfare.html"><span class="icon">♥</span> Welfare</a></li>
+        <li><a href="profile.html"><span class="icon">◎</span> Profile</a></li>
+        <li><a href="support.html"><span class="icon">?</span> Support</a></li>
+      </ul>
+      <div class="members-sidebar__footer"><a href="#" id="logout-btn">Sign out</a></div>
+    </aside>
+    <main class="members-main">
+      <div class="members-topbar">
+        <h1>Membership</h1>
+        <span class="status-chip status-chip--active">Active · <span data-member-plan>Basic</span></span>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card dash-card--full">
+          <h2>Current Plan</h2>
+          <div class="plans" style="margin-top:1rem;">
+            <div class="plan">
+              <h3>Your Plan: <span data-member-plan>Basic</span></h3>
+              <div class="plan__price">$50 <small>/ year</small></div>
+              <p>Renews on <strong data-member-renews>12 Aug 2026</strong></p>
+              <ul>
+                <li>Exclusive workshops &amp; webinars</li>
+                <li>Member event discounts</li>
+                <li>Cultural &amp; educational resources</li>
+              </ul>
+              <button class="btn btn--ghost" onclick="alert('Payment history will be available when connected to a payment provider.')">View Payment History</button>
+            </div>
+            <div class="plan plan--featured">
+              <h3>Welfare Plus</h3>
+              <div class="plan__price">$300 <small>/ year</small></div>
+              <ul>
+                <li>All Basic benefits</li>
+                <li>Welfare financial support</li>
+                <li>Exclusive welfare portal access</li>
+                <li>Peer support network</li>
+              </ul>
+              <button class="btn btn--accent" onclick="alert('Upgrade flow will connect to payment when live.')">Upgrade Plan</button>
+            </div>
+          </div>
+        </div>
+        <div class="dash-card dash-card--full">
+          <h2>Plan Comparison</h2>
+          <table class="compare-table">
+            <thead><tr><th>Benefit</th><th>Basic</th><th>Welfare Plus</th></tr></thead>
+            <tbody>
+              <tr><td>Exclusive events</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Event discounts</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Cultural resources</td><td class="check">✓</td><td class="check">✓</td></tr>
+              <tr><td>Welfare support</td><td class="dash">—</td><td class="check">✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/members.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Taunet Nelel//Events//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:taunet-gala-2026@taunetnelel.org
+DTSTAMP:20260401T000000Z
+DTSTART:20260418T040000Z
+DTEND:20260418T130000Z
+SUMMARY:Taunet Nelel Gala 2026
+DESCRIPTION:Celebrate 5 years of Taunet Nelel with music, dancing, and delicious food. Tickets: https://www.eventbrite.com.au/e/taunet-nelel-2026-gala-tickets-1980043622777
+LOCATION:Almas Receptions, Victoria, Australia
+URL:https://www.eventbrite.com.au/e/taunet-nelel-2026-gala-tickets-1980043622777
+END:VEVENT
+END:VCALENDAR

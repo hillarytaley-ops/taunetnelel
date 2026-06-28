@@ -1,0 +1,15 @@
+# WordPress export cruft (static site only needs uploads)
+wp-content/themes/
+wp-content/plugins/
+wp-content/et-cache/
+wp-includes/
+
+# Local dev / scratch
+_gotabgaa.*
+_gh-tree.json
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

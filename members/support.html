@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support | Taunet Nelel Members</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/members.css">
+</head>
+<body>
+  <div class="members-mobile-header">
+    <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:36px;filter:brightness(0) invert(1)"></a>
+    <button class="members-menu-toggle" aria-label="Menu">☰</button>
+  </div>
+  <div class="members-layout">
+    <aside class="members-sidebar">
+      <a href="../index.html" class="logo"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel"></a>
+      <ul class="members-nav">
+        <li><a href="dashboard.html"><span class="icon">⌂</span> Dashboard</a></li>
+        <li><a href="events.html"><span class="icon">◷</span> My Events</a></li>
+        <li><a href="membership.html"><span class="icon">★</span> Membership</a></li>
+        <li><a href="resources.html"><span class="icon">▤</span> Resources</a></li>
+        <li><a href="welfare.html"><span class="icon">♥</span> Welfare</a></li>
+        <li><a href="profile.html"><span class="icon">◎</span> Profile</a></li>
+        <li><a href="support.html" class="active"><span class="icon">?</span> Support</a></li>
+      </ul>
+      <div class="members-sidebar__footer"><a href="#" id="logout-btn">Sign out</a></div>
+    </aside>
+    <main class="members-main">
+      <div class="members-topbar"><h1>Support</h1></div>
+      <div class="dash-grid">
+        <div class="dash-card dash-card--events">
+          <h2>Contact Committee</h2>
+          <ul class="dash-list" style="list-style:none;">
+            <li><strong>General enquiries</strong><br><a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></li>
+            <li><strong>Phone</strong><br><a href="tel:+61475273985">+61 475 273 985</a></li>
+            <li><strong>WhatsApp</strong><br><a href="https://wa.me/61475273985" target="_blank" rel="noopener">Message us</a></li>
+          </ul>
+        </div>
+        <div class="dash-card dash-card--announce" id="member-message">
+          <h2>Send a Message</h2>
+          <form class="site-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Member support message">
+            <input type="hidden" name="_subject" value="Member support message from Taunet Nelel portal">
+            <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/support.html?sent=1#member-message">
+            <input type="hidden" name="_template" value="table">
+            <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
+            <div class="form-group">
+              <label for="support-subject">Subject</label>
+              <select id="support-subject" name="topic" required>
+                <option value="">Select topic...</option>
+                <option value="Membership question">Membership question</option>
+                <option value="Event enquiry">Event enquiry</option>
+                <option value="Technical support">Technical support</option>
+                <option value="Volunteering">Volunteering</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="support-message">Message</label>
+              <textarea id="support-message" name="message" required placeholder="How can we help?"></textarea>
+            </div>
+            <div class="site-form__actions">
+              <button type="submit" class="btn btn--primary">Send message</button>
+            </div>
+            <p class="inquiry-form__message" role="status" aria-live="polite" hidden></p>
+          </form>
+        </div>
+        <div class="dash-card dash-card--full">
+          <h2>Key Contacts</h2>
+          <div class="card-grid">
+            <div class="card"><div class="card__body"><h3>Events</h3><p>Nick Boit — Events Coordinator</p></div></div>
+            <div class="card"><div class="card__body"><h3>Welfare</h3><p>Felix Kogei — Welfare Director</p></div></div>
+            <div class="card"><div class="card__body"><h3>Mental Health</h3><p>Sharon Ng'etich &amp; Sandra Boinet</p></div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/members.js"></script>
+</body>
+</html>

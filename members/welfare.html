@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welfare | Taunet Nelel Members</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/members.css">
+</head>
+<body>
+  <div class="members-mobile-header">
+    <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:36px;filter:brightness(0) invert(1)"></a>
+    <button class="members-menu-toggle" aria-label="Menu">☰</button>
+  </div>
+  <div class="members-layout">
+    <aside class="members-sidebar">
+      <a href="../index.html" class="logo"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel"></a>
+      <ul class="members-nav">
+        <li><a href="dashboard.html"><span class="icon">⌂</span> Dashboard</a></li>
+        <li><a href="events.html"><span class="icon">◷</span> My Events</a></li>
+        <li><a href="membership.html"><span class="icon">★</span> Membership</a></li>
+        <li><a href="resources.html"><span class="icon">▤</span> Resources</a></li>
+        <li><a href="welfare.html" class="active"><span class="icon">♥</span> Welfare</a></li>
+        <li><a href="profile.html"><span class="icon">◎</span> Profile</a></li>
+        <li><a href="support.html"><span class="icon">?</span> Support</a></li>
+      </ul>
+      <div class="members-sidebar__footer"><a href="#" id="logout-btn">Sign out</a></div>
+    </aside>
+    <main class="members-main">
+      <div class="members-topbar">
+        <h1>Welfare — Kerebeetab Kaa</h1>
+        <span class="status-chip status-chip--welfare" data-welfare-only>Welfare Plus</span>
+      </div>
+      <div id="welfare-gate" class="dash-card welfare-locked" style="display:none;">
+        <div class="icon">🔒</div>
+        <h2>Welfare Plus Required</h2>
+        <p style="max-width:480px;margin:1rem auto;">The welfare support portal is available to Welfare Plus members ($300/year). Upgrade your plan to access financial support and peer assistance during difficult times.</p>
+        <a href="membership.html" class="btn btn--accent">Upgrade to Welfare Plus</a>
+      </div>
+      <div id="welfare-content" style="display:none;">
+        <div class="dash-grid">
+          <div class="dash-card dash-card--full" id="welfare-request">
+            <h2>Request Support</h2>
+            <p style="margin-bottom:1.5rem;">Confidential welfare assistance for members facing personal or family hardship. All requests are reviewed by the Welfare Committee.</p>
+            <form class="site-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Welfare support request">
+              <input type="hidden" name="_subject" value="Welfare support request from Taunet Nelel member">
+              <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/welfare.html?sent=1#welfare-request">
+              <input type="hidden" name="_template" value="table">
+              <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
+              <div class="form-group">
+                <label for="welfare-type">Type of support</label>
+                <select id="welfare-type" name="support_type" required>
+                  <option value="">Select...</option>
+                  <option value="Financial hardship">Financial hardship</option>
+                  <option value="Family emergency">Family emergency</option>
+                  <option value="Peer support / counselling referral">Peer support / counselling referral</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="welfare-message">Describe your situation (confidential)</label>
+                <textarea id="welfare-message" name="message" required placeholder="Please provide details to help us assist you..."></textarea>
+              </div>
+              <div class="site-form__actions">
+                <button type="submit" class="btn btn--primary">Submit request</button>
+                <p class="site-form__note">A welfare officer will contact you within 48 hours.</p>
+              </div>
+              <p class="inquiry-form__message" role="status" aria-live="polite" hidden data-success="Your request has been submitted. A welfare officer will contact you within 48 hours."></p>
+            </form>
+          </div>
+          <div class="dash-card dash-card--events">
+            <h2>My Requests</h2>
+            <ul class="dash-list">
+              <li><span>No active requests</span></li>
+            </ul>
+          </div>
+          <div class="dash-card dash-card--announce">
+            <h2>Peer Support</h2>
+            <p>Connect with trained peer supporters from the community. Available weekdays 9am–5pm AEST.</p>
+            <a href="support.html" class="btn btn--ghost" style="margin-top:1rem;">Contact Support</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/members.js"></script>
+</body>
+</html>

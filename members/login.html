@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Member Login | Taunet Nelel</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/members.css">
+</head>
+<body class="login-page">
+  <div class="login-bg" aria-hidden="true"></div>
+  <div class="login-overlay" aria-hidden="true"></div>
+
+  <main class="login-shell">
+    <div class="login-card">
+      <a href="../index.html" class="login-logo">
+        <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel">
+      </a>
+
+      <div class="login-card__header">
+        <h1>Welcome Back</h1>
+        <p>Sign in to access your member dashboard, events, and community updates.</p>
+      </div>
+
+      <form class="login-form" id="login-form" novalidate>
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-password">
+            <input type="password" id="password" name="password" placeholder="Your password" autocomplete="current-password" required>
+            <button type="button" class="input-password__toggle input-password__toggle--dark" aria-label="Show password" data-password-toggle="password">
+              <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary login-submit">Sign in</button>
+
+        <p class="login-form__footer">
+          Don't have an account? <a href="register.html">Join Taunet Nelel</a>
+          <span class="login-form__footer-sep" aria-hidden="true">·</span>
+          <a href="../index.html" class="login-form__footer-link">Back to website</a>
+        </p>
+
+        <div class="login-preview">
+          <p class="login-preview__label">Preview the member area</p>
+          <div class="login-preview__actions">
+            <a href="dashboard.html?preview=basic" class="btn btn--ghost btn--sm">Basic member</a>
+            <a href="dashboard.html?preview=welfare" class="btn btn--ghost btn--sm">Welfare Plus</a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="../assets/js/members.js"></script>
+  <script>
+    document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.dataset.passwordToggle);
+        if (!input) return;
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.querySelector('.icon-eye').hidden = show;
+        btn.querySelector('.icon-eye-off').hidden = !show;
+        btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      });
+    });
+  </script>
+</body>
+</html>

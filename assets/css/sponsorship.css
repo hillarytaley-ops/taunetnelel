@@ -1,0 +1,94 @@
+/* Sponsorship page — animated sponsor hero */
+
+body[data-page="sponsorship"] .page-hero--sponsorship {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(72vh, 680px);
+  padding: clamp(3rem, 7vw, 4.5rem) 0;
+  background-color: #1e1208;
+  overflow: hidden;
+}
+
+body[data-page="sponsorship"] .page-hero--sponsorship::before {
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 10, 4, 0.55) 0%,
+    rgba(20, 10, 4, 0.3) 45%,
+    rgba(20, 10, 4, 0.3) 55%,
+    rgba(20, 10, 4, 0.55) 100%
+  );
+}
+
+body[data-page="sponsorship"] .sponsorship-hero__slideshow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+body[data-page="sponsorship"] .sponsorship-hero__slide {
+  position: absolute;
+  inset: 0;
+  background-color: #1e1208;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(1);
+  animation-duration: 24s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+body[data-page="sponsorship"] .sponsorship-hero__slide:nth-child(1) {
+  animation-name: sponsorship-hero-slide-1, sponsorship-hero-zoom-1;
+}
+
+body[data-page="sponsorship"] .sponsorship-hero__slide:nth-child(2) {
+  animation-name: sponsorship-hero-slide-2, sponsorship-hero-zoom-2;
+}
+
+@keyframes sponsorship-hero-slide-1 {
+  0%, 45%, 50%, 100% { opacity: 0; }
+  2%, 43% { opacity: 1; }
+}
+
+@keyframes sponsorship-hero-slide-2 {
+  0%, 45%, 55%, 95%, 100% { opacity: 0; }
+  50%, 93% { opacity: 1; }
+}
+
+@keyframes sponsorship-hero-zoom-1 {
+  0%, 45%, 50%, 100% { transform: scale(1); }
+  2%, 43% { transform: scale(1.06); }
+}
+
+@keyframes sponsorship-hero-zoom-2 {
+  0%, 45%, 55%, 100% { transform: scale(1); }
+  50%, 93% { transform: scale(1.06); }
+}
+
+body[data-page="sponsorship"] .page-hero--sponsorship .page-hero__layout {
+  position: relative;
+  z-index: 2;
+  min-height: min(60vh, 560px);
+  align-items: center;
+}
+
+body[data-page="sponsorship"] .page-hero--sponsorship .page-hero__content {
+  align-self: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="sponsorship"] .sponsorship-hero__slide {
+    animation: none !important;
+    opacity: 0;
+  }
+
+  body[data-page="sponsorship"] .sponsorship-hero__slide:first-child {
+    opacity: 1;
+    transform: none;
+  }
+}

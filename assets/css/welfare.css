@@ -1,0 +1,381 @@
+/* Welfare page */
+
+body[data-page="welfare"] {
+  overflow-x: clip;
+}
+
+body[data-page="welfare"] .page-hero--welfare {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(68vh, 620px);
+  padding: clamp(3rem, 7vw, 4.5rem) 0;
+  background-size: cover;
+  background-position: center;
+}
+
+body[data-page="welfare"] .page-hero--welfare::before {
+  background: linear-gradient(
+    180deg,
+    rgba(20, 10, 4, 0.4) 0%,
+    rgba(20, 10, 4, 0.25) 50%,
+    rgba(20, 10, 4, 0.45) 100%
+  );
+}
+
+.welfare-hero__card {
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  text-align: center;
+  background: rgba(30, 18, 8, 0.82);
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.welfare-hero__card .page-hero__eyebrow {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.welfare-hero__card h1 {
+  font-size: clamp(1.5rem, 3.5vw, 2.15rem);
+  margin-bottom: 0.85rem;
+  line-height: 1.2;
+  word-wrap: break-word;
+}
+
+.welfare-hero__card p {
+  max-width: none;
+  margin-inline: auto;
+  line-height: 1.65;
+  font-size: clamp(0.92rem, 2.2vw, 1.05rem);
+}
+
+.welfare-quick {
+  background: var(--color-bg);
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
+  padding: 1rem 0;
+}
+
+.welfare-quick .container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+}
+
+.welfare-section {
+  scroll-margin-top: calc(var(--header-h) + var(--page-subnav-h) + 1rem);
+}
+
+.welfare-section--card {
+  padding: 1rem 0;
+  background: var(--color-bg);
+}
+
+.welfare-section--card:first-of-type {
+  padding-top: 2.5rem;
+}
+
+.welfare-section--card:last-of-type {
+  padding-bottom: 2rem;
+}
+
+.welfare-card {
+  background: var(--color-white);
+  border-radius: var(--radius);
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(139, 69, 19, 0.08);
+  border-top: 4px solid var(--color-accent);
+  max-width: 820px;
+  margin-inline: auto;
+}
+
+.welfare-card--wide {
+  max-width: var(--max-w);
+}
+
+.welfare-card .eyebrow {
+  display: inline-block;
+  color: var(--color-accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+}
+
+.welfare-card h2 {
+  margin-top: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  line-height: 1.25;
+}
+
+.welfare-card p,
+.welfare-card li {
+  font-size: clamp(0.92rem, 2vw, 1.02rem);
+  line-height: 1.75;
+  color: var(--color-text-muted);
+}
+
+.welfare-card p {
+  margin-bottom: 1rem;
+}
+
+.welfare-card p:last-child {
+  margin-bottom: 0;
+}
+
+.welfare-list {
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+  margin: 1.25rem 0 0;
+  padding-top: 1.15rem;
+  border-top: 1px solid rgba(139, 69, 19, 0.08);
+}
+
+.welfare-list li {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(139, 69, 19, 0.06);
+  text-align: left;
+}
+
+.welfare-list li::before {
+  content: "●";
+  color: var(--color-accent);
+  font-size: 0.65rem;
+  margin-top: 0.4rem;
+  flex-shrink: 0;
+}
+
+.welfare-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.welfare-card__actions .btn {
+  min-width: min(100%, 12rem);
+}
+
+.welfare-cta-strip {
+  background: linear-gradient(135deg, var(--color-cinnamon) 0%, var(--color-peru) 100%);
+  color: var(--color-white);
+  text-align: center;
+  padding: clamp(2.5rem, 5vw, 3.5rem) 0;
+}
+
+.welfare-cta-strip h2 {
+  color: var(--color-white);
+  margin-bottom: 0.65rem;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+}
+
+.welfare-cta-strip p {
+  max-width: 560px;
+  margin: 0 auto 1.5rem;
+  padding-inline: 0.5rem;
+  opacity: 0.92;
+  line-height: 1.65;
+  font-size: clamp(0.92rem, 2vw, 1rem);
+}
+
+.welfare-cta-strip .btn {
+  min-width: min(100%, 14rem);
+}
+
+.welfare-enquiry {
+  padding-bottom: clamp(2rem, 5vw, 3rem);
+}
+
+.welfare-enquiry .site-form-panel--wide {
+  max-width: min(100%, 1100px);
+  margin-inline: auto;
+}
+
+.welfare-enquiry .site-form-aside .btn {
+  width: 100%;
+  max-width: 100%;
+}
+
+.welfare-inquiry__form .site-form__note {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+body[data-page="welfare"] .section.welfare-enquiry {
+  padding: clamp(2rem, 5vw, 3.5rem) 0 clamp(2rem, 5vw, 3rem);
+}
+
+body[data-page="welfare"] .container {
+  width: min(
+    100% - max(2rem, env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px)),
+    var(--max-w)
+  );
+}
+
+.welfare-card,
+.welfare-list li,
+.welfare-hero__card {
+  overflow-wrap: anywhere;
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  body[data-page="welfare"] .page-hero--welfare {
+    min-height: min(58vh, 540px);
+  }
+
+  .welfare-section--card:first-of-type {
+    padding-top: 2rem;
+  }
+}
+
+/* Mobile landscape / large phones */
+@media (max-width: 768px) {
+  body[data-page="welfare"] .page-hero--welfare {
+    min-height: min(52vh, 460px);
+    padding: 2.25rem 0;
+    background-position: center 30%;
+  }
+
+  .welfare-hero__card {
+    padding: 1.35rem 1.15rem;
+  }
+
+  .welfare-quick {
+    padding: 0.85rem 0;
+  }
+
+  .welfare-quick .container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .welfare-quick .btn {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .welfare-quick .btn:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .welfare-section {
+    scroll-margin-top: calc(var(--header-h) + var(--page-subnav-h) + 0.5rem);
+  }
+
+  .welfare-section--card {
+    padding: 0.75rem 0;
+  }
+
+  .welfare-section--card:first-of-type {
+    padding-top: 1.5rem;
+  }
+
+  .welfare-card {
+    padding: 1.35rem 1.15rem;
+  }
+
+  .welfare-card__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .welfare-card__actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .welfare-enquiry .site-form-panel {
+    gap: 1.25rem;
+  }
+
+  .welfare-enquiry .site-form-aside {
+    text-align: center;
+  }
+
+  .welfare-enquiry .site-form-aside .btn {
+    max-width: 20rem;
+    margin-inline: auto;
+  }
+
+  .welfare-enquiry .site-form-aside__highlights li {
+    text-align: left;
+  }
+
+  body[data-page="welfare"] .section.welfare-enquiry {
+    padding: 2rem 0 1.75rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  body[data-page="welfare"] .page-hero--welfare {
+    min-height: auto;
+    padding: 1.75rem 0 2rem;
+  }
+
+  .welfare-hero__card h1 {
+    font-size: 1.35rem;
+  }
+
+  .welfare-quick .container {
+    grid-template-columns: 1fr;
+  }
+
+  .welfare-quick .btn {
+    width: 100%;
+  }
+
+  .welfare-list li {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .welfare-cta-strip {
+    padding: 2rem 0;
+  }
+
+  .welfare-cta-strip .btn {
+    width: 100%;
+    max-width: none;
+  }
+
+  .welfare-enquiry {
+    padding-bottom: 1.75rem;
+  }
+
+  .welfare-inquiry__form {
+    padding: 1.15rem;
+  }
+}
+
+/* Very narrow devices */
+@media (max-width: 360px) {
+  .welfare-hero__card {
+    padding: 1.15rem 0.95rem;
+  }
+
+  .welfare-card {
+    padding: 1.15rem 0.95rem;
+  }
+
+  .page-subnav--cards-four .page-subnav__card {
+    font-size: 0.72rem;
+    padding: 0.55rem 0.35rem;
+  }
+}

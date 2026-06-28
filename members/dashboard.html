@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Taunet Nelel Members</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/members.css">
+</head>
+<body>
+  <div class="members-mobile-header">
+        <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:36px"></a>
+    <button class="members-menu-toggle" aria-label="Menu">☰</button>
+  </div>
+  <div class="members-layout">
+    <aside class="members-sidebar">
+      <a href="../index.html" class="logo"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel"></a>
+      <ul class="members-nav">
+        <li><a href="dashboard.html" class="active"><span class="icon">⌂</span> Dashboard</a></li>
+        <li><a href="events.html"><span class="icon">◷</span> My Events</a></li>
+        <li><a href="membership.html"><span class="icon">★</span> Membership</a></li>
+        <li><a href="resources.html"><span class="icon">▤</span> Resources</a></li>
+        <li><a href="welfare.html"><span class="icon">♥</span> Welfare</a></li>
+        <li><a href="profile.html"><span class="icon">◎</span> Profile</a></li>
+        <li><a href="support.html"><span class="icon">?</span> Support</a></li>
+      </ul>
+      <div class="members-sidebar__footer">
+        <a href="#" id="logout-btn">Sign out</a>
+      </div>
+    </aside>
+    <main class="members-main">
+      <div class="members-topbar">
+        <h1>Dashboard</h1>
+        <div class="members-user">
+          <span class="status-chip status-chip--active">Active</span>
+          <div class="members-avatar" data-member-initials>JK</div>
+        </div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card dash-card--welcome">
+          <h2>Welcome</h2>
+          <p style="font-size:1.25rem;color:var(--color-text);font-weight:600;margin-bottom:0.5rem;">Hello, <span data-member-name>Member</span></p>
+          <p>Membership: <strong data-member-plan>Basic</strong> · Renews <span data-member-renews>—</span></p>
+          <a href="membership.html" class="btn btn--accent" style="margin-top:1rem;">Upgrade to Welfare Plus</a>
+        </div>
+        <div class="dash-card dash-card--actions">
+          <h2>Quick Actions</h2>
+          <div class="quick-actions">
+            <a href="events.html" class="btn btn--primary">Register for Gala</a>
+            <a href="resources.html" class="btn btn--ghost">Language Resources</a>
+            <a href="welfare.html" class="btn btn--ghost" data-welfare-only>Welfare Support</a>
+          </div>
+        </div>
+        <div class="dash-card dash-card--events">
+          <h2>Upcoming Events</h2>
+          <ul class="dash-list">
+            <li><span>Taunet Nelel Gala</span><span class="meta">18 Apr 2026</span></li>
+            <li><span>Sports Day</span><span class="meta">19 Apr 2026 · TBC</span></li>
+            <li><span>Kalenjin Language Session</span><span class="meta">Monthly</span></li>
+          </ul>
+        </div>
+        <div class="dash-card dash-card--announce">
+          <h2>Announcements</h2>
+          <ul class="dash-list">
+            <li><span>Sports Day venue to be confirmed</span><span class="meta">New</span></li>
+            <li><span>Gala tickets now on sale</span><span class="meta">2 days ago</span></li>
+            <li><span>New language session dates posted</span><span class="meta">1 week ago</span></li>
+          </ul>
+        </div>
+        <div class="dash-card dash-card--registrations">
+          <h2>My Registrations</h2>
+          <ul class="dash-list">
+            <li><span>Taunet Nelel Gala 2026</span><span class="status-chip status-chip--active">Confirmed</span></li>
+          </ul>
+          <a href="events.html" style="font-size:0.9rem;margin-top:0.75rem;display:inline-block;">View all events →</a>
+        </div>
+        <div class="dash-card dash-card--benefits">
+          <h2>Benefits Used This Year</h2>
+          <ul class="dash-list">
+            <li><span>Event discounts</span><span class="meta">2 used</span></li>
+            <li><span>Workshop access</span><span class="meta">1 attended</span></li>
+            <li><span>Resource downloads</span><span class="meta">3 files</span></li>
+          </ul>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="../assets/js/members.js"></script>
+</body>
+</html>
