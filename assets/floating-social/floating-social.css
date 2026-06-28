@@ -1,13 +1,23 @@
-/* Floating social folder (left) + WhatsApp (right) */
+/* Floating social folder (left) + WhatsApp (right) — aligned on same row */
+
+:root {
+  --float-contact-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+body.has-mobile-join-fab {
+  --float-contact-bottom: max(4.75rem, calc(1.25rem + env(safe-area-inset-bottom, 0px)));
+}
 
 .floating-social-folder {
   position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  left: max(0px, env(safe-area-inset-left, 0px));
+  right: auto;
+  top: auto;
+  bottom: var(--float-contact-bottom);
+  transform: none;
   z-index: 998;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   pointer-events: none;
 }
 
@@ -19,6 +29,7 @@
   justify-content: center;
   gap: 0.2rem;
   width: 2.65rem;
+  min-height: 3.5rem;
   padding: 0.65rem 0.45rem;
   border: none;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -57,6 +68,7 @@
   flex-direction: column;
   gap: 0.45rem;
   margin-left: 0.35rem;
+  margin-bottom: 0;
   padding: 0.55rem;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(139, 69, 19, 0.12);
@@ -105,7 +117,8 @@
   position: fixed;
   right: max(1rem, env(safe-area-inset-right, 0px));
   left: auto;
-  bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  top: auto;
+  bottom: var(--float-contact-bottom);
   z-index: 999;
   width: 56px;
   height: 56px;
@@ -128,17 +141,7 @@
   fill: white;
 }
 
-body.has-mobile-join-fab .whatsapp-float {
-  bottom: max(4.75rem, calc(1.25rem + env(safe-area-inset-bottom, 0px)));
-}
-
 @media (max-width: 768px) {
-  .floating-social-folder {
-    top: auto;
-    bottom: max(5.5rem, calc(4.5rem + env(safe-area-inset-bottom, 0px)));
-    transform: none;
-  }
-
   .floating-social-folder__toggle {
     width: 2.45rem;
     padding: 0.55rem 0.4rem;
@@ -146,10 +149,6 @@ body.has-mobile-join-fab .whatsapp-float {
 
   .floating-social-folder__toggle-label {
     font-size: 0.58rem;
-  }
-
-  body.has-mobile-join-fab .floating-social-folder {
-    bottom: max(7.25rem, calc(6.25rem + env(safe-area-inset-bottom, 0px)));
   }
 }
 
