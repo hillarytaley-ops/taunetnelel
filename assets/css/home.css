@@ -390,22 +390,12 @@ body[data-page="home"] .home-links .btn--outline:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: min(100%, 420px);
   }
-
-  .home-links__btn--join {
-    grid-column: 1 / -1;
-    max-width: min(100%, 240px);
-    justify-self: center;
-  }
 }
 
 @media (max-width: 400px) {
   .home-links__grid {
     grid-template-columns: 1fr;
     max-width: min(100%, 280px);
-  }
-
-  .home-links__btn--join {
-    max-width: 100%;
   }
 }
 
