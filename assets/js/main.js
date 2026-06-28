@@ -825,6 +825,22 @@
   initPageHeroLayout();
   initFooterSocial();
 
+  function initFloatingSocial() {
+    if (document.querySelector('.floating-social-folder')) return;
+    if (!document.querySelector('.site-header')) return;
+
+    const base =
+      document.querySelector('link[href*="assets/css/main.css"]')?.getAttribute('href')?.replace(/assets\/css\/main\.css.*$/, '') ||
+      '';
+
+    const script = document.createElement('script');
+    script.src = `${base}assets/floating-social/floating-social.js`;
+    script.defer = true;
+    document.body.appendChild(script);
+  }
+
+  initFloatingSocial();
+
   const lightbox = document.getElementById('lightbox');
   const lightboxImg = lightbox?.querySelector('.lightbox__img');
   const lightboxCaption = lightbox?.querySelector('.lightbox__caption');
