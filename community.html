@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css">
   <link rel="stylesheet" href="assets/css/community.css">
+  <link rel="stylesheet" href="assets/css/business.css">
 </head>
 <body data-page="community">
 
@@ -42,6 +43,7 @@
               <li><a href="community.html#language" data-nav="community">Language School</a></li>
               <li><a href="community.html#culture" data-nav="community">Culture</a></li>
               <li><a href="community.html#wellbeing" data-nav="community">People &amp; Wellbeing</a></li>
+              <li><a href="community.html#business" data-nav="community">Business</a></li>
               <li><a href="welfare.html" data-nav="welfare">Welfare</a></li>
               <li><a href="community.html#sports" data-nav="community">Sports</a></li>
             </ul>
@@ -106,13 +108,14 @@
     </div>
   </section>
 
-  <nav class="page-subnav page-subnav--cards page-subnav--cards-five" aria-label="Community page sections">
+  <nav class="page-subnav page-subnav--cards page-subnav--cards-six" aria-label="Community page sections">
     <div class="container page-subnav__inner">
       <a href="#language" class="page-subnav__card">Language</a>
       <a href="#culture" class="page-subnav__card">Culture</a>
       <a href="#wellbeing" class="page-subnav__card">Wellbeing</a>
+      <a href="#business" class="page-subnav__card">Business</a>
       <a href="#sports" class="page-subnav__card">Sports</a>
-      <a href="contact.html#inquiry" class="page-subnav__card">Enquire</a>
+      <a href="#enquiry" class="page-subnav__card">Enquire</a>
     </div>
   </nav>
 
@@ -383,6 +386,56 @@
     </div>
   </section>
 
+  <section class="section community-section community-section--card" id="business" aria-labelledby="business-heading">
+    <div class="container">
+      <article class="community-card community-card--wide community-card--flush reveal">
+        <div class="community-section-banner" style="background-image:url('wp-content/uploads/2026/06/community-hero-03-youth.png')">
+          <div class="community-section-banner__content">
+            <span class="eyebrow">Community Business</span>
+            <h2 id="business-heading">Business Hub</h2>
+            <p class="community-card__lead">Discover Kalenjin-owned businesses, business news, and community blog posts.</p>
+          </div>
+        </div>
+
+        <div class="community-card__inner community-business__inner">
+          <div class="community-business__block">
+            <h3>Community Business Cards</h3>
+            <p class="community-business__intro">Support Kalenjin-owned businesses across Victoria. Contact providers directly or ask Taunet Nelel to add your business.</p>
+            <div class="business-directory" id="business-directory" aria-live="polite"></div>
+            <p class="biz-empty" id="business-directory-empty" hidden>No business listings yet. Check back soon.</p>
+            <p class="business-updated">Last updated: <span id="business-updated">&mdash;</span></p>
+          </div>
+
+          <div class="community-business__block">
+            <h3>Business News &amp; Blog</h3>
+            <p class="community-business__intro">Short news updates and longer blog posts — refreshed regularly by the Taunet Nelel admin team.</p>
+            <div class="business-feed-card">
+              <div class="business-tabs" role="tablist" aria-label="Business updates">
+                <button type="button" class="business-tabs__btn is-active" role="tab" aria-selected="true" data-business-tab="news">Business News</button>
+                <button type="button" class="business-tabs__btn" role="tab" aria-selected="false" data-business-tab="blog">Blog</button>
+              </div>
+
+              <div class="business-tab-panel is-active" data-business-panel="news" role="tabpanel" id="business-news-panel">
+                <div id="business-news-feed" aria-live="polite"></div>
+                <p class="biz-empty" id="business-news-empty" hidden>No business news yet.</p>
+              </div>
+
+              <div class="business-tab-panel" data-business-panel="blog" role="tabpanel" id="business-blog-panel" hidden>
+                <div id="business-blog-feed" aria-live="polite"></div>
+                <p class="biz-empty" id="business-blog-empty" hidden>No blog posts yet.</p>
+              </div>
+            </div>
+          </div>
+
+          <p class="business-admin-link"><a href="admin/business.html">Admin: update business content</a></p>
+          <div class="community-card__actions">
+            <a href="contact.html#inquiry" class="btn btn--primary">List your business</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
   <section class="section community-section community-section--card" id="sports" aria-labelledby="sports-heading">
     <div class="container">
       <article class="community-card community-card--wide community-card--flush reveal">
@@ -407,7 +460,7 @@
       <article class="community-card community-enquiry-cta reveal">
         <span class="eyebrow">Get in touch</span>
         <h2 id="enquiry-heading">Make an Inquiry</h2>
-        <p class="community-card__lead">Ask about language classes, culture programs, women's and men's groups, youth, mental health, welfare, or sports.</p>
+        <p class="community-card__lead">Ask about language classes, culture programs, women's and men's groups, youth, mental health, welfare, business listings, or sports.</p>
         <div class="community-card__actions">
           <a href="contact.html#inquiry" class="btn btn--primary">Go to contact form</a>
         </div>
@@ -465,6 +518,8 @@
   </footer>
 
   <a href="members/register.html" class="mobile-join-fab">Join Us</a>
+  <script src="assets/js/business-content.js"></script>
+  <script src="assets/js/business.js"></script>
   <script src="assets/js/main.js"></script>
 </body>
 </html>

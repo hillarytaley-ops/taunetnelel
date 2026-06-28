@@ -676,7 +676,6 @@
         { href: `${pathPrefix}events.html`, label: 'Events', nav: 'events' },
         { href: `${pathPrefix}gallery.html`, label: 'Gallery', nav: 'gallery' },
         { href: `${pathPrefix}community.html`, label: 'Community Hub', nav: 'community' },
-        { href: `${pathPrefix}business.html`, label: 'Business', nav: 'business' },
         { href: `${pathPrefix}sponsorship.html`, label: 'Sponsorship', nav: 'sponsorship' },
         { href: `${pathPrefix}welfare.html`, label: 'Welfare', nav: 'welfare' },
         { href: `${pathPrefix}membership.html`, label: 'Membership', nav: 'membership' },

@@ -666,6 +666,37 @@ body[data-page="community"] .community-hero__card p {
   margin-top: 1.25rem;
 }
 
+.community-business__inner {
+  text-align: center;
+}
+
+.community-business__block + .community-business__block {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(139, 69, 19, 0.1);
+}
+
+.community-business__block h3 {
+  font-size: 1.15rem;
+  margin-bottom: 0.65rem;
+}
+
+.community-business__intro {
+  max-width: 640px;
+  margin: 0 auto 1.25rem;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.community-business__inner .business-feed-card {
+  max-width: 100%;
+}
+
+.community-business__inner .business-updated {
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 768px) {
   .community-card__split {
     grid-template-columns: 1fr;

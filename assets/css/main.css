@@ -1122,6 +1122,11 @@ body[data-page="welfare"] {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.page-subnav--cards-six .page-subnav__inner {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  max-width: 960px;
+}
+
 .page-subnav--cards-four .page-subnav__inner {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 760px;
@@ -1194,6 +1199,11 @@ body[data-page="welfare"] {
     grid-column: 4 / span 2;
   }
 
+  .page-subnav--cards-six .page-subnav__inner {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 640px;
+  }
+
   .page-subnav--cards-four .page-subnav__inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 520px;
@@ -1234,6 +1244,17 @@ body[data-page="welfare"] {
   }
 
   .page-subnav--cards-five .page-subnav__card:nth-child(5) {
+    grid-column: 1 / -1;
+    max-width: calc(50% - 0.375rem);
+    justify-self: center;
+  }
+
+  .page-subnav--cards-six .page-subnav__inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 420px;
+  }
+
+  .page-subnav--cards-six .page-subnav__card:nth-child(6) {
     grid-column: 1 / -1;
     max-width: calc(50% - 0.375rem);
     justify-self: center;

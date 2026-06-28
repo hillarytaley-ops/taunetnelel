@@ -1,12 +1,11 @@
 (function () {
   'use strict';
 
-  const page = document.body.dataset.page;
-  if (page !== 'business') return;
+  const businessGrid = document.getElementById('business-directory');
+  if (!businessGrid) return;
 
   const { loadBusinessContent, sortByDateDesc, formatDisplayDate, escapeHtml } = window.TaunetBusinessContent;
 
-  const businessGrid = document.getElementById('business-directory');
   const newsFeed = document.getElementById('business-news-feed');
   const blogFeed = document.getElementById('business-blog-feed');
   const updatedEl = document.getElementById('business-updated');
