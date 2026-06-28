@@ -115,7 +115,7 @@ body.has-mobile-join-fab {
 
 .whatsapp-float {
   position: fixed;
-  right: max(1rem, env(safe-area-inset-right, 0px));
+  right: max(0px, env(safe-area-inset-right, 0px));
   left: auto;
   top: auto;
   bottom: var(--float-contact-bottom);
