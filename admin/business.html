@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Business Admin | Taunet Nelel</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/business.css">
+</head>
+<body data-page="business-admin">
+
+  <div class="business-admin">
+    <div class="business-admin__brand">
+      <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel"></a>
+      <h1>Business Hub Admin</h1>
+      <p class="admin-help">Update business cards, business news, and blog posts. Last saved: <strong id="admin-updated">&mdash;</strong></p>
+    </div>
+
+    <section class="business-admin__card" id="admin-login">
+      <h2>Admin sign in</h2>
+      <p class="admin-help">Enter the admin PIN to edit content. Default PIN: <code>TaunetBiz2026</code> (change in code when ready for production).</p>
+      <form id="admin-login-form">
+        <label class="admin-field">
+          <span>Admin PIN</span>
+          <input type="password" name="pin" required autocomplete="current-password">
+        </label>
+        <button type="submit" class="btn btn--primary">Sign in</button>
+      </form>
+    </section>
+
+    <div id="admin-editor" hidden>
+      <section class="business-admin__card">
+        <h2>Publish workflow</h2>
+        <div class="admin-help">
+          <ol>
+            <li>Edit business cards, news, or blog posts below.</li>
+            <li>Click <strong>Export JSON</strong> to download <code>business-content.json</code>.</li>
+            <li>Replace <code>assets/data/business-content.json</code> in the project and push to GitHub — Vercel will redeploy automatically.</li>
+          </ol>
+        </div>
+        <div class="business-admin__actions">
+          <button type="button" class="btn btn--primary" id="admin-export">Export JSON</button>
+          <button type="button" class="btn btn--outline" id="admin-save-draft">Save draft (browser)</button>
+          <label class="btn btn--ghost" for="admin-import-file">Import JSON</label>
+          <input type="file" id="admin-import-file" accept="application/json,.json" hidden>
+          <button type="button" class="btn btn--ghost" id="admin-reset-storage">Reset local draft</button>
+          <button type="button" class="btn btn--ghost" id="admin-logout">Sign out</button>
+          <a href="../business.html" class="btn btn--ghost">View public page</a>
+        </div>
+        <p class="admin-status" id="admin-status" role="status" hidden></p>
+      </section>
+
+      <section class="business-admin__card">
+        <div class="admin-section-title">
+          <h2>Business cards</h2>
+          <button type="button" class="btn btn--sm btn--outline" id="admin-add-business">Add business</button>
+        </div>
+        <div id="admin-business-list"></div>
+      </section>
+
+      <section class="business-admin__card">
+        <div class="admin-section-title">
+          <h2>Business news</h2>
+          <button type="button" class="btn btn--sm btn--outline" id="admin-add-news">Add news item</button>
+        </div>
+        <div id="admin-news-list"></div>
+      </section>
+
+      <section class="business-admin__card">
+        <div class="admin-section-title">
+          <h2>Blog posts</h2>
+          <button type="button" class="btn btn--sm btn--outline" id="admin-add-blog">Add blog post</button>
+        </div>
+        <div id="admin-blog-list"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="../assets/js/business-content.js"></script>
+  <script src="../assets/js/business-admin.js"></script>
+</body>
+</html>

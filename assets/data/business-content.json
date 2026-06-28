@@ -1,0 +1,79 @@
+{
+  "updatedAt": "2026-06-28T10:00:00.000Z",
+  "businesses": [
+    {
+      "id": "biz-001",
+      "name": "Kiprotich Accounting Services",
+      "category": "Finance & Accounting",
+      "description": "Bookkeeping, tax returns, and business advisory for small businesses and community members across Victoria.",
+      "contactName": "James Kiprotich",
+      "phone": "+61 400 111 222",
+      "email": "hello@kiprotichaccounting.example",
+      "website": "",
+      "location": "Melbourne, VIC"
+    },
+    {
+      "id": "biz-002",
+      "name": "Nandi Fresh Produce",
+      "category": "Food & Retail",
+      "description": "Fresh vegetables, grains, and specialty Kenyan ingredients supplied to families and events in greater Melbourne.",
+      "contactName": "Sarah Chebet",
+      "phone": "+61 400 333 444",
+      "email": "orders@nandifresh.example",
+      "website": "",
+      "location": "Dandenong, VIC"
+    },
+    {
+      "id": "biz-003",
+      "name": "Rift Valley Transport",
+      "category": "Logistics",
+      "description": "Reliable courier and event transport for community gatherings, airport runs, and regional deliveries.",
+      "contactName": "Daniel Koech",
+      "phone": "+61 475 000 888",
+      "email": "bookings@riftvalleytransport.example",
+      "website": "",
+      "location": "Victoria-wide"
+    }
+  ],
+  "news": [
+    {
+      "id": "news-001",
+      "title": "Taunet Business Network launch",
+      "date": "2026-06-20",
+      "summary": "We are launching a community business directory to connect Kalenjin-owned businesses across Victoria.",
+      "body": "The Taunet Nelel Business Hub helps members promote services, share opportunities, and support one another. List your business or check the directory for trusted community providers."
+    },
+    {
+      "id": "news-002",
+      "title": "Gala sponsorship opportunities open",
+      "date": "2026-06-12",
+      "summary": "Local businesses can sponsor the 2026 Gala and gain visibility across our events and social channels.",
+      "body": "Packages include logo placement, stage mentions, and a feature in our Business News feed. Contact info@taunetnelel.org for the sponsorship kit."
+    },
+    {
+      "id": "news-003",
+      "title": "Member spotlight: catering services",
+      "date": "2026-06-05",
+      "summary": "Several members now offer catering for birthdays, weddings, and community functions.",
+      "body": "Browse the business directory for food and event suppliers. If you offer catering, ask the admin team to add or update your business card."
+    }
+  ],
+  "blog": [
+    {
+      "id": "blog-001",
+      "title": "Starting a side business in Australia",
+      "date": "2026-06-18",
+      "author": "Taunet Nelel Team",
+      "summary": "Practical first steps for registering an ABN, understanding tax obligations, and finding community mentors.",
+      "body": "Many members run successful side businesses while working full time. Start with an ABN, keep simple records from day one, and connect with other entrepreneurs in the Business Hub for referrals and advice."
+    },
+    {
+      "id": "blog-002",
+      "title": "Why we built a community business directory",
+      "date": "2026-06-10",
+      "author": "Taunet Nelel Team",
+      "summary": "Supporting Kalenjin-owned businesses strengthens the whole community.",
+      "body": "When we buy from and refer each other, we keep skills and resources within our network. The Business Hub makes it easier to discover trusted providers and celebrate member success stories."
+    }
+  ]
+}
