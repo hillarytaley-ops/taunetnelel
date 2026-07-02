@@ -307,7 +307,44 @@
     `;
   }
 
-  function renderPhaseSection(phase, events, prefix) {
+  function renderCompactEventItem(event, prefix, phase) {
+    const badge = dateBadge(event);
+    const img = assetPath(event.image, prefix);
+    const href = event.galleryUrl ? assetPath(event.galleryUrl, prefix) : (event.bookingUrl || '#');
+    const linkAttrs = event.bookingUrl?.startsWith('http') ? ' target="_blank" rel="noopener"' : '';
+    const phaseLabel = phase === 'present' ? 'Live now' : phase === 'most-recent' ? 'Recent' : phase === 'upcoming' ? 'Upcoming' : '';
+
+    let action = '';
+    if (phase === 'upcoming' && event.bookingUrl) {
+      action = `<a href="${event.bookingUrl.startsWith('http') ? event.bookingUrl : assetPath(event.bookingUrl, prefix)}" class="events-phase-item__link"${linkAttrs}>Booking</a>`;
+    } else if ((phase === 'past' || phase === 'most-recent') && event.galleryUrl) {
+      action = `<a href="${href}" class="events-phase-item__link">Gallery</a>`;
+    }
+
+    return `
+      <article class="events-phase-item events-phase-item--${phase}">
+        <a href="${href}" class="events-phase-item__media"${event.galleryUrl ? '' : linkAttrs}>
+          <img src="${img}" alt="${event.title}" width="120" height="80" loading="lazy">
+          <span class="events-phase-item__date">${badge.day} ${badge.month}</span>
+        </a>
+        <div class="events-phase-item__body">
+          ${phaseLabel ? `<span class="events-phase-item__badge">${phaseLabel}</span>` : ''}
+          <h4>${event.title}</h4>
+          <p>${event.meta || event.location}</p>
+          ${action}
+        </div>
+      </article>
+    `;
+  }
+
+  function renderPhaseSection(phase, events, prefix, compact) {
+    if (compact) {
+      if (!events.length) {
+        return `<div class="events-phase-empty"><p>${emptyMessage(phase)}</p></div>`;
+      }
+      return `<div class="events-phase-list">${events.map((e) => renderCompactEventItem(e, prefix, phase)).join('')}</div>`;
+    }
+
     let body = '';
 
     if (!events.length) {
@@ -335,7 +372,7 @@
     phases.forEach((phase) => {
       const root = document.getElementById(`events-${phase}-root`);
       if (root) {
-        root.innerHTML = renderPhaseSection(phase, groups[phase], '');
+        root.innerHTML = renderPhaseSection(phase, groups[phase], '', true);
       }
 
       const countEl = document.querySelector(`[data-events-count="${phase}"]`);
@@ -443,19 +480,22 @@
 
     const phaseSections = ['upcoming', 'present', 'most-recent', 'past'].map((phase) => {
       const events = groups[phase];
-      if (!events.length) return '';
-
       return `
-        <div class="dash-card dash-card--full">
-          <h2>${PHASE_LABELS[phase]} <span class="event-phase-count">${events.length}</span></h2>
-          <div class="events-grid" style="margin-top:1rem;">
-            ${events.map((event) => renderMemberEventCard(event, prefix, phase, isRegistered(event, member))).join('')}
+        <section class="event-phase-block event-phase-block--member" id="member-phase-${phase}">
+          <h3 class="event-phase-block__title">
+            ${PHASE_LABELS[phase]}
+            <span class="event-phase-count">${events.length}</span>
+          </h3>
+          <div class="events-phase-list events-phase-list--member">
+            ${events.length
+              ? events.map((event) => renderCompactEventItem(event, prefix, phase)).join('')
+              : `<div class="events-phase-empty"><p>${emptyMessage(phase)}</p></div>`}
           </div>
-        </div>
+        </section>
       `;
     }).join('');
 
-    const registeredSection = `
+    root.innerHTML = `
       <div class="dash-card dash-card--full">
         <h2>My Registrations</h2>
         <div class="events-grid" style="margin-top:1rem;">
@@ -464,9 +504,11 @@
             : '<p class="meta">You have no registered events yet.</p>'}
         </div>
       </div>
+      <div class="dash-card dash-card--full">
+        <h2>All Events by Phase</h2>
+        <div class="event-phases-dashboard event-phases-dashboard--member">${phaseSections}</div>
+      </div>
     `;
-
-    root.innerHTML = registeredSection + phaseSections;
 
     root.querySelectorAll('[data-register-interest]').forEach((btn) => {
       btn.addEventListener('click', () => {
