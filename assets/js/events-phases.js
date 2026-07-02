@@ -476,13 +476,22 @@
     if (!root) return;
 
     const groups = categorizeEvents();
+    const prefix = '../';
 
-    root.innerHTML = PHASE_ORDER.map((phase) => `
-      <section class="event-phase-block event-phase-block--member event-phase-block--${PHASE_META[phase].mod}" id="dashboard-phase-${phase}">
-        ${renderPhaseBlockHeader(phase, groups[phase].length)}
-        <ul class="dash-list">${renderDashboardList(groups[phase], phase)}</ul>
-      </section>
-    `).join('');
+    root.innerHTML = PHASE_ORDER.map((phase) => {
+      const events = groups[phase];
+      const meta = PHASE_META[phase];
+      return `
+        <section class="event-phase-block event-phase-block--member event-phase-block--${meta.mod}" id="dashboard-phase-${phase}">
+          ${renderPhaseBlockHeader(phase, events.length)}
+          <div class="events-phase-list events-phase-list--member events-phase-list--dashboard">
+            ${events.length
+              ? events.map((event) => renderCompactEventItem(event, prefix, phase)).join('')
+              : `<div class="events-phase-empty"><span class="events-phase-empty__icon" aria-hidden="true">${meta.icon}</span><p>${emptyMessage(phase)}</p></div>`}
+          </div>
+        </section>
+      `;
+    }).join('');
   }
 
   function isRegistered(event, member) {
