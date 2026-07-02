@@ -79,10 +79,30 @@
     sessionStorage.removeItem('taunet_preview');
   }
 
+  function migrateMember(raw) {
+    if (!raw) return null;
+    const member = { ...raw };
+
+    if (member.plan === 'welfare' || member.welfareRegistered === true) {
+      member.welfareRegistered = true;
+      member.welfarePackage = member.welfarePackage || 'Welfare Plus — Individual';
+      member.welfareStatus = member.welfareStatus || 'active';
+      member.welfareSince = member.welfareSince || member.memberSince || new Date().getFullYear().toString();
+      member.welfareCover = member.welfareCover || 'Bereavement & hardship';
+      if (member.welfareAlertsEnabled === undefined) member.welfareAlertsEnabled = true;
+      if (member.plan !== 'welfare') {
+        member.plan = 'welfare';
+        member.planLabel = 'Welfare Plus';
+      }
+    }
+
+    return member;
+  }
+
   function getMember() {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : null;
+      return data ? migrateMember(JSON.parse(data)) : null;
     } catch {
       return null;
     }
@@ -123,7 +143,10 @@
       loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = loginForm.querySelector('[name="email"]')?.value;
-        const user = { ...DEMO_USER, email: email || DEMO_USER.email };
+        const memberType = loginForm.querySelector('[name="member_type"]')?.value || 'basic';
+        const user = memberType === 'welfare'
+          ? { ...DEMO_WELFARE_USER, email: email || DEMO_WELFARE_USER.email }
+          : { ...DEMO_USER, email: email || DEMO_USER.email };
         setMember(user);
         const params = new URLSearchParams(window.location.search);
         const redirect = params.get('redirect');
@@ -189,20 +212,35 @@
     const status = member.welfareStatus || (isWelfareMember(member) ? 'active' : 'none');
     const chips = document.querySelectorAll('[data-welfare-status-chip]');
     const note = document.getElementById('welfare-status-note');
+    const badge = document.getElementById('welfare-status-badge');
+    const topbarStatus = document.getElementById('welfare-topbar-status');
+
+    const statusLabel = status === 'active' ? 'Active'
+      : status === 'pending' ? 'Pending approval'
+        : status === 'expired' ? 'Expired' : 'Not enrolled';
 
     chips.forEach((chip) => {
-      chip.classList.remove('status-chip--active', 'status-chip--pending', 'status-chip--welfare');
-      if (status === 'active') {
-        chip.textContent = 'Active';
-        chip.classList.add('status-chip--active');
-      } else if (status === 'pending') {
-        chip.textContent = 'Pending';
-        chip.classList.add('status-chip--pending');
-      } else if (status === 'expired') {
-        chip.textContent = 'Expired';
-        chip.classList.add('status-chip--pending');
-      }
+      chip.textContent = statusLabel;
     });
+
+    if (badge) {
+      badge.dataset.status = status;
+      badge.classList.remove('welfare-status-badge--active', 'welfare-status-badge--pending', 'welfare-status-badge--expired');
+      if (status === 'active') badge.classList.add('welfare-status-badge--active');
+      else if (status === 'pending') badge.classList.add('welfare-status-badge--pending');
+      else if (status === 'expired') badge.classList.add('welfare-status-badge--expired');
+    }
+
+    if (topbarStatus) {
+      if (status === 'active' || status === 'pending') {
+        topbarStatus.hidden = false;
+        topbarStatus.textContent = statusLabel;
+        topbarStatus.classList.remove('status-chip--active', 'status-chip--pending', 'status-chip--welfare');
+        topbarStatus.classList.add(status === 'active' ? 'status-chip--active' : 'status-chip--pending');
+      } else {
+        topbarStatus.hidden = true;
+      }
+    }
 
     if (note) {
       if (status === 'active') {
@@ -218,28 +256,59 @@
   function renderWelfareAlerts(member) {
     const list = document.getElementById('welfare-alert-list');
     const toggle = document.getElementById('welfare-alerts-enabled');
+    const liveAlert = document.getElementById('welfare-live-alert');
+    const liveAlertText = document.getElementById('welfare-live-alert-text');
     if (!list) return;
 
     const enabled = member.welfareAlertsEnabled !== false;
     if (toggle) toggle.checked = enabled;
 
-    list.innerHTML = '';
+    const alertsSection = document.getElementById('welfare-alerts');
+    const alertsList = document.getElementById('welfare-alert-list');
+
     if (!enabled) {
-      list.innerHTML = '<li class="welfare-alert-list__empty">Alerts are turned off. Enable notifications above to see reimbursement updates.</li>';
+      if (liveAlert) liveAlert.hidden = true;
+      if (alertsList) {
+        alertsList.innerHTML = '<li class="welfare-alert-list__empty">Alerts are turned off. Turn on the toggle above to receive reimbursement notifications.</li>';
+      }
       return;
     }
 
-    WELFARE_ALERTS.forEach((alert) => {
-      const item = document.createElement('li');
-      item.className = 'welfare-alert-item';
-      item.innerHTML = `
-        <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
-        <div class="welfare-alert-item__body">
-          <p class="welfare-alert-item__title">${alert.type} — ${alert.amount}</p>
-          <p class="welfare-alert-item__meta">${alert.member} · ${alert.date} · <span class="status-chip status-chip--active">${alert.status}</span></p>
-        </div>
-      `;
-      list.appendChild(item);
+    if (alertsSection) alertsSection.hidden = false;
+
+    const latest = WELFARE_ALERTS[0];
+    const dismissed = sessionStorage.getItem('taunet_welfare_alert_dismissed') === latest.id;
+
+    if (liveAlert && liveAlertText && !dismissed) {
+      liveAlert.hidden = false;
+      liveAlertText.textContent = `A social welfare member (${latest.member}) received a ${latest.type.toLowerCase()} of ${latest.amount} on ${latest.date}.`;
+    } else if (liveAlert) {
+      liveAlert.hidden = true;
+    }
+
+    if (list.children.length === 0) {
+      WELFARE_ALERTS.forEach((alert, index) => {
+        const item = document.createElement('li');
+        item.className = `welfare-alert-item${index === 0 ? ' welfare-alert-item--new' : ''}`;
+        item.dataset.alertId = alert.id;
+        item.innerHTML = `
+          <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
+          <div class="welfare-alert-item__body">
+            <p class="welfare-alert-item__title">${alert.type} — ${alert.amount}</p>
+            <p class="welfare-alert-item__meta">${alert.member} · ${alert.date} · <span class="status-chip status-chip--active">${alert.status}</span>${index === 0 ? ' <span class="welfare-alert-item__new">New</span>' : ''}</p>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+  }
+
+  function initWelfareLiveAlert() {
+    const dismiss = document.getElementById('welfare-live-alert-dismiss');
+    const liveAlert = document.getElementById('welfare-live-alert');
+    dismiss?.addEventListener('click', () => {
+      if (liveAlert) liveAlert.hidden = true;
+      sessionStorage.setItem('taunet_welfare_alert_dismissed', WELFARE_ALERTS[0].id);
     });
   }
 
@@ -303,8 +372,26 @@
       renderWelfareAlerts(updated);
     });
 
+    initWelfareLiveAlert();
     renderWelfareStatus(member);
     renderWelfareAlerts(member);
+  }
+
+  function showWelfareSection(member) {
+    const isWelfare = isWelfareMember(member);
+    const welfareGate = document.getElementById('welfare-gate');
+    const welfareContent = document.getElementById('welfare-content');
+
+    if (!welfareGate || !welfareContent) return;
+
+    if (isWelfare) {
+      welfareGate.hidden = true;
+      welfareContent.hidden = false;
+      initWelfarePortal(member);
+    } else {
+      welfareGate.hidden = false;
+      welfareContent.hidden = true;
+    }
   }
 
   function initDashboard() {
@@ -313,24 +400,12 @@
 
     populateMemberFields(member);
 
-    const isWelfare = isWelfareMember(member);
-
-    const welfareGate = document.getElementById('welfare-gate');
-    const welfareContent = document.getElementById('welfare-content');
-    if (welfareGate && welfareContent) {
-      if (isWelfare) {
-        welfareGate.style.display = 'none';
-        welfareContent.style.display = 'block';
-        initWelfarePortal(member);
-      } else {
-        welfareGate.style.display = 'block';
-        welfareContent.style.display = 'none';
-      }
-    }
+    showWelfareSection(member);
 
     initWelfareRegister(member);
 
     const welfareQuickAction = document.querySelector('.quick-actions [data-welfare-only]');
+    const isWelfare = isWelfareMember(member);
     if (welfareQuickAction && !isWelfare) {
       welfareQuickAction.textContent = 'Register for Welfare';
       welfareQuickAction.href = 'dashboard.html#welfare-register-card';
@@ -394,7 +469,7 @@
       window.location.href = 'dashboard.html';
     }
     initAuth();
-  } else if (path.includes('/members/')) {
+  } else if (path.includes('members')) {
     applyPreviewMode();
     initDashboard();
     showPreviewBanner();

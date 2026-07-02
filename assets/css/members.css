@@ -313,6 +313,100 @@
   font-size: 0.95rem;
 }
 
+.welfare-live-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, rgba(210, 105, 30, 0.14), rgba(210, 105, 30, 0.06));
+  border: 1px solid rgba(210, 105, 30, 0.35);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(210, 105, 30, 0.1);
+}
+
+.welfare-live-alert__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.welfare-live-alert__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.welfare-live-alert__body strong {
+  display: block;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  margin-bottom: 0.25rem;
+}
+
+.welfare-live-alert__body p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-text);
+}
+
+.welfare-live-alert__dismiss {
+  background: none;
+  border: none;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+}
+
+.welfare-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--color-text-muted);
+}
+
+.welfare-status-badge__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.welfare-status-badge--active {
+  background: rgba(34, 139, 34, 0.12);
+  color: var(--color-green);
+}
+
+.welfare-status-badge--active .welfare-status-badge__dot {
+  box-shadow: 0 0 0 4px rgba(34, 139, 34, 0.2);
+  animation: welfare-pulse 2s ease-in-out infinite;
+}
+
+.welfare-status-badge--pending {
+  background: rgba(210, 105, 30, 0.12);
+  color: #b8860b;
+}
+
+.welfare-status-badge--expired {
+  background: rgba(180, 50, 50, 0.1);
+  color: #b43232;
+}
+
+@keyframes welfare-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 .welfare-register-intro {
   margin-bottom: 1.25rem;
   color: var(--color-text-muted);
@@ -462,6 +556,23 @@
 .welfare-alert-item__meta .status-chip {
   font-size: 0.65rem;
   padding: 0.2rem 0.5rem;
+}
+
+.welfare-alert-item--new {
+  border-color: rgba(210, 105, 30, 0.35);
+  background: rgba(210, 105, 30, 0.1);
+}
+
+.welfare-alert-item__new {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 99px;
+  background: var(--color-accent);
+  color: white;
 }
 
 @media (max-width: 768px) {

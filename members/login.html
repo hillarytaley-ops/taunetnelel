@@ -40,6 +40,14 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label for="member-type">Account type</label>
+          <select id="member-type" name="member_type">
+            <option value="basic">Association member (Basic)</option>
+            <option value="welfare">Social welfare member (Welfare Plus)</option>
+          </select>
+        </div>
+
         <button type="submit" class="btn btn--primary login-submit">Sign in</button>
 
         <p class="login-form__footer">
@@ -59,7 +67,7 @@
     </div>
   </main>
 
-  <script src="../assets/js/members.js"></script>
+  <script src="../assets/js/members.js?v=9"></script>
   <script>
     document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {

@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=8">
+  <link rel="stylesheet" href="../assets/css/members.css?v=9">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -31,9 +31,9 @@
     <main class="members-main">
       <div class="members-topbar">
         <h1>Welfare — Kerebeetab Kaa</h1>
-        <span class="status-chip status-chip--welfare" data-welfare-only>Welfare Plus</span>
+        <span class="status-chip status-chip--active" id="welfare-topbar-status" hidden>Active</span>
       </div>
-      <div id="welfare-gate" class="dash-card welfare-locked" style="display:none;">
+      <div id="welfare-gate" class="dash-card welfare-locked" hidden>
         <div class="icon">🔒</div>
         <h2>Social Welfare Registration Required</h2>
         <p style="max-width:480px;margin:1rem auto;">The welfare portal is available to registered social welfare members. If you are already an association member, register for a welfare package from your dashboard.</p>
@@ -42,15 +42,27 @@
           <a href="membership.html" class="btn btn--ghost">View membership plans</a>
         </div>
       </div>
-      <div id="welfare-content" style="display:none;">
+      <div id="welfare-content" hidden>
+        <div id="welfare-live-alert" class="welfare-live-alert" role="alert" hidden>
+          <div class="welfare-live-alert__icon" aria-hidden="true">&#128276;</div>
+          <div class="welfare-live-alert__body">
+            <strong>Reimbursement alert</strong>
+            <p id="welfare-live-alert-text">A social welfare member received a bereavement reimbursement.</p>
+          </div>
+          <button type="button" class="welfare-live-alert__dismiss" id="welfare-live-alert-dismiss" aria-label="Dismiss alert">&times;</button>
+        </div>
+
         <div class="dash-grid">
-          <div class="dash-card dash-card--full welfare-status-card">
+          <div class="dash-card dash-card--full welfare-status-card" id="welfare-membership-status-card">
             <div class="welfare-status-card__head">
               <div>
-                <h2>Your Welfare Membership</h2>
-                <p class="welfare-status-card__package">Package: <strong data-welfare-package>Welfare Plus</strong></p>
+                <h2>Social Welfare Membership</h2>
+                <p class="welfare-status-card__package">Package: <strong data-welfare-package>Welfare Plus — Individual</strong></p>
               </div>
-              <span class="status-chip status-chip--active" id="welfare-membership-status" data-welfare-status-chip>Active</span>
+              <div class="welfare-status-badge" id="welfare-status-badge" data-status="active">
+                <span class="welfare-status-badge__dot" aria-hidden="true"></span>
+                <span class="welfare-status-badge__label" data-welfare-status-chip>Active</span>
+              </div>
             </div>
             <ul class="welfare-status-meta">
               <li><span>Member since</span><strong data-welfare-since>2024</strong></li>
@@ -65,11 +77,33 @@
               <h2>Reimbursement Alerts</h2>
               <label class="welfare-alert-toggle">
                 <input type="checkbox" id="welfare-alerts-enabled" checked>
-                <span>Notify me when a member receives a reimbursement</span>
+                <span>Alert me when a member receives a reimbursement</span>
               </label>
             </div>
-            <p class="welfare-alerts-intro">Community transparency updates when the Welfare Committee approves bereavement or hardship reimbursements. Member names are anonymised for privacy.</p>
-            <ul class="welfare-alert-list" id="welfare-alert-list" aria-live="polite"></ul>
+            <p class="welfare-alerts-intro">When the Welfare Committee approves a bereavement or hardship reimbursement, all enrolled social welfare members are notified here. Member names are anonymised for privacy.</p>
+            <ul class="welfare-alert-list" id="welfare-alert-list" aria-live="polite">
+              <li class="welfare-alert-item welfare-alert-item--new" data-alert-id="a1">
+                <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
+                <div class="welfare-alert-item__body">
+                  <p class="welfare-alert-item__title">Bereavement reimbursement — $2,500</p>
+                  <p class="welfare-alert-item__meta">Member #1042 · 28 Jun 2026 · <span class="status-chip status-chip--active">Approved</span> <span class="welfare-alert-item__new">New</span></p>
+                </div>
+              </li>
+              <li class="welfare-alert-item" data-alert-id="a2">
+                <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
+                <div class="welfare-alert-item__body">
+                  <p class="welfare-alert-item__title">Hardship support — $800</p>
+                  <p class="welfare-alert-item__meta">Member #0987 · 12 Jun 2026 · <span class="status-chip status-chip--active">Approved</span></p>
+                </div>
+              </li>
+              <li class="welfare-alert-item" data-alert-id="a3">
+                <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
+                <div class="welfare-alert-item__body">
+                  <p class="welfare-alert-item__title">Bereavement reimbursement — $2,500</p>
+                  <p class="welfare-alert-item__meta">Member #0911 · 30 May 2026 · <span class="status-chip status-chip--active">Approved</span></p>
+                </div>
+              </li>
+            </ul>
           </div>
 
           <div class="dash-card dash-card--full" id="welfare-info-request">
@@ -155,6 +189,6 @@
       </div>
     </main>
   </div>
-  <script src="../assets/js/members.js?v=8"></script>
+  <script src="../assets/js/members.js?v=9"></script>
 </body>
 </html>
