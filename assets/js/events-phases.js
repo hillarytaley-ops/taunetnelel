@@ -138,19 +138,67 @@
     }
   ];
 
-  const PHASE_LABELS = {
-    upcoming: 'Upcoming Events',
-    present: 'Present Events',
-    'most-recent': 'Most Recent Events',
-    past: 'Past Events'
+  const PHASE_META = {
+    upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'Book tickets & save the date', mod: 'upcoming' },
+    present: { label: 'Present Events', icon: '●', hint: 'Live right now', mod: 'present', live: true },
+    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'Ended in the last 30 days', mod: 'recent' },
+    past: { label: 'Past Events', icon: '◷', hint: 'Browse photos & memories', mod: 'past' }
   };
 
-  const PHASE_EYEBROWS = {
-    upcoming: 'On the horizon',
-    present: 'Happening now',
-    'most-recent': 'Just finished',
-    past: 'Archive'
-  };
+  const PHASE_ORDER = ['upcoming', 'present', 'most-recent', 'past'];
+
+  function phaseLabel(phase) {
+    return PHASE_META[phase]?.label || phase;
+  }
+
+  function renderPhaseFlowStrip() {
+    return `
+      <div class="events-phase-flow" aria-hidden="true">
+        <div class="events-phase-flow__track">
+          ${PHASE_ORDER.map((phase, i) => {
+            const meta = PHASE_META[phase];
+            const arrow = i < PHASE_ORDER.length - 1 ? '<span class="events-phase-flow__arrow">→</span>' : '';
+            return `
+              <span class="events-phase-flow__step events-phase-flow__step--${meta.mod}${meta.live ? ' events-phase-flow__step--live' : ''}">
+                <span class="events-phase-flow__dot"></span>${meta.short || meta.label.split(' ')[0]}
+              </span>${arrow}`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPhaseHeader(phase, count) {
+    const meta = PHASE_META[phase];
+    return `
+      <header class="events-phase-column__head events-phase-column__head--${meta.mod}">
+        <div class="events-phase-column__title-wrap">
+          <span class="events-phase-column__icon${meta.live ? ' events-phase-column__icon--live' : ''}" aria-hidden="true">${meta.icon}</span>
+          <div>
+            <h3>${meta.label}</h3>
+            <p class="events-phase-column__hint">${meta.hint}</p>
+          </div>
+        </div>
+        <span class="events-phase-column__count">${count}</span>
+      </header>
+    `;
+  }
+
+  function renderPhaseBlockHeader(phase, count) {
+    const meta = PHASE_META[phase];
+    return `
+      <header class="event-phase-block__head event-phase-block__head--${meta.mod}">
+        <div class="event-phase-block__title-wrap">
+          <span class="events-phase-column__icon${meta.live ? ' events-phase-column__icon--live' : ''}" aria-hidden="true">${meta.icon}</span>
+          <div>
+            <h3 class="event-phase-block__title">${meta.label}</h3>
+            <p class="events-phase-column__hint">${meta.hint}</p>
+          </div>
+        </div>
+        <span class="event-phase-count">${count}</span>
+      </header>
+    `;
+  }
 
   function parseDate(value) {
     return new Date(value);
@@ -312,23 +360,27 @@
     const img = assetPath(event.image, prefix);
     const href = event.galleryUrl ? assetPath(event.galleryUrl, prefix) : (event.bookingUrl || '#');
     const linkAttrs = event.bookingUrl?.startsWith('http') ? ' target="_blank" rel="noopener"' : '';
-    const phaseLabel = phase === 'present' ? 'Live now' : phase === 'most-recent' ? 'Recent' : phase === 'upcoming' ? 'Upcoming' : '';
+    const meta = PHASE_META[phase];
+    const phaseLabelText = phase === 'present' ? 'Live now' : phase === 'most-recent' ? 'Recent' : phase === 'upcoming' ? 'Upcoming' : '';
 
     let action = '';
     if (phase === 'upcoming' && event.bookingUrl) {
-      action = `<a href="${event.bookingUrl.startsWith('http') ? event.bookingUrl : assetPath(event.bookingUrl, prefix)}" class="events-phase-item__link"${linkAttrs}>Booking</a>`;
+      action = `<a href="${event.bookingUrl.startsWith('http') ? event.bookingUrl : assetPath(event.bookingUrl, prefix)}" class="events-phase-item__action events-phase-item__action--book"${linkAttrs}>Booking →</a>`;
     } else if ((phase === 'past' || phase === 'most-recent') && event.galleryUrl) {
-      action = `<a href="${href}" class="events-phase-item__link">Gallery</a>`;
+      action = `<a href="${href}" class="events-phase-item__action events-phase-item__action--gallery">Gallery →</a>`;
+    } else if (phase === 'present') {
+      action = `<span class="events-phase-item__action events-phase-item__action--live">Join us today</span>`;
     }
 
     return `
-      <article class="events-phase-item events-phase-item--${phase}">
+      <article class="events-phase-item events-phase-item--${meta.mod}">
         <a href="${href}" class="events-phase-item__media"${event.galleryUrl ? '' : linkAttrs}>
           <img src="${img}" alt="${event.title}" width="120" height="80" loading="lazy">
+          <span class="events-phase-item__overlay"></span>
           <span class="events-phase-item__date">${badge.day} ${badge.month}</span>
         </a>
         <div class="events-phase-item__body">
-          ${phaseLabel ? `<span class="events-phase-item__badge">${phaseLabel}</span>` : ''}
+          ${phaseLabelText ? `<span class="events-phase-item__badge events-phase-item__badge--${meta.mod}">${phaseLabelText}</span>` : ''}
           <h4>${event.title}</h4>
           <p>${event.meta || event.location}</p>
           ${action}
@@ -340,7 +392,8 @@
   function renderPhaseSection(phase, events, prefix, compact) {
     if (compact) {
       if (!events.length) {
-        return `<div class="events-phase-empty"><p>${emptyMessage(phase)}</p></div>`;
+        const icon = PHASE_META[phase]?.icon || '◷';
+        return `<div class="events-phase-empty"><span class="events-phase-empty__icon" aria-hidden="true">${icon}</span><p>${emptyMessage(phase)}</p></div>`;
       }
       return `<div class="events-phase-list">${events.map((e) => renderCompactEventItem(e, prefix, phase)).join('')}</div>`;
     }
@@ -367,17 +420,34 @@
 
   function renderPublicPage() {
     const groups = categorizeEvents();
-    const phases = ['upcoming', 'present', 'most-recent', 'past'];
+    const row = document.querySelector('.events-phases-row');
+    const flowMount = document.querySelector('[data-events-phase-flow]');
 
-    phases.forEach((phase) => {
-      const root = document.getElementById(`events-${phase}-root`);
-      if (root) {
-        root.innerHTML = renderPhaseSection(phase, groups[phase], '', true);
-      }
+    if (flowMount) {
+      flowMount.innerHTML = renderPhaseFlowStrip();
+    }
 
-      const countEl = document.querySelector(`[data-events-count="${phase}"]`);
-      if (countEl) countEl.textContent = String(groups[phase].length);
-    });
+    if (row) {
+      row.innerHTML = PHASE_ORDER.map((phase) => {
+        const meta = PHASE_META[phase];
+        const sectionId = phase === 'most-recent' ? 'most-recent' : phase;
+        return `
+          <section class="events-phase-column events-phase-column--${meta.mod}" id="${sectionId}" aria-labelledby="${sectionId}-heading">
+            ${renderPhaseHeader(phase, groups[phase].length).replace(`<h3>`, `<h3 id="${sectionId}-heading">`)}
+            <div id="events-${phase}-root" class="events-phase-column__body" aria-live="polite">
+              ${renderPhaseSection(phase, groups[phase], '', true)}
+            </div>
+          </section>
+        `;
+      }).join('');
+    } else {
+      PHASE_ORDER.forEach((phase) => {
+        const root = document.getElementById(`events-${phase}-root`);
+        if (root) root.innerHTML = renderPhaseSection(phase, groups[phase], '', true);
+        const countEl = document.querySelector(`[data-events-count="${phase}"]`);
+        if (countEl) countEl.textContent = String(groups[phase].length);
+      });
+    }
   }
 
   function formatShortDate(event) {
@@ -401,17 +471,15 @@
 
   function renderMemberDashboard() {
     const root = document.querySelector('[data-events-dashboard]');
+    const flowMount = document.querySelector('[data-events-phase-flow-dashboard]');
+    if (flowMount) flowMount.innerHTML = renderPhaseFlowStrip();
     if (!root) return;
 
     const groups = categorizeEvents();
-    const phases = ['upcoming', 'present', 'most-recent', 'past'];
 
-    root.innerHTML = phases.map((phase) => `
-      <section class="event-phase-block" id="dashboard-phase-${phase}">
-        <h3 class="event-phase-block__title">
-          ${PHASE_LABELS[phase]}
-          <span class="event-phase-count">${groups[phase].length}</span>
-        </h3>
+    root.innerHTML = PHASE_ORDER.map((phase) => `
+      <section class="event-phase-block event-phase-block--member event-phase-block--${PHASE_META[phase].mod}" id="dashboard-phase-${phase}">
+        ${renderPhaseBlockHeader(phase, groups[phase].length)}
         <ul class="dash-list">${renderDashboardList(groups[phase], phase)}</ul>
       </section>
     `).join('');
@@ -478,25 +546,23 @@
       });
     });
 
-    const phaseSections = ['upcoming', 'present', 'most-recent', 'past'].map((phase) => {
+    const phaseSections = PHASE_ORDER.map((phase) => {
       const events = groups[phase];
+      const meta = PHASE_META[phase];
       return `
-        <section class="event-phase-block event-phase-block--member" id="member-phase-${phase}">
-          <h3 class="event-phase-block__title">
-            ${PHASE_LABELS[phase]}
-            <span class="event-phase-count">${events.length}</span>
-          </h3>
+        <section class="event-phase-block event-phase-block--member event-phase-block--${meta.mod}" id="member-phase-${phase}">
+          ${renderPhaseBlockHeader(phase, events.length)}
           <div class="events-phase-list events-phase-list--member">
             ${events.length
               ? events.map((event) => renderCompactEventItem(event, prefix, phase)).join('')
-              : `<div class="events-phase-empty"><p>${emptyMessage(phase)}</p></div>`}
+              : `<div class="events-phase-empty"><span class="events-phase-empty__icon" aria-hidden="true">${meta.icon}</span><p>${emptyMessage(phase)}</p></div>`}
           </div>
         </section>
       `;
     }).join('');
 
     root.innerHTML = `
-      <div class="dash-card dash-card--full">
+      <div class="dash-card dash-card--full dash-card--registrations-highlight">
         <h2>My Registrations</h2>
         <div class="events-grid" style="margin-top:1rem;">
           ${registered.length
@@ -504,11 +570,16 @@
             : '<p class="meta">You have no registered events yet.</p>'}
         </div>
       </div>
-      <div class="dash-card dash-card--full">
+      <div class="dash-card dash-card--full dash-card--events-by-phase">
         <h2>All Events by Phase</h2>
+        <p class="event-phases-dashboard__intro">Events flow automatically through each stage — watch them move from left to right over time.</p>
+        <div data-events-phase-flow></div>
         <div class="event-phases-dashboard event-phases-dashboard--member">${phaseSections}</div>
       </div>
     `;
+
+    const flowMount = root.querySelector('[data-events-phase-flow]');
+    if (flowMount) flowMount.innerHTML = renderPhaseFlowStrip();
 
     root.querySelectorAll('[data-register-interest]').forEach((btn) => {
       btn.addEventListener('click', () => {

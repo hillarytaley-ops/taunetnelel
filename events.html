@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=7">
-  <link rel="stylesheet" href="assets/css/events.css?v=9">
+  <link rel="stylesheet" href="assets/css/events.css?v=10">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -137,39 +137,9 @@
             <p>Events move automatically from upcoming → present → most recent → past based on their dates.</p>
           </header>
 
-          <div class="events-phases-row">
-            <section class="events-phase-column" id="upcoming" aria-labelledby="upcoming-heading">
-              <header class="events-phase-column__head">
-                <h3 id="upcoming-heading">Upcoming Events</h3>
-                <span class="events-phase-column__count" data-events-count="upcoming">0</span>
-              </header>
-              <div id="events-upcoming-root" class="events-phase-column__body" aria-live="polite"></div>
-            </section>
+          <div data-events-phase-flow></div>
 
-            <section class="events-phase-column events-phase-column--present" id="present" aria-labelledby="present-heading">
-              <header class="events-phase-column__head">
-                <h3 id="present-heading">Present Events</h3>
-                <span class="events-phase-column__count" data-events-count="present">0</span>
-              </header>
-              <div id="events-present-root" class="events-phase-column__body" aria-live="polite"></div>
-            </section>
-
-            <section class="events-phase-column events-phase-column--recent" id="most-recent" aria-labelledby="most-recent-heading">
-              <header class="events-phase-column__head">
-                <h3 id="most-recent-heading">Most Recent</h3>
-                <span class="events-phase-column__count" data-events-count="most-recent">0</span>
-              </header>
-              <div id="events-most-recent-root" class="events-phase-column__body" aria-live="polite"></div>
-            </section>
-
-            <section class="events-phase-column events-phase-column--past" id="past" aria-labelledby="past-heading">
-              <header class="events-phase-column__head">
-                <h3 id="past-heading">Past Events</h3>
-                <span class="events-phase-column__count" data-events-count="past">0</span>
-              </header>
-              <div id="events-past-root" class="events-phase-column__body" aria-live="polite"></div>
-            </section>
-          </div>
+          <div class="events-phases-row"></div>
 
           <p class="events-block__footer">
             <a href="gallery.html" class="btn btn--ghost">View event gallery →</a>
@@ -342,7 +312,7 @@
 
   <a href="members/register.html" class="mobile-join-fab">Join Us</a>
 
-  <script src="assets/js/events-phases.js?v=9"></script>
+  <script src="assets/js/events-phases.js?v=10"></script>
   <script src="assets/js/main.js?v=7"></script>
 </body>
 </html>
