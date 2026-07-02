@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=7">
-  <link rel="stylesheet" href="assets/css/events.css">
+  <link rel="stylesheet" href="assets/css/events.css?v=7">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -138,8 +138,49 @@
             <p>New gatherings will be announced here — subscribe on our <a href="contact.html">Contact page</a> to stay informed.</p>
           </header>
 
-          <div class="events-upcoming-empty" aria-live="polite">
-            <p>No upcoming events at the moment. Check back soon or <a href="#inquiry">send an enquiry</a> if you have questions.</p>
+          <div class="events-upcoming-stack" aria-live="polite">
+            <article class="upcoming-event upcoming-event--featured">
+              <figure class="upcoming-event__poster">
+                <img src="wp-content/uploads/2026/01/Taunet-Nelel-Galla.jpg" alt="Taunet Nelel Gala 2026" width="480" height="320" loading="lazy">
+                <div class="upcoming-event__date-badge">
+                  <span class="day">18</span>
+                  <span class="month">Apr</span>
+                </div>
+              </figure>
+              <div class="upcoming-event__details">
+                <div class="upcoming-event__badges">
+                  <span class="event-card__badge">Featured</span>
+                </div>
+                <h3>Taunet Nelel Gala 2026</h3>
+                <p class="upcoming-event__meta">Saturday, 18 April 2026 · 2pm–11pm · Almas Receptions, Victoria</p>
+                <p class="upcoming-event__desc">Celebrate five years of Taunet Nelel with music, dancing, and delicious food. Family-friendly and alcohol-free.</p>
+                <div class="upcoming-event__actions">
+                  <a href="https://www.eventbrite.com.au/e/taunet-nelel-2026-gala-tickets-1980043622777" class="btn btn--accent" target="_blank" rel="noopener">Booking</a>
+                  <a href="assets/events/taunet-nelel-gala-2026.ics" class="btn btn--outline" download>Add to calendar</a>
+                </div>
+              </div>
+            </article>
+
+            <p class="events-upcoming-stack__note">Also coming up</p>
+
+            <article class="upcoming-event upcoming-event--secondary">
+              <figure class="upcoming-event__thumb">
+                <img src="wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg" alt="Sports Day 2026" width="320" height="200" loading="lazy">
+                <div class="upcoming-event__date-badge">
+                  <span class="day">19</span>
+                  <span class="month">Apr</span>
+                </div>
+              </figure>
+              <div class="upcoming-event__details">
+                <span class="event-card__badge">Family day</span>
+                <h3>Sports Day</h3>
+                <p class="upcoming-event__meta">Sunday, 19 April 2026 · Victoria · venue TBC</p>
+                <p class="upcoming-event__desc">A fun-filled family sports day for all ages. Register your interest and we will confirm details as they are finalised.</p>
+                <div class="upcoming-event__actions">
+                  <a href="#inquiry" class="btn btn--accent">Booking</a>
+                </div>
+              </div>
+            </article>
           </div>
         </article>
       </div>
@@ -155,26 +196,6 @@
           </header>
 
         <div class="past-events-grid past-events-grid--compact">
-          <article class="past-event-card">
-            <a href="gallery.html#sports-day" class="past-event-card__media">
-              <img src="wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg" alt="Sports Day 2026" width="320" height="200" loading="lazy">
-              <div class="past-event-card__date"><span class="day">19</span><span class="month">Apr 2026</span></div>
-            </a>
-            <div class="past-event-card__body">
-              <h3>Sports Day</h3>
-              <p>Victoria · family sports day</p>
-            </div>
-          </article>
-          <article class="past-event-card">
-            <a href="gallery.html#gala-2026" class="past-event-card__media">
-              <img src="wp-content/uploads/2026/01/Taunet-Nelel-Galla.jpg" alt="Taunet Nelel Gala 2026" width="320" height="200" loading="lazy">
-              <div class="past-event-card__date"><span class="day">18</span><span class="month">Apr 2026</span></div>
-            </a>
-            <div class="past-event-card__body">
-              <h3>Taunet Nelel Gala 2026</h3>
-              <p>Almas Receptions · 2pm – 11pm</p>
-            </div>
-          </article>
           <article class="past-event-card">
             <a href="gallery.html#agm-2025" class="past-event-card__media">
               <img src="wp-content/uploads/2025/09/Celebration.jpg" alt="Taunet Nelel AGM 2025" width="320" height="200" loading="lazy">
