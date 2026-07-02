@@ -133,6 +133,64 @@
 .dash-card--registrations { grid-column: span 6; }
 .dash-card--benefits { grid-column: span 6; }
 .dash-card--full { grid-column: span 12; }
+.dash-card--events-phases { grid-column: span 12; }
+
+.event-phases-dashboard {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.event-phases-dashboard__intro {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin: -0.35rem 0 0;
+}
+
+.event-phase-block {
+  padding: 1rem 1.1rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(139, 69, 19, 0.08);
+}
+
+.event-phase-block__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.65rem;
+}
+
+.event-phase-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 99px;
+  background: rgba(210, 105, 30, 0.15);
+  color: var(--color-accent);
+  font-size: 0.72rem;
+}
+
+.event-phase-block .dash-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .event-phases-dashboard {
+    grid-template-columns: 1fr;
+  }
+}
 
 .dash-card h2 {
   font-size: 1rem;

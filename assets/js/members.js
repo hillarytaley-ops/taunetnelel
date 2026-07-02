@@ -19,7 +19,7 @@
     memberSince: '2024',
     welfareRegistered: false,
     registrations: [
-      { event: 'Taunet Nelel Gala 2026', status: 'Confirmed', date: '18 Apr 2026' }
+      { eventId: 'gala-2026', event: 'Taunet Nelel Gala 2026', status: 'Confirmed', date: '18 Apr 2026' }
     ]
   };
 
@@ -394,6 +394,30 @@
     }
   }
 
+  function renderMemberRegistrations(member) {
+    const list = document.querySelector('[data-member-registrations]');
+    if (!list || !window.TaunetEventsPhases) return;
+
+    const groups = window.TaunetEventsPhases.categorizeEvents();
+    const allEvents = [...groups.upcoming, ...groups.present, ...groups['most-recent'], ...groups.past];
+    const registered = allEvents.filter((event) =>
+      member.registrations?.some((r) => r.eventId === event.id || r.event === event.title)
+    );
+
+    if (!registered.length) {
+      list.innerHTML = '<li><span>No registrations yet</span></li>';
+      return;
+    }
+
+    list.innerHTML = registered.map((event) => {
+      const reg = member.registrations.find((r) => r.eventId === event.id || r.event === event.title);
+      const phase = window.TaunetEventsPhases.getEventPhase(event);
+      const chipClass = phase === 'present' ? 'status-chip--active' : phase === 'upcoming' ? 'status-chip--active' : 'status-chip--pending';
+      const chipText = reg?.status || (phase === 'past' ? 'Attended' : phase === 'present' ? 'Live' : 'Confirmed');
+      return `<li><span>${event.title}</span><span class="status-chip ${chipClass}">${chipText}</span></li>`;
+    }).join('');
+  }
+
   function initDashboard() {
     const member = requireAuth();
     if (!member) return;
@@ -403,6 +427,11 @@
     showWelfareSection(member);
 
     initWelfareRegister(member);
+
+    if (window.TaunetEventsPhases) {
+      window.TaunetEventsPhases.initMemberEvents(member);
+      renderMemberRegistrations(member);
+    }
 
     const welfareQuickAction = document.querySelector('.quick-actions [data-welfare-only]');
     const isWelfare = isWelfareMember(member);

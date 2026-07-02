@@ -403,10 +403,55 @@ body[data-page="events"] .page-hero {
 }
 
 #upcoming:target,
+#present:target,
+#most-recent:target,
 #past:target,
 #gallery:target,
 #inquiry:target {
   scroll-margin-top: calc(var(--header-h) + var(--page-subnav-h) + 1rem);
+}
+
+.page-subnav__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin-left: 0.35rem;
+  padding: 0 0.35rem;
+  border-radius: 99px;
+  background: rgba(210, 105, 30, 0.15);
+  color: var(--color-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.upcoming-event--present {
+  border-color: rgba(34, 139, 34, 0.35);
+  box-shadow: 0 4px 20px rgba(34, 139, 34, 0.1);
+}
+
+.event-card__badge--live,
+.event-card__badge--phase {
+  background: rgba(34, 139, 34, 0.15);
+  color: var(--color-green);
+}
+
+.past-event-card--most-recent {
+  border-color: rgba(210, 105, 30, 0.25);
+}
+
+.past-event-card__body .event-card__badge--phase {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 99px;
+  background: rgba(210, 105, 30, 0.12);
+  color: var(--color-accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 @media (max-width: 768px) {

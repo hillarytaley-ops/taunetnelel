@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=8">
+  <link rel="stylesheet" href="../assets/css/members.css?v=9">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -54,25 +54,15 @@
             <a href="welfare.html" class="btn btn--ghost" data-welfare-only>Welfare Support</a>
           </div>
         </div>
-        <div class="dash-card dash-card--events">
-          <h2>Upcoming Events</h2>
-          <ul class="dash-list">
-            <li><span>Taunet Nelel Gala</span><span class="meta">18 Apr 2026</span></li>
-            <li><span>Sports Day</span><span class="meta">19 Apr 2026 · TBC</span></li>
-            <li><span>Kalenjin Language Session</span><span class="meta">Monthly</span></li>
-          </ul>
-        </div>
-        <div class="dash-card dash-card--announce">
-          <h2>Announcements</h2>
-          <ul class="dash-list">
-            <li><span>Sports Day venue to be confirmed</span><span class="meta">New</span></li>
-            <li><span>Gala tickets now on sale</span><span class="meta">2 days ago</span></li>
-            <li><span>New language session dates posted</span><span class="meta">1 week ago</span></li>
-          </ul>
+        <div class="dash-card dash-card--full dash-card--events-phases">
+          <h2>Community Events</h2>
+          <p class="event-phases-dashboard__intro">Events move automatically from upcoming → present → most recent → past based on their dates.</p>
+          <div class="event-phases-dashboard" data-events-dashboard></div>
+          <a href="events.html" style="font-size:0.9rem;margin-top:0.75rem;display:inline-block;">View all my events →</a>
         </div>
         <div class="dash-card dash-card--registrations">
           <h2>My Registrations</h2>
-          <ul class="dash-list">
+          <ul class="dash-list" data-member-registrations>
             <li><span>Taunet Nelel Gala 2026</span><span class="status-chip status-chip--active">Confirmed</span></li>
           </ul>
           <a href="events.html" style="font-size:0.9rem;margin-top:0.75rem;display:inline-block;">View all events →</a>
@@ -129,6 +119,7 @@
       </div>
     </main>
   </div>
-  <script src="../assets/js/members.js?v=8"></script>
+  <script src="../assets/js/events-phases.js?v=8"></script>
+  <script src="../assets/js/members.js?v=9"></script>
 </body>
 </html>
