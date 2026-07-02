@@ -25,41 +25,10 @@ window.TAUNET_FIND_PHOTOS = [
 /** Event photo albums — sourced from taunetnelel.org WordPress media */
 window.TAUNET_GALLERY = [
   {
-    id: 'pageant-2025',
-    nav: 'Pageant',
-    group: 'recent',
-    previewLimit: 6,
-    title: 'Mr & Miss Taunet 2025',
-    date: '8 November 2025',
-    description: 'Community pageant at Almas Reception — celebration, culture, and youth leadership.',
-    externalAlbums: [
-      {
-        label: 'Full photo album (PQ Photography — Pixieset)',
-        url: 'https://pqphotography90.pixieset.com/taunetnelelbeautypeagantcontest/'
-      }
-    ],
-    photos: [
-      {
-        src: 'wp-content/uploads/2025/11/TN-beauty-peagant.jpg',
-        alt: 'Mr and Miss Taunet 2025 pageant',
-        downloadName: 'Taunet-Pageant-2025-cover.jpg'
-      },
-      {
-        src: 'wp-content/uploads/2025/10/Beauty-Pageant-show.jpeg',
-        alt: 'Beauty pageant stage presentation',
-        downloadName: 'Taunet-Pageant-2025-show.jpg'
-      },
-      {
-        src: 'wp-content/uploads/2025/10/Youre-Invited-Mr-Miss-Taunet-2025.jpeg',
-        alt: 'Mr and Miss Taunet 2025 invitation',
-        downloadName: 'Taunet-Pageant-2025-invite.jpg'
-      }
-    ]
-  },
-  {
     id: 'gala-2026',
     nav: 'Gala 2026',
     group: 'recent',
+    sortDate: '2026-04-18',
     previewLimit: 8,
     title: 'Taunet Nelel Gala 2026',
     date: '18 April 2026',
@@ -102,22 +71,56 @@ window.TAUNET_GALLERY = [
     }))
   },
   {
-    id: 'gala-2025',
-    nav: 'Gala 2025',
+    id: 'agm-2025',
+    nav: 'AGM',
     group: 'past',
-    title: 'Taunet Nelel Gala 2025',
-    date: '26 April 2025',
-    description: 'Annual gala night at Dandenong Stadium — music, culture, and fellowship.',
+    sortDate: '2025-11-29',
+    title: 'Annual General Meeting 2025',
+    date: '29 November 2025',
+    description: 'Taunet Nelel AGM held online with members across Victoria.',
     photos: [
       {
-        src: 'wp-content/uploads/2025/10/TAUNET-NELE-GALA.jpg',
-        alt: 'Taunet Nelel Gala 2025 promotional banner',
-        downloadName: 'Taunet-Gala-2025-banner.jpg'
+        src: 'wp-content/uploads/2025/09/Celebration.jpg',
+        alt: 'Taunet Nelel AGM community celebration',
+        downloadName: 'Taunet-AGM-2025-celebration.jpg'
       },
       {
-        src: 'wp-content/uploads/2025/10/Taunet-Nelel-Gala.png',
-        alt: 'Taunet Nelel Gala 2025 branding',
-        downloadName: 'Taunet-Gala-2025-branding.png'
+        src: 'wp-content/uploads/2025/10/Membership.jpg',
+        alt: 'Taunet Nelel members community',
+        downloadName: 'Taunet-AGM-2025-members.jpg'
+      }
+    ]
+  },
+  {
+    id: 'pageant-2025',
+    nav: 'Pageant',
+    group: 'past',
+    sortDate: '2025-11-08',
+    previewLimit: 6,
+    title: 'Mr & Miss Taunet 2025',
+    date: '8 November 2025',
+    description: 'Community pageant at Almas Reception — celebration, culture, and youth leadership.',
+    externalAlbums: [
+      {
+        label: 'Full photo album (PQ Photography — Pixieset)',
+        url: 'https://pqphotography90.pixieset.com/taunetnelelbeautypeagantcontest/'
+      }
+    ],
+    photos: [
+      {
+        src: 'wp-content/uploads/2025/11/TN-beauty-peagant.jpg',
+        alt: 'Mr and Miss Taunet 2025 pageant',
+        downloadName: 'Taunet-Pageant-2025-cover.jpg'
+      },
+      {
+        src: 'wp-content/uploads/2025/10/Beauty-Pageant-show.jpeg',
+        alt: 'Beauty pageant stage presentation',
+        downloadName: 'Taunet-Pageant-2025-show.jpg'
+      },
+      {
+        src: 'wp-content/uploads/2025/10/Youre-Invited-Mr-Miss-Taunet-2025.jpeg',
+        alt: 'Mr and Miss Taunet 2025 invitation',
+        downloadName: 'Taunet-Pageant-2025-invite.jpg'
       }
     ]
   },
@@ -125,6 +128,7 @@ window.TAUNET_GALLERY = [
     id: 'volleyball-2025',
     nav: 'Volleyball',
     group: 'past',
+    sortDate: '2025-10-19',
     title: 'Volleyball Tournament 2025',
     date: '19 October 2025',
     description: 'Community volleyball at Dandenong Stadium.',
@@ -142,9 +146,31 @@ window.TAUNET_GALLERY = [
     ]
   },
   {
+    id: 'gala-2025',
+    nav: 'Gala 2025',
+    group: 'past',
+    sortDate: '2025-04-26',
+    title: 'Taunet Nelel Gala 2025',
+    date: '26 April 2025',
+    description: 'Annual gala night at Dandenong Stadium — music, culture, and fellowship.',
+    photos: [
+      {
+        src: 'wp-content/uploads/2025/10/TAUNET-NELE-GALA.jpg',
+        alt: 'Taunet Nelel Gala 2025 promotional banner',
+        downloadName: 'Taunet-Gala-2025-banner.jpg'
+      },
+      {
+        src: 'wp-content/uploads/2025/10/Taunet-Nelel-Gala.png',
+        alt: 'Taunet Nelel Gala 2025 branding',
+        downloadName: 'Taunet-Gala-2025-branding.png'
+      }
+    ]
+  },
+  {
     id: 'sports-day',
     nav: 'Sports Day',
     group: 'past',
+    sortDate: '2025-04-19',
     title: 'Sports Day',
     date: 'Community sports events',
     description: 'Family sports days and youth activities across Victoria.',
@@ -163,26 +189,6 @@ window.TAUNET_GALLERY = [
         src: 'wp-content/uploads/2025/10/IMG-20211212-WA0071.jpg',
         alt: 'Community sports day gathering',
         downloadName: 'Taunet-Sports-Day-02.jpg'
-      }
-    ]
-  },
-  {
-    id: 'agm-2025',
-    nav: 'AGM',
-    group: 'past',
-    title: 'Annual General Meeting 2025',
-    date: '29 November 2025',
-    description: 'Taunet Nelel AGM held online with members across Victoria.',
-    photos: [
-      {
-        src: 'wp-content/uploads/2025/09/Celebration.jpg',
-        alt: 'Taunet Nelel AGM community celebration',
-        downloadName: 'Taunet-AGM-2025-celebration.jpg'
-      },
-      {
-        src: 'wp-content/uploads/2025/10/Membership.jpg',
-        alt: 'Taunet Nelel members community',
-        downloadName: 'Taunet-AGM-2025-members.jpg'
       }
     ]
   }

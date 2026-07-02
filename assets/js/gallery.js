@@ -28,7 +28,13 @@
   }
 
   function albumsInGroup(groupId) {
-    return events.filter((event) => event.group === groupId);
+    return events
+      .filter((event) => event.group === groupId)
+      .sort((a, b) => {
+        const da = a.sortDate || '0000';
+        const db = b.sortDate || '0000';
+        return db.localeCompare(da);
+      });
   }
 
   function findAlbum(id) {
