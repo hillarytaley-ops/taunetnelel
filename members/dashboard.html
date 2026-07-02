@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css">
+  <link rel="stylesheet" href="../assets/css/members.css?v=8">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -43,7 +43,8 @@
           <h2>Welcome</h2>
           <p style="font-size:1.25rem;color:var(--color-text);font-weight:600;margin-bottom:0.5rem;">Hello, <span data-member-name>Member</span></p>
           <p>Membership: <strong data-member-plan>Basic</strong> · Renews <span data-member-renews>—</span></p>
-          <a href="membership.html" class="btn btn--accent" style="margin-top:1rem;">Upgrade to Welfare Plus</a>
+          <p id="welfare-member-summary" class="welfare-member-summary" hidden>Welfare: <strong data-welfare-package>—</strong> · <span class="status-chip status-chip--active" data-welfare-status-chip>Active</span></p>
+          <a href="membership.html" class="btn btn--accent" id="dashboard-upgrade-btn" style="margin-top:1rem;">Upgrade to Welfare Plus</a>
         </div>
         <div class="dash-card dash-card--actions">
           <h2>Quick Actions</h2>
@@ -84,9 +85,50 @@
             <li><span>Resource downloads</span><span class="meta">3 files</span></li>
           </ul>
         </div>
+
+        <div class="dash-card dash-card--full" id="welfare-register-card" hidden>
+          <h2>Register for Social Welfare</h2>
+          <p class="welfare-register-intro">You are an association member but not yet enrolled in Taunet Social Welfare. Choose a package below to join the welfare fund and access bereavement support, reimbursements, and the member welfare portal.</p>
+          <form class="site-form welfare-register-form" id="welfare-register-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Social welfare registration">
+            <input type="hidden" name="_subject" value="Social welfare registration from Taunet Nelel member">
+            <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/dashboard.html?welfare=registered">
+            <input type="hidden" name="_template" value="table">
+            <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
+            <input type="hidden" name="member_name" data-member-name-field>
+            <input type="hidden" name="member_email" data-member-email-field>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="welfare-package">Social welfare package</label>
+                <select id="welfare-package" name="welfare_package" required>
+                  <option value="">Select a package…</option>
+                  <option value="Welfare Plus — Individual ($300/year)">Welfare Plus — Individual ($300/year)</option>
+                  <option value="Welfare Plus — Family household ($450/year)">Welfare Plus — Family household ($450/year)</option>
+                  <option value="Welfare Bereavement — Standard cover ($300/year)">Welfare Bereavement — Standard cover ($300/year)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="welfare-start">Preferred start date</label>
+                <input type="date" id="welfare-start" name="preferred_start" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="welfare-dependents">Dependents to cover (if any)</label>
+              <input type="text" id="welfare-dependents" name="dependents" placeholder="Names and relationship, e.g. spouse, children">
+            </div>
+            <div class="form-group">
+              <label for="welfare-notes">Additional notes</label>
+              <textarea id="welfare-notes" name="notes" rows="3" placeholder="Any questions about cover, payment, or eligibility…"></textarea>
+            </div>
+            <div class="site-form__actions">
+              <button type="submit" class="btn btn--accent">Submit welfare registration</button>
+              <p class="site-form__note">The Welfare Committee will confirm your enrolment within 3 business days.</p>
+            </div>
+            <p class="inquiry-form__message" id="welfare-register-message" role="status" aria-live="polite" hidden></p>
+          </form>
+        </div>
       </div>
     </main>
   </div>
-  <script src="../assets/js/members.js"></script>
+  <script src="../assets/js/members.js?v=8"></script>
 </body>
 </html>

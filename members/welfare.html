@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css">
+  <link rel="stylesheet" href="../assets/css/members.css?v=8">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -35,12 +35,82 @@
       </div>
       <div id="welfare-gate" class="dash-card welfare-locked" style="display:none;">
         <div class="icon">🔒</div>
-        <h2>Welfare Plus Required</h2>
-        <p style="max-width:480px;margin:1rem auto;">The welfare support portal is available to Welfare Plus members ($300/year). Upgrade your plan to access financial support and peer assistance during difficult times.</p>
-        <a href="membership.html" class="btn btn--accent">Upgrade to Welfare Plus</a>
+        <h2>Social Welfare Registration Required</h2>
+        <p style="max-width:480px;margin:1rem auto;">The welfare portal is available to registered social welfare members. If you are already an association member, register for a welfare package from your dashboard.</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.25rem;">
+          <a href="dashboard.html#welfare-register-card" class="btn btn--accent">Register for Social Welfare</a>
+          <a href="membership.html" class="btn btn--ghost">View membership plans</a>
+        </div>
       </div>
       <div id="welfare-content" style="display:none;">
         <div class="dash-grid">
+          <div class="dash-card dash-card--full welfare-status-card">
+            <div class="welfare-status-card__head">
+              <div>
+                <h2>Your Welfare Membership</h2>
+                <p class="welfare-status-card__package">Package: <strong data-welfare-package>Welfare Plus</strong></p>
+              </div>
+              <span class="status-chip status-chip--active" id="welfare-membership-status" data-welfare-status-chip>Active</span>
+            </div>
+            <ul class="welfare-status-meta">
+              <li><span>Member since</span><strong data-welfare-since>2024</strong></li>
+              <li><span>Renews</span><strong data-member-renews>—</strong></li>
+              <li><span>Cover type</span><strong data-welfare-cover>Bereavement &amp; hardship</strong></li>
+            </ul>
+            <p class="welfare-status-note" id="welfare-status-note">Your social welfare membership is active. You are eligible for bereavement support and community reimbursements.</p>
+          </div>
+
+          <div class="dash-card dash-card--full" id="welfare-alerts">
+            <div class="welfare-alerts__head">
+              <h2>Reimbursement Alerts</h2>
+              <label class="welfare-alert-toggle">
+                <input type="checkbox" id="welfare-alerts-enabled" checked>
+                <span>Notify me when a member receives a reimbursement</span>
+              </label>
+            </div>
+            <p class="welfare-alerts-intro">Community transparency updates when the Welfare Committee approves bereavement or hardship reimbursements. Member names are anonymised for privacy.</p>
+            <ul class="welfare-alert-list" id="welfare-alert-list" aria-live="polite"></ul>
+          </div>
+
+          <div class="dash-card dash-card--full" id="welfare-info-request">
+            <h2>Request Welfare Information</h2>
+            <p style="margin-bottom:1.25rem;">Request a bank statement summary, fund balance update, or other information about the social welfare account. Requests are reviewed by the Welfare Committee.</p>
+            <form class="site-form" id="welfare-info-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Welfare information request">
+              <input type="hidden" name="_subject" value="Welfare information request from Taunet Nelel member">
+              <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/welfare.html?sent=1#welfare-info-request">
+              <input type="hidden" name="_template" value="table">
+              <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
+              <input type="hidden" name="member_name" data-member-name-field>
+              <input type="hidden" name="member_email" data-member-email-field>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="welfare-info-type">Information requested</label>
+                  <select id="welfare-info-type" name="info_type" required>
+                    <option value="">Select…</option>
+                    <option value="Welfare bank statement">Welfare bank statement</option>
+                    <option value="Fund balance summary">Fund balance summary</option>
+                    <option value="Recent reimbursements report">Recent reimbursements report</option>
+                    <option value="Constitution &amp; welfare policy">Constitution &amp; welfare policy</option>
+                    <option value="Other welfare information">Other welfare information</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="welfare-info-period">Period (if applicable)</label>
+                  <input type="text" id="welfare-info-period" name="period" placeholder="e.g. Jan–Mar 2026">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="welfare-info-message">Details of your request</label>
+                <textarea id="welfare-info-message" name="message" required placeholder="Describe what you need and why…"></textarea>
+              </div>
+              <div class="site-form__actions">
+                <button type="submit" class="btn btn--primary">Submit request</button>
+                <p class="site-form__note">We aim to respond within 5 business days.</p>
+              </div>
+              <p class="inquiry-form__message" role="status" aria-live="polite" hidden data-success="Your information request has been submitted. The Welfare Committee will respond within 5 business days."></p>
+            </form>
+          </div>
+
           <div class="dash-card dash-card--full" id="welfare-request">
             <h2>Request Support</h2>
             <p style="margin-bottom:1.5rem;">Confidential welfare assistance for members facing personal or family hardship. All requests are reviewed by the Welfare Committee.</p>
@@ -85,6 +155,6 @@
       </div>
     </main>
   </div>
-  <script src="../assets/js/members.js"></script>
+  <script src="../assets/js/members.js?v=8"></script>
 </body>
 </html>
