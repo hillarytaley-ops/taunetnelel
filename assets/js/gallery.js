@@ -3,10 +3,15 @@
 
   const MEMBER_KEY = 'taunet_member';
   const events = window.TAUNET_GALLERY || [];
-  const groups = window.TAUNET_GALLERY_GROUPS || [];
+  const groups = window.TAUNET_GALLERY_GROUPS || [
+    { id: 'recent', label: 'Most Recent', hint: 'Albums from the last few months', icon: '✦', mod: 'recent' },
+    { id: 'past', label: 'Past Events', hint: 'Browse our community archive', icon: '◷', mod: 'past' }
+  ];
 
-  let activeGroup = groups[0]?.id || 'recent';
-  let activeAlbum = events[0]?.id || null;
+  const GROUP_META = {
+    recent: { label: 'Most Recent', hint: 'Fresh albums & recent gatherings', icon: '✦', mod: 'recent' },
+    past: { label: 'Past Events', hint: 'Browse photos & memories', icon: '◷', mod: 'past' }
+  };
 
   function getMember() {
     try {
@@ -30,6 +35,10 @@
     return events.find((event) => event.id === id);
   }
 
+  function groupMeta(groupId) {
+    return GROUP_META[groupId] || { label: groupId, hint: '', icon: '◷', mod: groupId };
+  }
+
   function renderMemberBanner(container, member) {
     const banner = document.createElement('div');
     banner.className = `gallery-member-banner${member ? ' gallery-member-banner--member' : ''}`;
@@ -37,6 +46,21 @@
       ? `<p><strong>Welcome, ${member.name.split(' ')[0]}.</strong> You can download full-resolution photos from each event album below.</p>`
       : `<p>Photos are free to browse. <a href="${loginUrl()}">Log in as a member</a> or <a href="members/register.html">join Taunet Nelel</a> to download images.</p>`;
     container.appendChild(banner);
+  }
+
+  function renderFlowStrip() {
+    return `
+      <div class="gallery-phase-flow" aria-hidden="true">
+        <div class="gallery-phase-flow__track">
+          <span class="gallery-phase-flow__step gallery-phase-flow__step--recent">
+            <span class="gallery-phase-flow__dot"></span>Most Recent
+          </span>
+          <span class="gallery-phase-flow__arrow">→</span>
+          <span class="gallery-phase-flow__step gallery-phase-flow__step--past">
+            <span class="gallery-phase-flow__dot"></span>Past Events
+          </span>
+        </div>
+      </div>`;
   }
 
   function photoActions(photo, member) {
@@ -64,9 +88,10 @@
       </figure>`;
   }
 
-  function renderAlbumSection(event, member) {
-    const previewLimit = event.previewLimit || event.photos.length;
+  function renderAlbumCard(event, member) {
+    const previewLimit = Math.min(event.previewLimit || 4, 4);
     const hasMore = event.photos.length > previewLimit;
+    const cover = event.photos[0]?.src || '';
     const photosHtml = event.photos
       .map((photo, index) => renderPhotoFigure(photo, member, index >= previewLimit))
       .join('');
@@ -74,119 +99,61 @@
     const albumLinks = (event.externalAlbums || [])
       .map(
         (album) =>
-          `<a class="gallery-event__album-link" href="${album.url}" target="_blank" rel="noopener">${album.label}</a>`
+          `<a class="gallery-event__album-link" href="${album.url}" target="_blank" rel="noopener">${album.label} →</a>`
       )
       .join('');
 
-    const section = document.createElement('section');
-    section.className = 'gallery-event';
-    section.id = event.id;
-    section.dataset.group = event.group;
-    section.hidden = event.id !== activeAlbum;
-
-    section.innerHTML = `
-      <header class="gallery-event__header">
-        <div>
-          <p class="gallery-event__date">${event.date}</p>
+    return `
+      <article class="gallery-album-card" id="${event.id}" data-group="${event.group}">
+        <a href="#${event.id}" class="gallery-album-card__hero" aria-hidden="true" tabindex="-1">
+          <img src="${cover}" alt="" width="480" height="200" loading="lazy">
+          <span class="gallery-album-card__overlay"></span>
+          <span class="gallery-album-card__count">${event.photos.length} photos</span>
+        </a>
+        <header class="gallery-album-card__head">
+          <p class="gallery-album-card__date">${event.date}</p>
           <h2>${event.title}</h2>
-          <p>${event.description}</p>
+          <p class="gallery-album-card__desc">${event.description}</p>
           ${albumLinks ? `<div class="gallery-event__albums">${albumLinks}</div>` : ''}
-        </div>
-        <span class="gallery-event__count">${event.photos.length} photo${event.photos.length === 1 ? '' : 's'}</span>
-      </header>
-      <div class="gallery-grid gallery-grid--photos" data-album-grid="${event.id}">${photosHtml}</div>
-      ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${event.id}">Show all ${event.photos.length} photos</button>` : ''}`;
-
-    return section;
+        </header>
+        <div class="gallery-grid gallery-grid--photos gallery-grid--compact" data-album-grid="${event.id}">${photosHtml}</div>
+        ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${event.id}">Show all ${event.photos.length} photos</button>` : ''}
+      </article>`;
   }
 
-  function renderToolbar(container) {
-    const toolbar = document.createElement('div');
-    toolbar.className = 'gallery-toolbar';
-
-    const groupNav = document.createElement('nav');
-    groupNav.className = 'gallery-toolbar__groups';
-    groupNav.setAttribute('aria-label', 'Gallery groups');
-    groupNav.innerHTML = groups
-      .map(
-        (group) =>
-          `<button type="button" class="gallery-toolbar__group${group.id === activeGroup ? ' is-active' : ''}" data-group="${group.id}">${group.label}</button>`
-      )
-      .join('');
-
-    const albumNav = document.createElement('nav');
-    albumNav.className = 'gallery-toolbar__albums';
-    albumNav.setAttribute('aria-label', 'Albums in group');
-
-    toolbar.append(groupNav, albumNav);
-    container.appendChild(toolbar);
-    return { groupNav, albumNav };
-  }
-
-  function updateAlbumNav(albumNav) {
-    const albums = albumsInGroup(activeGroup);
-    if (!albums.some((album) => album.id === activeAlbum)) {
-      activeAlbum = albums[0]?.id || activeAlbum;
-    }
-
-    albumNav.innerHTML = albums
-      .map(
-        (album) =>
-          `<button type="button" class="gallery-toolbar__album${album.id === activeAlbum ? ' is-active' : ''}" data-album="${album.id}">${album.nav}</button>`
-      )
-      .join('');
-  }
-
-  function showAlbum(albumId, { updateHash = true } = {}) {
-    const album = findAlbum(albumId);
-    if (!album) return;
-
-    activeAlbum = albumId;
-    activeGroup = album.group;
-
-    document.querySelectorAll('.gallery-toolbar__group').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.group === activeGroup);
-    });
-
-    const albumNav = document.querySelector('.gallery-toolbar__albums');
-    if (albumNav) updateAlbumNav(albumNav);
-
-    document.querySelectorAll('.gallery-event').forEach((section) => {
-      const isActive = section.id === activeAlbum;
-      section.hidden = !isActive;
-      section.classList.toggle('gallery-event--active', isActive);
-    });
-
-    if (updateHash) {
-      history.replaceState(null, '', `#${albumId}`);
-    }
-  }
-
-  function showGroup(groupId) {
-    activeGroup = groupId;
+  function renderColumn(groupId, member) {
+    const meta = groupMeta(groupId);
     const albums = albumsInGroup(groupId);
-    if (!albums.length) return;
+    const empty = albums.length
+      ? albums.map((album) => renderAlbumCard(album, member)).join('')
+      : `<div class="gallery-phase-empty"><span class="gallery-phase-empty__icon" aria-hidden="true">${meta.icon}</span><p>No albums in this section yet.</p></div>`;
 
-    document.querySelectorAll('.gallery-toolbar__group').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.group === groupId);
-    });
-
-    showAlbum(albums[0].id);
+    return `
+      <section class="gallery-phase-column gallery-phase-column--${meta.mod}" aria-labelledby="gallery-col-${groupId}">
+        <header class="gallery-phase-column__head gallery-phase-column__head--${meta.mod}">
+          <div class="gallery-phase-column__title-wrap">
+            <span class="gallery-phase-column__icon" aria-hidden="true">${meta.icon}</span>
+            <div>
+              <h2 id="gallery-col-${groupId}">${meta.label}</h2>
+              <p class="gallery-phase-column__hint">${meta.hint}</p>
+            </div>
+          </div>
+          <span class="gallery-phase-column__count">${albums.length}</span>
+        </header>
+        <div class="gallery-phase-column__body">${empty}</div>
+      </section>`;
   }
 
-  function bindToolbar(toolbar) {
-    toolbar.addEventListener('click', (e) => {
-      const groupBtn = e.target.closest('[data-group]');
-      if (groupBtn) {
-        showGroup(groupBtn.dataset.group);
-        return;
-      }
+  function renderGalleryLayout(root, member) {
+    const wrap = document.createElement('div');
+    wrap.className = 'gallery-phases-panel';
+    wrap.innerHTML = renderFlowStrip();
 
-      const albumBtn = e.target.closest('[data-album]');
-      if (albumBtn) {
-        showAlbum(albumBtn.dataset.album);
-      }
-    });
+    const row = document.createElement('div');
+    row.className = 'gallery-phases-row';
+    row.innerHTML = groups.map((g) => renderColumn(g.id, member)).join('');
+    wrap.appendChild(row);
+    root.appendChild(wrap);
   }
 
   function bindShowMore(container) {
@@ -203,13 +170,12 @@
     });
   }
 
-  function renderEvents(container, member) {
-    const albumsWrap = document.createElement('div');
-    albumsWrap.className = 'gallery-albums';
-    events.forEach((event) => {
-      albumsWrap.appendChild(renderAlbumSection(event, member));
-    });
-    container.appendChild(albumsWrap);
+  function scrollToAlbum(albumId) {
+    const el = document.getElementById(albumId);
+    if (!el) return;
+    el.classList.add('gallery-album-card--highlight');
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => el.classList.remove('gallery-album-card--highlight'), 2000);
   }
 
   function initLightbox() {
@@ -288,39 +254,24 @@
   function initFromHash() {
     const hash = window.location.hash.replace('#', '');
     if (hash && findAlbum(hash)) {
-      const album = findAlbum(hash);
-      activeGroup = album.group;
-      activeAlbum = hash;
-      return;
+      requestAnimationFrame(() => scrollToAlbum(hash));
     }
-    activeGroup = groups[0]?.id || events[0]?.group;
-    activeAlbum = albumsInGroup(activeGroup)[0]?.id || events[0]?.id;
   }
 
   function init() {
     const root = document.getElementById('gallery-root');
     if (!root || !events.length) return;
 
-    initFromHash();
-
     const member = getMember();
     renderMemberBanner(root, member);
-
-    const { albumNav } = renderToolbar(root);
-    updateAlbumNav(albumNav);
-
-    renderEvents(root, member);
-
-    const toolbar = root.querySelector('.gallery-toolbar');
-    bindToolbar(toolbar);
+    renderGalleryLayout(root, member);
     bindShowMore(root);
-    showAlbum(activeAlbum, { updateHash: false });
-
     initLightbox();
+    initFromHash();
 
     window.addEventListener('hashchange', () => {
       const hash = window.location.hash.replace('#', '');
-      if (hash && findAlbum(hash)) showAlbum(hash, { updateHash: false });
+      if (hash && findAlbum(hash)) scrollToAlbum(hash);
     });
   }
 

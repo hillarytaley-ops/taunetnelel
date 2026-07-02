@@ -1,6 +1,6 @@
 /** Gallery page groups — one group visible at a time to reduce scrolling */
 window.TAUNET_GALLERY_GROUPS = [
-  { id: 'recent', label: 'Recent Events' },
+  { id: 'recent', label: 'Most Recent' },
   { id: 'past', label: 'Past Events' }
 ];
 
