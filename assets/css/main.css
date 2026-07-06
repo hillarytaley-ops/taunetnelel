@@ -467,6 +467,18 @@ h3 { font-size: 1.35rem; }
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
+.site-header .btn--accent {
+  background: var(--color-white);
+  border-color: var(--color-white);
+  color: var(--color-primary-dark);
+}
+
+.site-header .btn--accent:hover {
+  background: var(--color-primary-dark);
+  border-color: rgba(255, 255, 255, 0.65);
+  color: var(--color-white);
+}
+
 .menu-toggle {
   display: none;
   background: none;
@@ -2524,6 +2536,10 @@ body[data-page="welfare"] {
   font-size: 0.82rem;
   margin-top: 0.35rem;
   opacity: 0.92;
+}
+
+.event-strip__also:last-child {
+  margin-bottom: 0;
 }
 
 .event-strip__also a {
