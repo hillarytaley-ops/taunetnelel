@@ -81,6 +81,187 @@ body[data-page="sponsorship"] .page-hero--sponsorship .page-hero__content {
   align-self: center;
 }
 
+.sponsorship-intro__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.sponsorship-benefits {
+  margin-top: 2.5rem;
+}
+
+.sponsor-tier-group + .sponsor-tier-group {
+  margin-top: 2.5rem;
+}
+
+.sponsor-tier-group__title {
+  margin-bottom: 1.25rem;
+  font-size: 1.15rem;
+  color: var(--color-primary);
+  text-align: center;
+}
+
+.sponsor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.25rem;
+}
+
+.sponsor-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 100%;
+  padding: 1.35rem;
+  border-radius: 16px;
+  background: var(--color-white);
+  box-shadow: var(--shadow);
+}
+
+.sponsor-card__badge {
+  align-self: flex-start;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sponsor-card__badge--platinum {
+  background: linear-gradient(135deg, #e8e8e8, #f8f8f8);
+  color: #3d3d3d;
+}
+
+.sponsor-card__badge--gold {
+  background: #fff4d6;
+  color: #8b5a00;
+}
+
+.sponsor-card__badge--silver {
+  background: #eef1f4;
+  color: #4a5568;
+}
+
+.sponsor-card__badge--bronze {
+  background: #f3e4d8;
+  color: #7a4a24;
+}
+
+.sponsor-card__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88px;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: var(--color-bg);
+}
+
+.sponsor-card__logo img {
+  max-width: 100%;
+  max-height: 72px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.sponsor-card__logo--placeholder {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+}
+
+.sponsor-card__name {
+  font-size: 1.05rem;
+  color: var(--color-primary);
+}
+
+.sponsor-card__contact {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: auto;
+  font-size: 0.9rem;
+}
+
+.sponsor-card__contact div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.sponsor-card__contact dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.sponsor-card__contact dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.sponsor-card__contact a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.sponsor-card__contact a:hover {
+  text-decoration: underline;
+}
+
+.sponsorship-enquiry__inner {
+  max-width: 760px;
+}
+
+.sponsorship-enquiry__toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.sponsorship-enquiry__toggle.is-open {
+  background: var(--color-primary-dark);
+}
+
+.sponsorship-form-panel[hidden] {
+  display: none;
+}
+
+.sponsorship-form-panel:not([hidden]) {
+  animation: sponsorship-form-reveal 0.35s ease;
+}
+
+@keyframes sponsorship-form-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sponsorship-form {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.sponsorship-form h3 {
+  margin-bottom: 0.35rem;
+}
+
+.sponsorship-form > p {
+  margin-bottom: 1.25rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   body[data-page="sponsorship"] .sponsorship-hero__slide {
     animation: none !important;
@@ -90,5 +271,9 @@ body[data-page="sponsorship"] .page-hero--sponsorship .page-hero__content {
   body[data-page="sponsorship"] .sponsorship-hero__slide:first-child {
     opacity: 1;
     transform: none;
+  }
+
+  .sponsorship-form-panel:not([hidden]) {
+    animation: none;
   }
 }

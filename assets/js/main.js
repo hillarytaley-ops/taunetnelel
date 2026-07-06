@@ -840,6 +840,32 @@
 
   initFloatingSocial();
 
+  function initSponsorshipEnquiry() {
+    const toggle = document.querySelector('[data-sponsorship-form-toggle]');
+    const panel = document.querySelector('[data-sponsorship-form-panel]');
+    if (!toggle || !panel) return;
+
+    const labelShow = toggle.dataset.labelShow || 'Open Sponsorship Enquiry Form';
+    const labelHide = toggle.dataset.labelHide || 'Hide Sponsorship Enquiry Form';
+
+    function setOpen(isOpen) {
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      toggle.classList.toggle('is-open', isOpen);
+      toggle.textContent = isOpen ? labelHide : labelShow;
+      panel.hidden = !isOpen;
+    }
+
+    toggle.addEventListener('click', () => {
+      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    if (new URLSearchParams(window.location.search).get('sent') === '1') {
+      setOpen(true);
+    }
+  }
+
+  initSponsorshipEnquiry();
+
   const lightbox = document.getElementById('lightbox');
   const lightboxImg = lightbox?.querySelector('.lightbox__img');
   const lightboxCaption = lightbox?.querySelector('.lightbox__caption');
