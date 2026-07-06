@@ -594,9 +594,6 @@ body[data-page="home"] .home-links .btn--outline:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #f0dcc8;
-  font-size: 1.55rem;
-  font-weight: 700;
 }
 
 .program-card__icon svg {
@@ -624,18 +621,6 @@ body[data-page="home"] .home-links .btn--outline:hover {
 
 .program-card__link:hover {
   color: var(--color-accent);
-}
-
-/* Home membership */
-.home-membership {
-  background:
-    radial-gradient(circle at 10% 0%, rgba(210, 105, 30, 0.12), transparent 34%),
-    var(--color-bg);
-}
-
-.home-membership .plans {
-  max-width: 900px;
-  margin-inline: auto;
 }
 
 /* CTA banner */
@@ -685,10 +670,6 @@ body[data-page="home"] .home-links .btn--outline:hover {
   font-size: clamp(1.75rem, 3vw, 2.5rem);
   color: var(--color-white);
   margin-bottom: 0.35rem;
-}
-
-.cta-banner .eyebrow {
-  color: rgba(255, 255, 255, 0.86);
 }
 
 .cta-banner p {
