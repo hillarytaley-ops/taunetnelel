@@ -3,10 +3,9 @@
 
   const MEMBER_KEY = 'taunet_member';
   let events = window.TAUNET_GALLERY || [];
-  let activeFilter = 'all';
+  let activeFilter = 'recent';
 
   const FILTERS = [
-    { id: 'all', label: 'All events' },
     { id: 'recent', label: 'Most recent' },
     { id: 'past', label: 'Past events' }
   ];
@@ -27,11 +26,14 @@
 
   function sortedAlbums(filterId) {
     return events
-      .filter((event) => filterId === 'all' || event.group === filterId)
+      .filter((event) => event.group === filterId)
       .sort((a, b) => {
         const da = a.sortDate || '0000';
         const db = b.sortDate || '0000';
-        return db.localeCompare(da);
+        const byDate = db.localeCompare(da);
+        if (byDate !== 0) return byDate;
+        // Prefer albums with more photos when dates tie
+        return (b.photos?.length || 0) - (a.photos?.length || 0);
       });
   }
 
@@ -145,7 +147,6 @@
 
   function renderGalleryLayout(root, member) {
     const counts = {
-      all: events.length,
       recent: events.filter((e) => e.group === 'recent').length,
       past: events.filter((e) => e.group === 'past').length
     };
@@ -263,8 +264,8 @@
     const hash = window.location.hash.replace('#', '');
     if (hash && findAlbum(hash)) {
       const album = findAlbum(hash);
-      if (album && activeFilter !== 'all' && album.group !== activeFilter) {
-        activeFilter = 'all';
+      if (album && album.group !== activeFilter) {
+        activeFilter = album.group;
         init();
         return;
       }
