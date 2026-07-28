@@ -15,7 +15,17 @@ This updates `profiles` for association/welfare/`both` and links new Auth users 
 - Site URL (for now): `https://taunetnelel.vercel.app`
 - Redirect URLs — add:
   - `https://taunetnelel.vercel.app/members/login.html`
-  - `http://localhost:8080/members/login.html` (local testing)
+  - `https://taunetnelel.vercel.app/members/dashboard.html`
+  - `http://localhost:8080/members/**` (local testing)
+
+After someone clicks **Confirm email address** in the mail:
+
+1. Supabase verifies the email
+2. Browser is sent to your site (`dashboard.html` or `login.html`)
+3. That is expected — it is **not** the Supabase dashboard “Auth” settings page
+4. If they land on **Sign in**, use the same email + password they registered with
+
+If the link opens localhost or the wrong page, check Site URL + Redirect URLs above.
 
 **Authentication → Providers → Email**
 

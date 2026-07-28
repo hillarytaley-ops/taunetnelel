@@ -55,6 +55,38 @@
     return profileToMember(data || { full_name: '', email }, email);
   }
 
+  /**
+   * Finish email-confirm / magic-link / recovery redirects from Supabase.
+   * Call before reading the session on login or dashboard pages.
+   */
+  async function handleAuthCallback() {
+    const client = await getClient();
+    if (!client) return { type: null, session: null };
+
+    const search = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const code = search.get('code');
+    const type = search.get('type') || hash.get('type');
+    const errorDescription = search.get('error_description') || hash.get('error_description');
+
+    if (errorDescription) {
+      throw new Error(decodeURIComponent(errorDescription.replace(/\+/g, ' ')));
+    }
+
+    if (code) {
+      const { data, error } = await client.auth.exchangeCodeForSession(window.location.href);
+      if (error) throw error;
+      // Drop one-time code from the address bar
+      const clean = `${window.location.pathname}${window.location.hash || ''}`;
+      window.history.replaceState({}, document.title, clean);
+      return { type: type || 'email', session: data?.session || null };
+    }
+
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    return { type, session: data?.session || null };
+  }
+
   async function getSessionMember() {
     const client = await getClient();
     if (!client) return null;
@@ -93,7 +125,8 @@
           phone: phone || '',
           plan: plan || 'basic'
         },
-        emailRedirectTo: `${window.location.origin}/members/login.html`
+        // After confirm, land on dashboard (session tokens / code are handled there)
+        emailRedirectTo: `${window.location.origin}/members/dashboard.html`
       }
     });
     if (error) throw error;
@@ -125,6 +158,7 @@
 
   global.taunetMembersAuth = {
     getClient,
+    handleAuthCallback,
     getSessionMember,
     signIn,
     signUp,

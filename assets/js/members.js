@@ -202,17 +202,31 @@
     const authApi = window.taunetMembersAuth;
     let authBusy = false;
 
-    // Prefer live Supabase session over stale localStorage demo
+    // Finish email-confirm / recovery redirects, then prefer live session
     if (authApi) {
       try {
+        const callback = await authApi.handleAuthCallback();
         const sessionMember = await authApi.getSessionMember();
         if (sessionMember) {
           setMember(sessionMember);
           redirectAfterAuth();
           return;
         }
+        if (callback?.type === 'signup' || callback?.type === 'email') {
+          if (loginForm) {
+            showAuthMessage(
+              loginForm,
+              'Email confirmed. Sign in with the password you created.',
+              false
+            );
+          }
+        }
       } catch (error) {
-        console.warn('Session check failed:', error);
+        if (loginForm) {
+          showAuthMessage(loginForm, authErrorMessage(error), true);
+        } else {
+          console.warn('Auth callback failed:', error);
+        }
       }
     }
 
@@ -644,6 +658,7 @@
     // Restore session from Supabase when available
     if (window.taunetMembersAuth && window.taunetSupabaseApi?.isConfigured()) {
       try {
+        await window.taunetMembersAuth.handleAuthCallback();
         const sessionMember = await window.taunetMembersAuth.getSessionMember();
         if (sessionMember) {
           setMember(sessionMember);
