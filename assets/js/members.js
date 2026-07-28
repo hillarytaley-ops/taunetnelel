@@ -483,19 +483,90 @@
       history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
     }
 
-    form?.addEventListener('submit', () => {
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const msg = document.getElementById('welfare-register-message');
+      const submitBtn = form.querySelector('button[type="submit"]');
       const packageSelect = form.querySelector('[name="welfare_package"]');
       const packageValue = packageSelect?.value || '';
-      const updated = {
-        ...member,
-        welfareRegistered: true,
-        welfareStatus: 'pending',
-        welfarePackage: packageLabelFromValue(packageValue),
-        welfareSince: new Date().getFullYear().toString(),
-        welfareCover: packageValue.includes('Bereavement') ? 'Bereavement only' : 'Bereavement & hardship',
-        welfareAlertsEnabled: true
-      };
-      setMember(updated);
+      const honeypot = form.querySelector('[name="_honey"]');
+      if (honeypot?.value) return;
+
+      const current = getMember() || member;
+      const nameInput = form.querySelector('[name="name"]');
+      const emailInput = form.querySelector('[name="email"]');
+      if (nameInput && !nameInput.value) nameInput.value = current.name || '';
+      if (emailInput && !emailInput.value) emailInput.value = current.email || '';
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.dataset.originalText = submitBtn.dataset.originalText || submitBtn.textContent;
+        submitBtn.textContent = 'Submitting…';
+      }
+
+      try {
+        const api = window.taunetSupabaseApi;
+        if (!api?.isConfigured()) {
+          throw new Error('Supabase is not configured.');
+        }
+        const client = await api.ensureClient();
+        if (!client) throw new Error('Could not connect to Supabase.');
+
+        const formData = new FormData(form);
+        const metadata = {};
+        formData.forEach((value, key) => {
+          if (!value || key.startsWith('_') || ['name', 'email', 'phone', 'message'].includes(key)) return;
+          metadata[key] = String(value).trim();
+        });
+
+        const { error } = await client.from('form_submissions').insert({
+          form_type: 'welfare',
+          name: String(formData.get('name') || current.name || '').trim() || null,
+          email: String(formData.get('email') || current.email || '').trim() || null,
+          phone: String(formData.get('phone') || current.phone || '').trim() || null,
+          message: String(formData.get('message') || '').trim() || null,
+          metadata
+        });
+        if (error) throw error;
+
+        const updated = {
+          ...current,
+          welfareRegistered: true,
+          welfareStatus: 'pending',
+          welfarePackage: packageLabelFromValue(packageValue),
+          welfareSince: new Date().getFullYear().toString(),
+          welfareCover: packageValue.includes('Bereavement') ? 'Bereavement only' : 'Bereavement & hardship',
+          welfareAlertsEnabled: true
+        };
+        setMember(updated);
+
+        if (msg) {
+          msg.hidden = false;
+          msg.classList.remove('is-error');
+          msg.textContent = msg.dataset.success
+            || 'Thank you! Your welfare registration has been submitted. The Welfare Committee will confirm your enrolment within 3 business days.';
+        }
+
+        form.querySelectorAll('input, select, textarea, button').forEach((el) => {
+          if (el.type === 'hidden' || el.name === '_honey') return;
+          el.disabled = true;
+        });
+        renderWelfareStatus(updated);
+        summary?.removeAttribute('hidden');
+        upgradeBtn?.setAttribute('hidden', '');
+      } catch (error) {
+        console.error('Welfare registration failed:', error);
+        if (msg) {
+          msg.hidden = false;
+          msg.classList.add('is-error');
+          msg.textContent = 'Sorry, your welfare registration could not be sent. Please try again or email info@taunetnelel.org.';
+        }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = submitBtn.dataset.originalText || 'Submit welfare registration';
+        }
+      }
     });
   }
 

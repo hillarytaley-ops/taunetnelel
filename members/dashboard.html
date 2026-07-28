@@ -80,13 +80,11 @@
         <div class="dash-card dash-card--full" id="welfare-register-card" hidden>
           <h2>Register for Social Welfare</h2>
           <p class="welfare-register-intro">You are an association member but not yet enrolled in Taunet Social Welfare. Choose a package below to join the welfare fund and access bereavement support, reimbursements, and the member welfare portal.</p>
-          <form class="site-form welfare-register-form" id="welfare-register-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Social welfare registration">
-            <input type="hidden" name="_subject" value="Social welfare registration from Taunet Nelel member">
-            <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/dashboard.html?welfare=registered">
-            <input type="hidden" name="_template" value="table">
+          <form class="site-form welfare-register-form" id="welfare-register-form" method="post" aria-label="Social welfare registration">
             <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
-            <input type="hidden" name="member_name" data-member-name-field>
-            <input type="hidden" name="member_email" data-member-email-field>
+            <input type="hidden" name="name" data-member-name-field>
+            <input type="hidden" name="email" data-member-email-field>
+            <input type="hidden" name="phone" value="">
             <div class="form-row">
               <div class="form-group">
                 <label for="welfare-package">Social welfare package</label>
@@ -108,13 +106,14 @@
             </div>
             <div class="form-group">
               <label for="welfare-notes">Additional notes</label>
-              <textarea id="welfare-notes" name="notes" rows="3" placeholder="Any questions about cover, payment, or eligibility…"></textarea>
+              <textarea id="welfare-notes" name="message" rows="3" placeholder="Any questions about cover, payment, or eligibility…"></textarea>
             </div>
             <div class="site-form__actions">
               <button type="submit" class="btn btn--accent">Submit welfare registration</button>
               <p class="site-form__note">The Welfare Committee will confirm your enrolment within 3 business days.</p>
             </div>
-            <p class="inquiry-form__message" id="welfare-register-message" role="status" aria-live="polite" hidden></p>
+            <p class="inquiry-form__message" id="welfare-register-message" role="status" aria-live="polite" hidden
+              data-success="Thank you! Your welfare registration has been submitted. The Welfare Committee will confirm your enrolment within 3 business days."></p>
           </form>
         </div>
       </div>
@@ -124,6 +123,6 @@
   <script src="../assets/js/supabase-config.js?v=2"></script>
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/members-auth.js?v=2"></script>
-  <script src="../assets/js/members.js?v=16"></script>
+  <script src="../assets/js/members.js?v=17"></script>
 </body>
 </html>
