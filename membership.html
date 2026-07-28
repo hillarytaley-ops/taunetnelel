@@ -185,7 +185,7 @@
           <a href="members/register.html" class="btn btn--outline">Join online instead</a>
         </aside>
 
-        <form class="site-form card membership-enquiry__form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Membership enquiry form">
+        <form class="site-form card membership-enquiry__form" data-supabase-form="membership" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Membership enquiry form">
           <input type="hidden" name="_subject" value="Membership enquiry from Taunet Nelel website">
           <input type="hidden" name="_next" value="https://www.taunetnelel.org/membership.html?sent=1#enquiry">
           <input type="hidden" name="_template" value="table">
@@ -287,6 +287,8 @@
       </div>
     </div>
   </footer>
+  <script src="assets/js/supabase-config.js?v=2"></script>
+  <script src="assets/js/supabase-init.js?v=2"></script>
   <script src="assets/js/main.js?v=7"></script>
 </body>
 </html>
