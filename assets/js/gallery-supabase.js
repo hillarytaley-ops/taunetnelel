@@ -1,9 +1,21 @@
 /**
- * Load gallery albums/photos from Supabase and merge into TAUNET_GALLERY.
- * Falls back to static gallery-data.js if Supabase is unavailable.
+ * Load gallery albums/photos from Supabase.
+ * Curated static gallery-data.js stays the public source of truth —
+ * Supabase may enrich matching album IDs but must not add dump/extra albums.
  */
 (function (global) {
   'use strict';
+
+  const BLOCKED_ALBUM_IDS = new Set(['leadership-team']);
+
+  function isDumpAlbumId(id) {
+    const value = String(id || '');
+    return (
+      value.startsWith('wp-archive-') ||
+      value.startsWith('wp-202') ||
+      BLOCKED_ALBUM_IDS.has(value)
+    );
+  }
 
   function mapAlbum(album, photos) {
     const group = album.group_id === 'recent' ? 'recent' : 'past';
@@ -54,26 +66,33 @@
     });
 
     return albums
-      .filter((album) => {
-        const id = String(album.id || '');
-        // Skip raw WordPress dump albums — keep curated gallery only
-        return !id.startsWith('wp-archive-') && !id.startsWith('wp-202');
-      })
+      .filter((album) => !isDumpAlbumId(album.id))
       .map((album) => mapAlbum(album, byAlbum[album.id] || []))
       .filter((album) => album.photos.length > 0);
   }
 
   function mergeAlbums(remoteAlbums) {
-    const current = global.TAUNET_GALLERY || [];
-    const remoteIds = new Set(remoteAlbums.map((a) => a.id));
-    const kept = current.filter((a) => !remoteIds.has(a.id));
-    global.TAUNET_GALLERY = kept.concat(remoteAlbums);
+    const current = (global.TAUNET_GALLERY || []).filter((a) => !isDumpAlbumId(a.id));
+    const curatedIds = new Set(current.map((a) => a.id));
+    const remoteById = new Map(
+      remoteAlbums.filter((a) => curatedIds.has(a.id)).map((a) => [a.id, a])
+    );
+
+    // Prefer curated static albums; only take remote when it has more photos
+    global.TAUNET_GALLERY = current.map((album) => {
+      const remote = remoteById.get(album.id);
+      if (remote && remote.photos.length > album.photos.length) return remote;
+      return album;
+    });
   }
 
   async function init() {
     try {
       const remote = await loadFromSupabase();
-      if (!remote || !remote.length) return;
+      if (!remote || !remote.length) {
+        global.TAUNET_GALLERY = (global.TAUNET_GALLERY || []).filter((a) => !isDumpAlbumId(a.id));
+        return;
+      }
       mergeAlbums(remote);
       if (typeof global.taunetGalleryRefresh === 'function') {
         global.taunetGalleryRefresh();

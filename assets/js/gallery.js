@@ -3,15 +3,13 @@
 
   const MEMBER_KEY = 'taunet_member';
   let events = window.TAUNET_GALLERY || [];
-  const groups = window.TAUNET_GALLERY_GROUPS || [
-    { id: 'recent', label: 'Most Recent', hint: 'Albums from the last few months', icon: '✦', mod: 'recent' },
-    { id: 'past', label: 'Past Events', hint: 'Browse our community archive', icon: '◷', mod: 'past' }
-  ];
+  let activeFilter = 'all';
 
-  const GROUP_META = {
-    recent: { label: 'Most Recent', hint: 'Fresh albums & recent gatherings', icon: '✦', mod: 'recent' },
-    past: { label: 'Past Events', hint: 'Browse photos & memories', icon: '◷', mod: 'past' }
-  };
+  const FILTERS = [
+    { id: 'all', label: 'All events' },
+    { id: 'recent', label: 'Most recent' },
+    { id: 'past', label: 'Past events' }
+  ];
 
   function getMember() {
     try {
@@ -27,9 +25,9 @@
     return `members/login.html?redirect=${encodeURIComponent(redirect.replace(/^\//, ''))}`;
   }
 
-  function albumsInGroup(groupId) {
+  function sortedAlbums(filterId) {
     return events
-      .filter((event) => event.group === groupId)
+      .filter((event) => filterId === 'all' || event.group === filterId)
       .sort((a, b) => {
         const da = a.sortDate || '0000';
         const db = b.sortDate || '0000';
@@ -41,10 +39,6 @@
     return events.find((event) => event.id === id);
   }
 
-  function groupMeta(groupId) {
-    return GROUP_META[groupId] || { label: groupId, hint: '', icon: '◷', mod: groupId };
-  }
-
   function renderMemberBanner(container, member) {
     const banner = document.createElement('div');
     banner.className = `gallery-member-banner${member ? ' gallery-member-banner--member' : ''}`;
@@ -52,21 +46,6 @@
       ? `<p><strong>Welcome, ${member.name.split(' ')[0]}.</strong> You can download full-resolution photos from each event album below.</p>`
       : `<p>Photos are free to browse. <a href="${loginUrl()}">Log in as a member</a> or <a href="members/register.html">join Taunet Nelel</a> to download images.</p>`;
     container.appendChild(banner);
-  }
-
-  function renderFlowStrip() {
-    return `
-      <div class="gallery-phase-flow" aria-hidden="true">
-        <div class="gallery-phase-flow__track">
-          <span class="gallery-phase-flow__step gallery-phase-flow__step--recent">
-            <span class="gallery-phase-flow__dot"></span>Most Recent
-          </span>
-          <span class="gallery-phase-flow__arrow">→</span>
-          <span class="gallery-phase-flow__step gallery-phase-flow__step--past">
-            <span class="gallery-phase-flow__dot"></span>Past Events
-          </span>
-        </div>
-      </div>`;
   }
 
   function photoActions(photo, member) {
@@ -95,7 +74,7 @@
   }
 
   function renderAlbumCard(event, member) {
-    const previewLimit = Math.min(event.previewLimit || 4, 4);
+    const previewLimit = Math.min(event.previewLimit || 4, 8);
     const hasMore = event.photos.length > previewLimit;
     const cover = event.photos[0]?.src || '';
     const photosHtml = event.photos
@@ -109,15 +88,23 @@
       )
       .join('');
 
+    const badge =
+      event.group === 'recent'
+        ? '<span class="gallery-album-card__badge gallery-album-card__badge--recent">Most recent</span>'
+        : '<span class="gallery-album-card__badge">Past event</span>';
+
     return `
       <article class="gallery-album-card" id="${event.id}" data-group="${event.group}">
         <a href="#${event.id}" class="gallery-album-card__hero" aria-hidden="true" tabindex="-1">
-          <img src="${cover}" alt="" width="480" height="200" loading="lazy">
+          <img src="${cover}" alt="" width="960" height="360" loading="lazy">
           <span class="gallery-album-card__overlay"></span>
           <span class="gallery-album-card__count">${event.photos.length} photos</span>
         </a>
         <header class="gallery-album-card__head">
-          <p class="gallery-album-card__date">${event.date}</p>
+          <div class="gallery-album-card__meta">
+            <p class="gallery-album-card__date">${event.date}</p>
+            ${badge}
+          </div>
           <h2>${event.title}</h2>
           <p class="gallery-album-card__desc">${event.description}</p>
           ${albumLinks ? `<div class="gallery-event__albums">${albumLinks}</div>` : ''}
@@ -127,43 +114,58 @@
       </article>`;
   }
 
-  function renderColumn(groupId, member) {
-    const meta = groupMeta(groupId);
-    const albums = albumsInGroup(groupId);
-    const empty = albums.length
-      ? albums.map((album) => renderAlbumCard(album, member)).join('')
-      : `<div class="gallery-phase-empty"><span class="gallery-phase-empty__icon" aria-hidden="true">${meta.icon}</span><p>No albums in this section yet.</p></div>`;
-
+  function renderFilters(activeId, counts) {
     return `
-      <section class="gallery-phase-column gallery-phase-column--${meta.mod}" aria-labelledby="gallery-col-${groupId}">
-        <header class="gallery-phase-column__head gallery-phase-column__head--${meta.mod}">
-          <div class="gallery-phase-column__title-wrap">
-            <span class="gallery-phase-column__icon" aria-hidden="true">${meta.icon}</span>
-            <div>
-              <h2 id="gallery-col-${groupId}">${meta.label}</h2>
-              <p class="gallery-phase-column__hint">${meta.hint}</p>
-            </div>
-          </div>
-          <span class="gallery-phase-column__count">${albums.length}</span>
-        </header>
-        <div class="gallery-phase-column__body">${empty}</div>
-      </section>`;
+      <div class="gallery-filters" role="tablist" aria-label="Filter albums">
+        ${FILTERS.map(
+          (filter) => `
+          <button
+            type="button"
+            class="gallery-filters__btn${activeId === filter.id ? ' is-active' : ''}"
+            role="tab"
+            aria-selected="${activeId === filter.id}"
+            data-gallery-filter="${filter.id}"
+          >
+            ${filter.label}
+            <span class="gallery-filters__count">${counts[filter.id] || 0}</span>
+          </button>`
+        ).join('')}
+      </div>`;
+  }
+
+  function renderAlbumList(root, member, filterId) {
+    const albums = sortedAlbums(filterId);
+    const list = document.createElement('div');
+    list.className = 'gallery-album-list';
+    list.innerHTML = albums.length
+      ? albums.map((album) => renderAlbumCard(album, member)).join('')
+      : `<div class="gallery-phase-empty"><p>No albums in this section yet.</p></div>`;
+    root.appendChild(list);
   }
 
   function renderGalleryLayout(root, member) {
+    const counts = {
+      all: events.length,
+      recent: events.filter((e) => e.group === 'recent').length,
+      past: events.filter((e) => e.group === 'past').length
+    };
+
     const wrap = document.createElement('div');
     wrap.className = 'gallery-phases-panel';
-    wrap.innerHTML = renderFlowStrip();
-
-    const row = document.createElement('div');
-    row.className = 'gallery-phases-row';
-    row.innerHTML = groups.map((g) => renderColumn(g.id, member)).join('');
-    wrap.appendChild(row);
+    wrap.innerHTML = renderFilters(activeFilter, counts);
     root.appendChild(wrap);
+    renderAlbumList(root, member, activeFilter);
   }
 
   function bindShowMore(container) {
     container.addEventListener('click', (e) => {
+      const filterBtn = e.target.closest('[data-gallery-filter]');
+      if (filterBtn) {
+        activeFilter = filterBtn.dataset.galleryFilter;
+        init();
+        return;
+      }
+
       const btn = e.target.closest('[data-show-more]');
       if (!btn) return;
 
@@ -260,9 +262,17 @@
   function initFromHash() {
     const hash = window.location.hash.replace('#', '');
     if (hash && findAlbum(hash)) {
+      const album = findAlbum(hash);
+      if (album && activeFilter !== 'all' && album.group !== activeFilter) {
+        activeFilter = 'all';
+        init();
+        return;
+      }
       requestAnimationFrame(() => scrollToAlbum(hash));
     }
   }
+
+  let bound = false;
 
   function init() {
     const root = document.getElementById('gallery-root');
@@ -273,8 +283,11 @@
     const member = getMember();
     renderMemberBanner(root, member);
     renderGalleryLayout(root, member);
-    bindShowMore(root);
-    initLightbox();
+    if (!bound) {
+      bindShowMore(root);
+      initLightbox();
+      bound = true;
+    }
     initFromHash();
   }
 

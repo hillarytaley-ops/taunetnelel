@@ -14,7 +14,7 @@ window.TAUNET_FIND_PHOTOS = [
     external: 'https://pqphotography90.pixieset.com/taunetnelelbeautypeagantcontest/'
   },
   {
-    id: 'gala-2025',
+    id: 'gala-2026',
     label: 'Taunet Gala Images',
     href: 'gallery.html#gala-2026',
     thumb: 'assets/gallery/gala-2026/gala-2026-01-PQS_0001.jpg',
@@ -150,19 +150,40 @@ window.TAUNET_GALLERY = [
     nav: 'Gala 2025',
     group: 'past',
     sortDate: '2025-04-26',
+    previewLimit: 6,
     title: 'Taunet Nelel Gala 2025',
     date: '26 April 2025',
-    description: 'Annual gala night at Dandenong Stadium — music, culture, and fellowship.',
+    description: 'Annual gala night — music, culture, and fellowship. Preview below, or open the full photographer albums on SmugMug.',
+    externalAlbums: [
+      {
+        label: 'Full album 1 (Ian Kigen — SmugMug)',
+        url: 'https://iankigen.smugmug.com/TAUNET-GALA-2025/n-bRh23b'
+      },
+      {
+        label: 'Full album 2 (Ian Kigen — SmugMug)',
+        url: 'https://iankigen.smugmug.com/TAUNET-NE-GALA-2025-2/n-4WVB2D'
+      }
+    ],
     photos: [
       {
         src: 'wp-content/uploads/2025/10/TAUNET-NELE-GALA.jpg',
-        alt: 'Taunet Nelel Gala 2025 promotional banner',
-        downloadName: 'Taunet-Gala-2025-banner.jpg'
+        alt: 'Taunet Nelel Gala 2025',
+        downloadName: 'Taunet-Gala-2025-01.jpg'
+      },
+      {
+        src: 'wp-content/uploads/2025/10/TAUNET-NELEL-GALA-2.png',
+        alt: 'Taunet Nelel Gala 2025 highlights',
+        downloadName: 'Taunet-Gala-2025-02.png'
       },
       {
         src: 'wp-content/uploads/2025/10/Taunet-Nelel-Gala.png',
         alt: 'Taunet Nelel Gala 2025 branding',
         downloadName: 'Taunet-Gala-2025-branding.png'
+      },
+      {
+        src: 'assets/migrated-uploads/2026/01/Taunet-Nelel-Galla.jpg',
+        alt: 'Taunet Nelel gala celebration',
+        downloadName: 'Taunet-Gala-celebration.jpg'
       }
     ]
   },
@@ -189,93 +210,6 @@ window.TAUNET_GALLERY = [
         src: 'wp-content/uploads/2025/10/IMG-20211212-WA0071.jpg',
         alt: 'Community sports day gathering',
         downloadName: 'Taunet-Sports-Day-02.jpg'
-      }
-    ]
-  },
-  {
-    id: 'leadership-team',
-    nav: 'Our Team',
-    group: 'past',
-    sortDate: '2025-10-15',
-    previewLimit: 8,
-    title: 'Leadership Team',
-    date: 'Committee portraits',
-    description: 'Meet members of the Taunet Nelel leadership and organising team.',
-    photos: [
-      {
-        src: 'assets/migrated-uploads/2025/10/Betty-Langat-Vice-Chair-Lady.jpg',
-        alt: 'Betty Langat — Vice Chair',
-        downloadName: 'Betty-Langat.jpg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/10/Brenda-Bor.jpeg',
-        alt: 'Brenda Bor',
-        downloadName: 'Brenda-Bor.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Caroline-Yego.jpeg',
-        alt: 'Caroline Yego',
-        downloadName: 'Caroline-Yego.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Dennis-Kirwa.jpeg',
-        alt: 'Dennis Kirwa',
-        downloadName: 'Dennis-Kirwa.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Dennis-Melly.jpeg',
-        alt: 'Dennis Melly',
-        downloadName: 'Dennis-Melly.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/10/Dismus-Kiprop.jpeg',
-        alt: 'Dismus Kiprop',
-        downloadName: 'Dismus-Kiprop.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Felix-Kogei.jpeg',
-        alt: 'Felix Kogei',
-        downloadName: 'Felix-Kogei.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Kennedy-Chumba.jpeg',
-        alt: 'Kennedy Chumba',
-        downloadName: 'Kennedy-Chumba.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Lidya-Kiplagat.jpeg',
-        alt: "Lidya Kiplagat",
-        downloadName: 'Lidya-Kiplagat.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Nick-Boit.jpeg',
-        alt: 'Nick Boit',
-        downloadName: 'Nick-Boit.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Ronnie-Kipter.jpeg',
-        alt: 'Ronnie Kipter',
-        downloadName: 'Ronnie-Kipter.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Ruto-Mangusho.jpeg',
-        alt: 'Ruto Mangusho',
-        downloadName: 'Ruto-Mangusho.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Sandra-Boinet.jpeg',
-        alt: 'Sandra Boinet',
-        downloadName: 'Sandra-Boinet.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/09/Sharon-Ngetich.jpeg',
-        alt: "Sharon Ngetich",
-        downloadName: 'Sharon-Ngetich.jpeg'
-      },
-      {
-        src: 'assets/migrated-uploads/2025/10/Taunet-Leadership-Team-Meet-up.jpeg',
-        alt: 'Taunet Nelel leadership team meet-up',
-        downloadName: 'Leadership-Team-Meetup.jpeg'
       }
     ]
   }
