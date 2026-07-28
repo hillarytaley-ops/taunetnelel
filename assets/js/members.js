@@ -154,6 +154,21 @@
     return member;
   }
 
+  function authErrorMessage(error) {
+    const raw = (error && (error.message || error.error_description || error.msg)) || '';
+    const status = error?.status || error?.code;
+    const lowered = String(raw).toLowerCase();
+    if (
+      status === 429 ||
+      lowered.includes('rate limit') ||
+      lowered.includes('too many requests') ||
+      lowered.includes('over_email')
+    ) {
+      return 'Supabase is temporarily blocking signups (rate limit). With the built-in email service this is often only 2 auth emails per hour for the whole project — wait a while, or turn off “Confirm email” for testing, or add custom SMTP.';
+    }
+    return raw || 'Request failed.';
+  }
+
   function showAuthMessage(form, text, isError) {
     let message = form.querySelector('.auth-form__message');
     if (!message) {
@@ -185,6 +200,7 @@
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const authApi = window.taunetMembersAuth;
+    let authBusy = false;
 
     // Prefer live Supabase session over stale localStorage demo
     if (authApi) {
@@ -203,6 +219,7 @@
     if (loginForm) {
       loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (authBusy) return;
         const email = loginForm.querySelector('[name="email"]')?.value?.trim();
         const password = loginForm.querySelector('[name="password"]')?.value || '';
 
@@ -211,6 +228,7 @@
           return;
         }
 
+        authBusy = true;
         setSubmitBusy(loginForm, true);
         showAuthMessage(loginForm, '');
         try {
@@ -218,8 +236,9 @@
           setMember(member);
           redirectAfterAuth();
         } catch (error) {
-          showAuthMessage(loginForm, error.message || 'Sign in failed. Check your email and password.', true);
+          showAuthMessage(loginForm, authErrorMessage(error), true);
         } finally {
+          authBusy = false;
           setSubmitBusy(loginForm, false);
         }
       });
@@ -227,17 +246,21 @@
       const forgotBtn = document.getElementById('forgot-password');
       forgotBtn?.addEventListener('click', async (e) => {
         e.preventDefault();
+        if (authBusy) return;
         const email = loginForm.querySelector('[name="email"]')?.value?.trim();
         if (!email) {
           showAuthMessage(loginForm, 'Enter your email first, then click Forgot password.', true);
           return;
         }
         if (!authApi) return;
+        authBusy = true;
         try {
           await authApi.requestPasswordReset(email);
           showAuthMessage(loginForm, 'Password reset email sent. Check your inbox.', false);
         } catch (error) {
-          showAuthMessage(loginForm, error.message || 'Could not send reset email.', true);
+          showAuthMessage(loginForm, authErrorMessage(error), true);
+        } finally {
+          authBusy = false;
         }
       });
     }
@@ -245,6 +268,7 @@
     if (registerForm) {
       registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (authBusy) return;
         const name = registerForm.querySelector('[name="name"]')?.value?.trim() || '';
         const email = registerForm.querySelector('[name="email"]')?.value?.trim() || '';
         const phone = registerForm.querySelector('[name="phone"]')?.value?.trim() || '';
@@ -258,6 +282,7 @@
           return;
         }
 
+        authBusy = true;
         setSubmitBusy(registerForm, true);
         showAuthMessage(registerForm, '');
         try {
@@ -273,8 +298,9 @@
           setMember(result.member);
           redirectAfterAuth();
         } catch (error) {
-          showAuthMessage(registerForm, error.message || 'Could not create account.', true);
+          showAuthMessage(registerForm, authErrorMessage(error), true);
         } finally {
+          authBusy = false;
           setSubmitBusy(registerForm, false);
         }
       });
