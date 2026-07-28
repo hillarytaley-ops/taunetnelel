@@ -1333,6 +1333,50 @@
   color: rgba(255, 255, 255, 0.88);
 }
 
+.login-form__forgot {
+  margin: -0.35rem 0 0.85rem;
+  text-align: right;
+}
+
+.login-form__forgot a {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255, 200, 140, 0.95);
+}
+
+.auth-form__message {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.auth-form__message.is-error {
+  background: rgba(160, 40, 40, 0.35);
+  border: 1px solid rgba(255, 180, 180, 0.45);
+}
+
+.register-form .auth-form__message {
+  background: rgba(139, 69, 19, 0.08);
+  color: var(--color-text);
+}
+
+.register-form .auth-form__message.is-error {
+  background: rgba(160, 40, 40, 0.1);
+  border: 1px solid rgba(160, 40, 40, 0.25);
+  color: #8a2a2a;
+}
+
+.plan-picker__hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
 .login-form__footer a {
   color: rgba(255, 200, 140, 0.95);
   font-weight: 600;

@@ -83,16 +83,30 @@
     if (!raw) return null;
     const member = { ...raw };
 
-    if (member.plan === 'welfare' || member.welfareRegistered === true) {
+    if (member.plan === 'both' || (member.associationMember && member.welfareMember)) {
+      member.plan = 'both';
+      member.planLabel = member.planLabel || 'Association + Welfare';
+      member.associationMember = true;
+      member.welfareMember = true;
       member.welfareRegistered = true;
-      member.welfarePackage = member.welfarePackage || 'Welfare Plus — Individual';
+      member.welfarePackage = member.welfarePackage || 'Welfare membership';
+      member.welfareStatus = member.welfareStatus || 'active';
+      member.welfareCover = member.welfareCover || 'Bereavement & hardship';
+      if (member.welfareAlertsEnabled === undefined) member.welfareAlertsEnabled = true;
+      return member;
+    }
+
+    if (member.plan === 'welfare' || member.welfareRegistered === true || member.welfareMember === true) {
+      member.welfareRegistered = true;
+      member.welfareMember = true;
+      member.welfarePackage = member.welfarePackage || 'Welfare membership';
       member.welfareStatus = member.welfareStatus || 'active';
       member.welfareSince = member.welfareSince || member.memberSince || new Date().getFullYear().toString();
       member.welfareCover = member.welfareCover || 'Bereavement & hardship';
       if (member.welfareAlertsEnabled === undefined) member.welfareAlertsEnabled = true;
       if (member.plan !== 'welfare') {
         member.plan = 'welfare';
-        member.planLabel = 'Welfare Plus';
+        member.planLabel = member.planLabel || 'Welfare';
       }
     }
 
@@ -117,7 +131,12 @@
   }
 
   function isWelfareMember(member) {
-    return member.plan === 'welfare' || member.welfareRegistered === true;
+    return (
+      member.plan === 'welfare' ||
+      member.plan === 'both' ||
+      member.welfareMember === true ||
+      member.welfareRegistered === true
+    );
   }
 
   function packageLabelFromValue(value) {
@@ -135,53 +154,129 @@
     return member;
   }
 
-  function initAuth() {
+  function showAuthMessage(form, text, isError) {
+    let message = form.querySelector('.auth-form__message');
+    if (!message) {
+      message = document.createElement('p');
+      message.className = 'auth-form__message';
+      message.setAttribute('role', 'status');
+      form.insertBefore(message, form.querySelector('button[type="submit"]'));
+    }
+    message.hidden = !text;
+    message.textContent = text || '';
+    message.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function setSubmitBusy(form, busy) {
+    const btn = form.querySelector('button[type="submit"]');
+    if (!btn) return;
+    btn.disabled = busy;
+    btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
+    btn.textContent = busy ? 'Please wait…' : btn.dataset.originalText;
+  }
+
+  function redirectAfterAuth() {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    window.location.href = redirect || 'dashboard.html';
+  }
+
+  async function initAuth() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
+    const authApi = window.taunetMembersAuth;
+
+    // Prefer live Supabase session over stale localStorage demo
+    if (authApi) {
+      try {
+        const sessionMember = await authApi.getSessionMember();
+        if (sessionMember) {
+          setMember(sessionMember);
+          redirectAfterAuth();
+          return;
+        }
+      } catch (error) {
+        console.warn('Session check failed:', error);
+      }
+    }
 
     if (loginForm) {
-      loginForm.addEventListener('submit', (e) => {
+      loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = loginForm.querySelector('[name="email"]')?.value;
-        const memberType = loginForm.querySelector('[name="member_type"]')?.value || 'basic';
-        const user = memberType === 'welfare'
-          ? { ...DEMO_WELFARE_USER, email: email || DEMO_WELFARE_USER.email }
-          : { ...DEMO_USER, email: email || DEMO_USER.email };
-        setMember(user);
-        const params = new URLSearchParams(window.location.search);
-        const redirect = params.get('redirect');
-        window.location.href = redirect || 'dashboard.html';
+        const email = loginForm.querySelector('[name="email"]')?.value?.trim();
+        const password = loginForm.querySelector('[name="password"]')?.value || '';
+
+        if (!authApi || !window.taunetSupabaseApi?.isConfigured()) {
+          showAuthMessage(loginForm, 'Member login is not connected yet. Check supabase-config.js.', true);
+          return;
+        }
+
+        setSubmitBusy(loginForm, true);
+        showAuthMessage(loginForm, '');
+        try {
+          const member = await authApi.signIn(email, password);
+          setMember(member);
+          redirectAfterAuth();
+        } catch (error) {
+          showAuthMessage(loginForm, error.message || 'Sign in failed. Check your email and password.', true);
+        } finally {
+          setSubmitBusy(loginForm, false);
+        }
+      });
+
+      const forgotBtn = document.getElementById('forgot-password');
+      forgotBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = loginForm.querySelector('[name="email"]')?.value?.trim();
+        if (!email) {
+          showAuthMessage(loginForm, 'Enter your email first, then click Forgot password.', true);
+          return;
+        }
+        if (!authApi) return;
+        try {
+          await authApi.requestPasswordReset(email);
+          showAuthMessage(loginForm, 'Password reset email sent. Check your inbox.', false);
+        } catch (error) {
+          showAuthMessage(loginForm, error.message || 'Could not send reset email.', true);
+        }
       });
     }
 
     if (registerForm) {
-      registerForm.addEventListener('submit', (e) => {
+      registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = registerForm.querySelector('[name="name"]')?.value || 'New Member';
-        const email = registerForm.querySelector('[name="email"]')?.value || '';
+        const name = registerForm.querySelector('[name="name"]')?.value?.trim() || '';
+        const email = registerForm.querySelector('[name="email"]')?.value?.trim() || '';
+        const phone = registerForm.querySelector('[name="phone"]')?.value?.trim() || '';
+        const password = registerForm.querySelector('[name="password"]')?.value || '';
         const plan = registerForm.querySelector('[name="plan"]:checked')?.value
           || registerForm.querySelector('[name="plan"]')?.value
           || 'basic';
-        const phone = registerForm.querySelector('[name="phone"]')?.value || '';
-        const isWelfare = plan === 'welfare';
-        setMember({
-          ...DEMO_USER,
-          name,
-          email,
-          phone,
-          plan,
-          planLabel: isWelfare ? 'Welfare Plus' : 'Basic',
-          welfareRegistered: isWelfare,
-          welfarePackage: isWelfare ? 'Welfare Plus — Individual' : undefined,
-          welfareStatus: isWelfare ? 'active' : undefined,
-          welfareSince: isWelfare ? new Date().getFullYear().toString() : undefined,
-          welfareCover: isWelfare ? 'Bereavement & hardship' : undefined,
-          welfareAlertsEnabled: isWelfare,
-          registrations: []
-        });
-        const params = new URLSearchParams(window.location.search);
-        const redirect = params.get('redirect');
-        window.location.href = redirect || 'dashboard.html';
+
+        if (!authApi || !window.taunetSupabaseApi?.isConfigured()) {
+          showAuthMessage(registerForm, 'Registration is not connected yet. Check supabase-config.js.', true);
+          return;
+        }
+
+        setSubmitBusy(registerForm, true);
+        showAuthMessage(registerForm, '');
+        try {
+          const result = await authApi.signUp({ name, email, phone, password, plan });
+          if (result.needsEmailConfirmation) {
+            showAuthMessage(
+              registerForm,
+              'Account created. Check your email to confirm, then sign in. If your email is on the member list, your membership will be applied automatically.',
+              false
+            );
+            return;
+          }
+          setMember(result.member);
+          redirectAfterAuth();
+        } catch (error) {
+          showAuthMessage(registerForm, error.message || 'Could not create account.', true);
+        } finally {
+          setSubmitBusy(registerForm, false);
+        }
       });
     }
   }
@@ -458,10 +553,15 @@
       });
     }
 
-    document.getElementById('logout-btn')?.addEventListener('click', (e) => {
+    document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
       e.preventDefault();
       clearPreviewMode();
       clearMember();
+      try {
+        await window.taunetMembersAuth?.signOut();
+      } catch (error) {
+        console.warn('Sign out error:', error);
+      }
       window.location.href = 'login.html';
     });
   }
@@ -487,22 +587,61 @@
     history.replaceState(null, '', `${window.location.pathname}#${hash}`);
   }
 
-  const path = window.location.pathname;
-  if (path.includes('login') || path.includes('register')) {
-    if (new URLSearchParams(window.location.search).get('exit') === 'preview') {
-      clearPreviewMode();
-      clearMember();
-      history.replaceState(null, '', path.includes('register') ? 'register.html' : 'login.html');
+  async function bootMembersArea() {
+    const path = window.location.pathname;
+    const onAuthPage = path.includes('login') || path.includes('register');
+
+    if (onAuthPage) {
+      if (new URLSearchParams(window.location.search).get('exit') === 'preview') {
+        clearPreviewMode();
+        clearMember();
+        try {
+          await window.taunetMembersAuth?.signOut();
+        } catch (_) { /* ignore */ }
+        history.replaceState(null, '', path.includes('register') ? 'register.html' : 'login.html');
+      }
+      await initAuth();
+      return;
     }
-    if (getMember()) {
-      window.location.href = 'dashboard.html';
+
+    if (!path.includes('members')) return;
+
+    // Preview mode still works without Auth
+    if (applyPreviewMode()) {
+      initDashboard();
+      showPreviewBanner();
+      initMobileSidebar();
+      initInquirySuccess();
+      return;
     }
-    initAuth();
-  } else if (path.includes('members')) {
-    applyPreviewMode();
+
+    // Restore session from Supabase when available
+    if (window.taunetMembersAuth && window.taunetSupabaseApi?.isConfigured()) {
+      try {
+        const sessionMember = await window.taunetMembersAuth.getSessionMember();
+        if (sessionMember) {
+          setMember(sessionMember);
+        } else if (!getMember()) {
+          requireAuth();
+          return;
+        }
+      } catch (error) {
+        console.warn('Could not restore member session:', error);
+        if (!getMember()) {
+          requireAuth();
+          return;
+        }
+      }
+    } else if (!getMember()) {
+      requireAuth();
+      return;
+    }
+
     initDashboard();
     showPreviewBanner();
     initMobileSidebar();
     initInquirySuccess();
   }
+
+  bootMembersArea();
 })();

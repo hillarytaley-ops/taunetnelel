@@ -25,6 +25,7 @@
       </div>
 
       <form class="login-form" id="login-form" novalidate>
+        <p class="auth-form__message" role="status" hidden></p>
         <div class="form-group">
           <label for="email">Email address</label>
           <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email" required>
@@ -40,13 +41,9 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="member-type">Account type</label>
-          <select id="member-type" name="member_type">
-            <option value="basic">Association member (Basic)</option>
-            <option value="welfare">Social welfare member (Welfare Plus)</option>
-          </select>
-        </div>
+        <p class="login-form__forgot">
+          <a href="#" id="forgot-password">Forgot password?</a>
+        </p>
 
         <button type="submit" class="btn btn--primary login-submit">Sign in</button>
 
@@ -67,7 +64,10 @@
     </div>
   </main>
 
-  <script src="../assets/js/members.js?v=9"></script>
+  <script src="../assets/js/supabase-config.js?v=2"></script>
+  <script src="../assets/js/supabase-init.js?v=2"></script>
+  <script src="../assets/js/members-auth.js?v=1"></script>
+  <script src="../assets/js/members.js?v=14"></script>
   <script>
     document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
       btn.addEventListener('click', function () {
