@@ -54,6 +54,11 @@
     });
 
     return albums
+      .filter((album) => {
+        const id = String(album.id || '');
+        // Skip raw WordPress dump albums — keep curated gallery only
+        return !id.startsWith('wp-archive-') && !id.startsWith('wp-202');
+      })
       .map((album) => mapAlbum(album, byAlbum[album.id] || []))
       .filter((album) => album.photos.length > 0);
   }
