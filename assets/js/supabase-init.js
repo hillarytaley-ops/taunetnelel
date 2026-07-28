@@ -1,7 +1,16 @@
 (function (global) {
   'use strict';
 
-  const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  // Same-origin copy — Edge Tracking Prevention blocks storage for CDN scripts (jsDelivr).
+  function supabaseScriptUrl() {
+    const el = document.querySelector('script[src*="supabase-init.js"]');
+    const src = el?.getAttribute('src') || '';
+    if (src.includes('supabase-init.js')) {
+      return src.replace(/supabase-init\.js[^/]*$/, 'vendor/supabase.min.js');
+    }
+    return 'assets/js/vendor/supabase.min.js';
+  }
+
   const CORE_FIELDS = new Set(['name', 'email', 'phone', 'message']);
 
   let client = null;
@@ -64,7 +73,7 @@
     }
 
     if (!loadPromise) {
-      loadPromise = loadScript(SUPABASE_CDN).then(() => getClient());
+      loadPromise = loadScript(supabaseScriptUrl()).then(() => getClient());
     }
 
     return loadPromise;
