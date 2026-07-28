@@ -1,7 +1,6 @@
 (function () {
   'use strict';
 
-  const MEMBER_KEY = 'taunet_member';
   let events = window.TAUNET_GALLERY || [];
   let activeFilter = 'recent';
 
@@ -9,20 +8,6 @@
     { id: 'recent', label: 'Most recent' },
     { id: 'past', label: 'Past events' }
   ];
-
-  function getMember() {
-    try {
-      const data = localStorage.getItem(MEMBER_KEY);
-      return data ? JSON.parse(data) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function loginUrl() {
-    const redirect = `${window.location.pathname}${window.location.hash}`;
-    return `members/login.html?redirect=${encodeURIComponent(redirect.replace(/^\//, ''))}`;
-  }
 
   function sortedAlbums(filterId) {
     return events
@@ -32,7 +17,6 @@
         const db = b.sortDate || '0000';
         const byDate = db.localeCompare(da);
         if (byDate !== 0) return byDate;
-        // Prefer albums with more photos when dates tie
         return (b.photos?.length || 0) - (a.photos?.length || 0);
       });
   }
@@ -41,46 +25,21 @@
     return events.find((event) => event.id === id);
   }
 
-  function renderMemberBanner(container, member) {
-    const banner = document.createElement('div');
-    banner.className = `gallery-member-banner${member ? ' gallery-member-banner--member' : ''}`;
-    banner.innerHTML = member
-      ? `<p><strong>Welcome, ${member.name.split(' ')[0]}.</strong> You can download full-resolution photos from each event album below.</p>`
-      : `<p>Photos are free to browse. <a href="${loginUrl()}">Log in as a member</a> or <a href="members/register.html">join Taunet Nelel</a> to download images.</p>`;
-    container.appendChild(banner);
-  }
-
-  function photoActions(photo, member) {
-    if (member) {
-      return `
-        <div class="gallery-photo__actions">
-          <button type="button" class="gallery-photo__btn gallery-photo__btn--view" data-view="${photo.src}" data-caption="${photo.alt}">View</button>
-          <a href="${photo.src}" class="gallery-photo__btn gallery-photo__btn--download" download="${photo.downloadName}">Download</a>
-        </div>`;
-    }
-    return `
-      <div class="gallery-photo__actions">
-        <button type="button" class="gallery-photo__btn gallery-photo__btn--view" data-view="${photo.src}" data-caption="${photo.alt}">View</button>
-        <a href="${loginUrl()}" class="gallery-photo__btn gallery-photo__btn--locked">Members download</a>
-      </div>`;
-  }
-
-  function renderPhotoFigure(photo, member, hidden) {
+  function renderPhotoFigure(photo, hidden) {
     return `
       <figure class="gallery-photo${hidden ? ' gallery-photo--hidden' : ''}">
         <button type="button" class="gallery-photo__thumb" data-view="${photo.src}" data-caption="${photo.alt}" aria-label="View ${photo.alt}">
           <img src="${photo.src}" alt="${photo.alt}" width="400" height="300" loading="lazy">
         </button>
-        ${photoActions(photo, member)}
       </figure>`;
   }
 
-  function renderAlbumCard(event, member) {
+  function renderAlbumCard(event) {
     const previewLimit = Math.min(event.previewLimit || 4, 8);
     const hasMore = event.photos.length > previewLimit;
     const cover = event.photos[0]?.src || '';
     const photosHtml = event.photos
-      .map((photo, index) => renderPhotoFigure(photo, member, index >= previewLimit))
+      .map((photo, index) => renderPhotoFigure(photo, index >= previewLimit))
       .join('');
 
     const albumLinks = (event.externalAlbums || [])
@@ -135,17 +94,17 @@
       </div>`;
   }
 
-  function renderAlbumList(root, member, filterId) {
+  function renderAlbumList(root, filterId) {
     const albums = sortedAlbums(filterId);
     const list = document.createElement('div');
     list.className = 'gallery-album-list';
     list.innerHTML = albums.length
-      ? albums.map((album) => renderAlbumCard(album, member)).join('')
+      ? albums.map((album) => renderAlbumCard(album)).join('')
       : `<div class="gallery-phase-empty"><p>No albums in this section yet.</p></div>`;
     root.appendChild(list);
   }
 
-  function renderGalleryLayout(root, member) {
+  function renderGalleryLayout(root) {
     const counts = {
       recent: events.filter((e) => e.group === 'recent').length,
       past: events.filter((e) => e.group === 'past').length
@@ -155,7 +114,7 @@
     wrap.className = 'gallery-phases-panel';
     wrap.innerHTML = renderFilters(activeFilter, counts);
     root.appendChild(wrap);
-    renderAlbumList(root, member, activeFilter);
+    renderAlbumList(root, activeFilter);
   }
 
   function bindShowMore(container) {
@@ -199,35 +158,19 @@
         <figure class="lightbox__figure">
           <img src="" alt="" class="lightbox__img">
           <figcaption class="lightbox__caption"></figcaption>
-        </figure>
-        <div class="lightbox__footer">
-          <a href="#" class="btn btn--accent lightbox__download" download hidden>Download photo</a>
-          <a href="${loginUrl()}" class="btn btn--ghost lightbox__login" hidden>Member login to download</a>
-        </div>`;
+        </figure>`;
       document.body.appendChild(lightbox);
     }
 
     const img = lightbox.querySelector('.lightbox__img');
     const caption = lightbox.querySelector('.lightbox__caption');
-    const downloadBtn = lightbox.querySelector('.lightbox__download');
-    const loginBtn = lightbox.querySelector('.lightbox__login');
     const closeBtn = lightbox.querySelector('.lightbox__close');
 
-    function openLightbox(src, alt, downloadName) {
-      const member = getMember();
+    function openLightbox(src, alt) {
       if (!img) return;
       img.src = src;
       img.alt = alt || 'Event photo';
       if (caption) caption.textContent = alt || '';
-      if (member && downloadBtn) {
-        downloadBtn.href = src;
-        downloadBtn.download = downloadName || 'taunet-photo.jpg';
-        downloadBtn.hidden = false;
-        if (loginBtn) loginBtn.hidden = true;
-      } else {
-        if (downloadBtn) downloadBtn.hidden = true;
-        if (loginBtn) loginBtn.hidden = false;
-      }
       lightbox.hidden = false;
       lightbox.setAttribute('aria-hidden', 'false');
       closeBtn?.focus();
@@ -243,12 +186,7 @@
       const viewBtn = e.target.closest('[data-view]');
       if (!viewBtn) return;
       e.preventDefault();
-      const src = viewBtn.dataset.view;
-      const alt = viewBtn.dataset.caption || '';
-      const figure = viewBtn.closest('.gallery-photo');
-      const downloadLink = figure?.querySelector('.gallery-photo__btn--download');
-      const downloadName = downloadLink?.getAttribute('download') || '';
-      openLightbox(src, alt, downloadName);
+      openLightbox(viewBtn.dataset.view, viewBtn.dataset.caption || '');
     });
 
     closeBtn?.addEventListener('click', closeLightbox);
@@ -281,9 +219,7 @@
     if (!root || !events.length) return;
 
     root.innerHTML = '';
-    const member = getMember();
-    renderMemberBanner(root, member);
-    renderGalleryLayout(root, member);
+    renderGalleryLayout(root);
     if (!bound) {
       bindShowMore(root);
       initLightbox();

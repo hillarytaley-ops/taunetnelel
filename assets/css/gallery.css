@@ -289,6 +289,24 @@ body[data-page="gallery"] .page-hero--gallery .page-hero__content {
   max-width: none;
 }
 
+.gallery-album-card .gallery-photo__thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.gallery-album-card .gallery-photo__thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
 .gallery-album-card .gallery-event__show-more {
   margin: 0 1rem 1rem;
   width: calc(100% - 2rem);
