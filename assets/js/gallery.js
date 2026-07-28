@@ -2,7 +2,7 @@
   'use strict';
 
   const MEMBER_KEY = 'taunet_member';
-  const events = window.TAUNET_GALLERY || [];
+  let events = window.TAUNET_GALLERY || [];
   const groups = window.TAUNET_GALLERY_GROUPS || [
     { id: 'recent', label: 'Most Recent', hint: 'Albums from the last few months', icon: '✦', mod: 'recent' },
     { id: 'past', label: 'Past Events', hint: 'Browse our community archive', icon: '◷', mod: 'past' }
@@ -266,24 +266,28 @@
 
   function init() {
     const root = document.getElementById('gallery-root');
+    events = window.TAUNET_GALLERY || events;
     if (!root || !events.length) return;
 
+    root.innerHTML = '';
     const member = getMember();
     renderMemberBanner(root, member);
     renderGalleryLayout(root, member);
     bindShowMore(root);
     initLightbox();
     initFromHash();
-
-    window.addEventListener('hashchange', () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && findAlbum(hash)) scrollToAlbum(hash);
-    });
   }
+
+  window.taunetGalleryRefresh = init;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
+
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && findAlbum(hash)) scrollToAlbum(hash);
+  });
 })();
