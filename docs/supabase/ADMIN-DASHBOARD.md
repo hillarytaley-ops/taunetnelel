@@ -2,27 +2,36 @@
 
 ## URL
 
-**Admin portal (PIN):** https://taunetnelel.vercel.app/admin/
+**Admin portal (PIN only):** https://taunetnelel.vercel.app/admin/
 
-This is **separate** from the members area (`/members/login.html`).
+Separate from members login (`/members/login.html`).
 
 Default PIN: `TaunetAdmin2026`  
-Change it in `assets/js/supabase-config.js` → `adminPin`.
+Change in `assets/js/supabase-config.js` → `adminPin` **and** match Vercel `ADMIN_PIN`.
 
-## How access works
+## How it works
 
-1. **Admin PIN** — unlocks the committee portal (Business Hub, page links, layout).
-2. **Optional live database** — on Overview, connect a committee email from `site_admins` only if you need enquiries / members / imports from Supabase. That is not the public members login screen.
+1. Enter the **admin PIN** → portal opens.
+2. Live enquiries / members / imports load through `/api/admin/data` using that PIN (no members email/password).
 
-## One-time SQL (for live data)
+## Vercel env (required for live data)
 
-1. `007` → `008` → `009` → `010` → **`011_fix_site_admin_recognition.sql`**
-2. Confirm emails in `site_admins`.
+In Vercel → Project → Settings → Environment Variables:
+
+| Name | Value |
+|------|--------|
+| `SUPABASE_URL` | `https://wgecdsdeeirzdvshdfwo.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` (secret) |
+| `ADMIN_PIN` | same as site PIN, e.g. `TaunetAdmin2026` |
+
+Redeploy after saving env vars.
+
+**Never** put `service_role` in frontend JS.
 
 ## Sections
 
-| Tab | Needs |
+| Tab | Notes |
 |-----|--------|
-| Business Hub | PIN only |
-| Pages & tools | PIN only |
-| Enquiries / Members / Imports / Events / Sponsors / Gallery / Newsletter | PIN + live database connect |
+| Business Hub | PIN; JSON export workflow |
+| Enquiries / Members / Imports / Newsletter | PIN + API + Supabase data |
+| Events / Sponsors / Gallery (DB) | May be empty if those tables were never filled (public site still uses static files) |

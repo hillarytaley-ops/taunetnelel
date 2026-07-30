@@ -20,6 +20,7 @@
   ];
 
   const ADMIN_PIN_KEY = 'taunet_site_admin_pin';
+  const ADMIN_PIN_VALUE_KEY = 'taunet_site_admin_pin_value';
 
   const state = {
     client: null,
@@ -208,150 +209,67 @@
   }
 
   function hasPinSession() {
-    return sessionStorage.getItem(ADMIN_PIN_KEY) === '1';
+    return sessionStorage.getItem(ADMIN_PIN_KEY) === '1' && Boolean(sessionStorage.getItem(ADMIN_PIN_VALUE_KEY));
+  }
+
+  function getStoredPin() {
+    return sessionStorage.getItem(ADMIN_PIN_VALUE_KEY) || '';
+  }
+
+  async function adminApi(resource, options = {}) {
+    const pin = getStoredPin();
+    if (!pin) throw new Error('Admin PIN session missing. Sign in again.');
+    const res = await fetch(`/api/admin/data?resource=${encodeURIComponent(resource)}`, {
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-pin': pin
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
+    }
+    if (!res.ok) {
+      throw new Error(data.error || `Admin API error (${res.status})`);
+    }
+    return data;
   }
 
   function enterPinPortal() {
     state.pinOk = true;
+    state.isAdmin = true;
     state.preview = false;
     if (els.userLabel) els.userLabel.textContent = 'PIN session (committee portal)';
     showShell(true);
     setAuthStatus('');
-    updateDataConnectUi();
     const hash = (location.hash || '#overview').replace('#', '');
     setPanel(hash);
     ensureBusinessEditor();
-    // Live tabs only if committee data login already connected
-    if (state.isAdmin) {
-      refreshPanel(hash);
-    }
-  }
-
-  function updateDataConnectUi() {
-    const card = document.getElementById('admin-data-connect-card');
-    const note = document.getElementById('admin-data-connect-note');
-    const form = document.getElementById('admin-data-login-form');
-    if (!card) return;
-    if (state.isAdmin && state.user) {
-      if (note) {
-        note.textContent = `Live database connected as ${state.user.email}. Enquiries, members, and imports can load from Supabase.`;
-      }
-      if (form) form.hidden = true;
-    } else {
-      if (note) {
-        note.innerHTML =
-          'Business Hub works with the admin PIN alone. To load live enquiries, members, and imports from Supabase, connect a committee data login (emails in <code>site_admins</code>). This is not the public members portal.';
-      }
-      if (form) form.hidden = false;
-    }
-  }
-
-  async function checkAdmin(client, user) {
-    const email = (user?.email || '').toLowerCase().trim();
-    if (!email) return { ok: false, reason: 'No email on this Auth session.' };
-
-    const { data, error } = await client.rpc('is_site_admin');
-    if (!error && data === true) return { ok: true };
-
-    const { data: row, error: rowErr } = await client
-      .from('site_admins')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (row?.email) return { ok: true };
-
-    const hint = error?.message || rowErr?.message || '';
-    return {
-      ok: false,
-      reason:
-        `Connected as ${email}, but that address is not in site_admins` +
-        (hint ? ` (${hint})` : '') +
-        '. Run 011_fix_site_admin_recognition.sql, then try again.'
-    };
-  }
-
-  async function connectLiveData(user) {
-    const client = await getClient();
-    const result = await checkAdmin(client, user);
-    if (!result.ok) {
-      await client.auth.signOut();
-      state.user = null;
-      state.isAdmin = false;
-      return result;
-    }
-    state.user = user;
-    state.isAdmin = true;
-    if (els.userLabel) {
-      els.userLabel.textContent = `PIN + live data (${user.email})`;
-    }
-    updateDataConnectUi();
-    await loadOverview();
-    return { ok: true };
+    refreshPanel(hash);
   }
 
   async function loadOverview() {
-    const client = await getClient();
-    const counts = {
-      enquiries: '—',
-      newEnquiries: '—',
-      profiles: '—',
-      imports: '—',
-      newsletter: '—'
-    };
-
-    try {
-      const { count: total } = await client
-        .from('form_submissions')
-        .select('*', { count: 'exact', head: true });
-      counts.enquiries = total ?? 0;
-
-      const { count: fresh } = await client
-        .from('form_submissions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'new');
-      counts.newEnquiries = fresh ?? 0;
-    } catch (_) { /* ignore */ }
-
-    try {
-      const { count } = await client.from('profiles').select('*', { count: 'exact', head: true });
-      counts.profiles = count ?? 0;
-    } catch (_) { /* ignore */ }
-
-    try {
-      const { count } = await client.from('member_imports').select('*', { count: 'exact', head: true });
-      counts.imports = count ?? 0;
-    } catch (_) { /* ignore */ }
-
-    try {
-      const { count } = await client
-        .from('newsletter_subscribers')
-        .select('*', { count: 'exact', head: true });
-      counts.newsletter = count ?? 0;
-    } catch (_) { /* ignore */ }
-
+    const data = await adminApi('overview');
     const map = {
-      'stat-enquiries': counts.enquiries,
-      'stat-new': counts.newEnquiries,
-      'stat-profiles': counts.profiles,
-      'stat-imports': counts.imports,
-      'stat-newsletter': counts.newsletter
+      'stat-enquiries': data.enquiries,
+      'stat-new': data.newEnquiries,
+      'stat-profiles': data.profiles,
+      'stat-imports': data.imports,
+      'stat-newsletter': data.newsletter
     };
     Object.entries(map).forEach(([id, value]) => {
       const el = document.getElementById(id);
-      if (el) el.textContent = value;
+      if (el) el.textContent = value ?? '—';
     });
   }
 
   async function loadEnquiries() {
-    const client = await getClient();
-    const { data, error } = await client
-      .from('form_submissions')
-      .select('id,form_type,name,email,phone,message,metadata,status,admin_notes,created_at')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (error) throw error;
-    state.enquiries = data || [];
+    const data = await adminApi('enquiries');
+    state.enquiries = data.rows || [];
     renderEnquiries();
   }
 
@@ -413,12 +331,10 @@
             renderEnquiries();
             return;
           }
-          const client = await getClient();
-          const { error } = await client
-            .from('form_submissions')
-            .update({ status: select.value })
-            .eq('id', select.dataset.statusFor);
-          if (error) throw error;
+          await adminApi('enquiry-status', {
+            method: 'PATCH',
+            body: { id: select.dataset.statusFor, status: select.value }
+          });
           const item = state.enquiries.find((r) => r.id === select.dataset.statusFor);
           if (item) item.status = select.value;
           renderEnquiries();
@@ -431,20 +347,15 @@
   }
 
   async function loadMembers() {
-    const client = await getClient();
-    const { data, error } = await client
-      .from('profiles')
-      .select('id,full_name,email,phone,plan,association_member,welfare_member,member_number,created_at')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (error) throw error;
+    const data = await adminApi('members');
+    const rows = data.rows || [];
     const body = document.getElementById('admin-members-body');
     if (!body) return;
-    if (!data?.length) {
+    if (!rows.length) {
       body.innerHTML = `<tr><td colspan="5" class="admin-empty">No profiles yet.</td></tr>`;
       return;
     }
-    body.innerHTML = data
+    body.innerHTML = rows
       .map((row) => {
         const plan = row.plan || 'basic';
         const chipClass = plan === 'both' ? 'both' : plan === 'welfare' ? 'welfare' : '';
@@ -465,19 +376,10 @@
       btn.addEventListener('click', async () => {
         if (!confirm('Mark this member as welfare-enrolled (Association + Welfare)?')) return;
         try {
-          const client = await getClient();
-          const id = btn.dataset.approveWelfare;
-          const row = data.find((r) => r.id === id);
-          const nextPlan = row?.association_member ? 'both' : 'welfare';
-          const { error } = await client
-            .from('profiles')
-            .update({
-              welfare_member: true,
-              association_member: row?.association_member !== false,
-              plan: nextPlan
-            })
-            .eq('id', id);
-          if (error) throw error;
+          await adminApi('approve-welfare', {
+            method: 'PATCH',
+            body: { id: btn.dataset.approveWelfare }
+          });
           await loadMembers();
         } catch (err) {
           alert(err.message || 'Could not approve welfare.');
@@ -487,38 +389,29 @@
   }
 
   async function loadImports() {
-    const client = await getClient();
-    const { data, error } = await client
-      .from('member_imports')
-      .select('member_number,full_name,email,plan,membership_label,status,association_member,welfare_member')
-      .order('member_number', { ascending: true })
-      .limit(100);
-    if (error) throw error;
-
+    const data = await adminApi('imports');
+    const stats = data.stats;
     let statsHtml = '';
-    try {
-      const { data: stats } = await client.from('member_import_stats').select('*').maybeSingle();
-      if (stats) {
-        statsHtml = `<div class="admin-stats">
+    if (stats) {
+      statsHtml = `<div class="admin-stats">
           <div class="admin-stat"><strong>${stats.total ?? '—'}</strong><span>Total imported</span></div>
           <div class="admin-stat"><strong>${stats.association_and_welfare ?? '—'}</strong><span>Association + Welfare</span></div>
           <div class="admin-stat"><strong>${stats.association_only ?? '—'}</strong><span>Association only</span></div>
           <div class="admin-stat"><strong>${stats.welfare_only ?? '—'}</strong><span>Welfare only</span></div>
           <div class="admin-stat"><strong>${stats.pending_invite ?? '—'}</strong><span>Pending invite</span></div>
         </div>`;
-      }
-    } catch (_) { /* view may be missing */ }
-
+    }
     const statsHost = document.getElementById('admin-imports-stats');
     if (statsHost) statsHost.innerHTML = statsHtml;
 
     const body = document.getElementById('admin-imports-body');
     if (!body) return;
-    if (!data?.length) {
-      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No import rows (or migration 009 not applied).</td></tr>`;
+    const rows = data.rows || [];
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No import rows found.</td></tr>`;
       return;
     }
-    body.innerHTML = data
+    body.innerHTML = rows
       .map(
         (row) => `<tr>
           <td>${escapeHtml(row.member_number || '—')}</td>
@@ -531,29 +424,16 @@
       .join('');
   }
 
-  async function loadSimpleTable(table, columns, bodyId, emptyMsg) {
-    const client = await getClient();
-    const { data, error } = await client.from(table).select(columns).limit(100);
-    if (error) throw error;
-    const body = document.getElementById(bodyId);
+  async function loadEvents() {
+    const data = await adminApi('events');
+    const body = document.getElementById('admin-events-body');
     if (!body) return;
-    if (!data?.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(emptyMsg)}</td></tr>`;
+    const rows = data.rows || [];
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No events in the database yet. Public events still come from events-phases.js.</td></tr>`;
       return;
     }
-    return data;
-  }
-
-  async function loadEvents() {
-    const data = await loadSimpleTable(
-      'events',
-      'id,title,location,start_at,is_published,registration_open,featured',
-      'admin-events-body',
-      'No events in the database yet. Public events still come from events-phases.js.'
-    );
-    const body = document.getElementById('admin-events-body');
-    if (!body || !data) return;
-    body.innerHTML = data
+    body.innerHTML = rows
       .map(
         (row) => `<tr>
           <td>${escapeHtml(row.title || '—')}</td>
@@ -568,15 +448,15 @@
   }
 
   async function loadSponsors() {
-    const data = await loadSimpleTable(
-      'sponsors',
-      'id,name,tier,website,is_published,sort_order',
-      'admin-sponsors-body',
-      'No sponsors in the database yet. Public sponsorship page is still mostly static HTML.'
-    );
+    const data = await adminApi('sponsors');
     const body = document.getElementById('admin-sponsors-body');
-    if (!body || !data) return;
-    body.innerHTML = data
+    if (!body) return;
+    const rows = data.rows || [];
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No sponsors in the database yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
       .map(
         (row) => `<tr>
           <td>${escapeHtml(row.name || '—')}</td>
@@ -590,20 +470,15 @@
   }
 
   async function loadGallery() {
-    const client = await getClient();
-    const { data, error } = await client
-      .from('gallery_albums')
-      .select('id,title,event_date,is_published,preview_limit,group_id')
-      .order('sort_date', { ascending: false })
-      .limit(100);
-    if (error) throw error;
+    const data = await adminApi('gallery');
     const body = document.getElementById('admin-gallery-body');
     if (!body) return;
-    if (!data?.length) {
+    const rows = data.rows || [];
+    if (!rows.length) {
       body.innerHTML = `<tr><td colspan="5" class="admin-empty">No gallery albums in DB (public gallery may still use gallery-data.js).</td></tr>`;
       return;
     }
-    body.innerHTML = data
+    body.innerHTML = rows
       .map(
         (row) => `<tr>
           <td>${escapeHtml(row.title || '—')}</td>
@@ -623,11 +498,10 @@
     body.querySelectorAll('[data-album-pub]').forEach((input) => {
       input.addEventListener('change', async () => {
         try {
-          const { error: upErr } = await client
-            .from('gallery_albums')
-            .update({ is_published: input.checked })
-            .eq('id', input.dataset.albumPub);
-          if (upErr) throw upErr;
+          await adminApi('gallery-publish', {
+            method: 'PATCH',
+            body: { id: input.dataset.albumPub, is_published: input.checked }
+          });
         } catch (err) {
           alert(err.message || 'Could not update album.');
           input.checked = !input.checked;
@@ -637,15 +511,15 @@
   }
 
   async function loadNewsletter() {
-    const data = await loadSimpleTable(
-      'newsletter_subscribers',
-      'email,list_key,subscribed_at',
-      'admin-newsletter-body',
-      'No newsletter subscribers yet.'
-    );
+    const data = await adminApi('newsletter');
     const body = document.getElementById('admin-newsletter-body');
-    if (!body || !data) return;
-    body.innerHTML = data
+    if (!body) return;
+    const rows = data.rows || [];
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="3" class="admin-empty">No newsletter subscribers yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
       .map(
         (row) => `<tr>
           <td>${escapeHtml(row.email || '—')}</td>
@@ -679,24 +553,14 @@
       return;
     }
 
-    if (id === 'overview') {
-      updateDataConnectUi();
-      if (state.isAdmin) {
-        try {
-          await loadOverview();
-        } catch (_) { /* ignore */ }
-      }
+    if (!(state.pinOk || state.isAdmin)) {
       return;
     }
 
-    if (!state.isAdmin) {
-      const status = document.getElementById('admin-panel-status');
-      if (status) {
-        status.hidden = false;
-        status.classList.remove('is-error');
-        status.textContent =
-          'Connect live database from Overview (committee data login) to load this section. Business Hub works with the admin PIN alone.';
-      }
+    if (id === 'overview') {
+      try {
+        await loadOverview();
+      } catch (_) { /* ignore */ }
       return;
     }
 
@@ -769,40 +633,14 @@
         return;
       }
       sessionStorage.setItem(ADMIN_PIN_KEY, '1');
+      sessionStorage.setItem(ADMIN_PIN_VALUE_KEY, pin);
       enterPinPortal();
     });
 
-    document.getElementById('admin-data-login-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const status = document.getElementById('admin-data-status');
-      const setDataStatus = (msg, isError) => {
-        if (!status) return;
-        status.hidden = !msg;
-        status.textContent = msg || '';
-        status.classList.toggle('is-error', Boolean(isError));
-      };
-      setDataStatus('Connecting…');
-      try {
-        if (!window.taunetSupabaseApi?.isConfigured()) {
-          throw new Error('Supabase is not configured.');
-        }
-        const client = await getClient();
-        const email = form.querySelector('[name="email"]')?.value?.trim();
-        const password = form.querySelector('[name="password"]')?.value || '';
-        const { data, error } = await client.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        const result = await connectLiveData(data.user);
-        if (!result.ok) throw new Error(result.reason || 'Not an allowed committee email.');
-        setDataStatus('Live database connected.');
-        await refreshPanel('overview');
-      } catch (err) {
-        setDataStatus(err.message || 'Could not connect live data.', true);
-      }
-    });
 
     els.logoutBtn?.addEventListener('click', async () => {
       sessionStorage.removeItem(ADMIN_PIN_KEY);
+      sessionStorage.removeItem(ADMIN_PIN_VALUE_KEY);
       state.pinOk = false;
       state.isAdmin = false;
       state.user = null;
@@ -820,15 +658,6 @@
     // PIN session only — never auto-open admin from a members Auth session alone
     if (hasPinSession()) {
       enterPinPortal();
-      if (window.taunetSupabaseApi?.isConfigured()) {
-        try {
-          const client = await getClient();
-          const { data } = await client.auth.getSession();
-          if (data?.session?.user) {
-            await connectLiveData(data.session.user);
-          }
-        } catch (_) { /* ignore */ }
-      }
     }
   }
 
