@@ -18,11 +18,15 @@ All five are inserted into `site_admins` so they can use `/admin/` after they ha
 
 ## Steps
 
-1. In Supabase SQL Editor, run (if not already):
-   - `009_admin_dashboard_access.sql`
-   - **`010_portal_memberpress_members.sql`**
+Run these in Supabase **SQL Editor** in order:
 
-2. Confirm the SELECT at the end of `010` lists all 5 emails.
+1. **`007_member_import_staging.sql`** — creates `member_imports` (required; this was missing)
+2. **`009_admin_dashboard_access.sql`** — if not already run (`site_admins` + admin RLS)
+3. **`010_portal_memberpress_members.sql`** — the 5 portal admins
+
+Optional: reload the full 540 ClientClub list with `backups/migration-ready/import_members.sql` (only if that table is empty and you still need the big list).
+
+4. Confirm the SELECT at the end of `010` lists all 5 emails.
 
 3. **Auth accounts** (passwords are not copied from WordPress):
    - Each person registers or signs in at  
