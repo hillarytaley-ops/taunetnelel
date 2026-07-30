@@ -131,14 +131,26 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'imports') {
+        const filter = url.searchParams.get('filter') || 'all';
+        let query =
+          'member_imports?select=member_number,full_name,email,plan,membership_label,status,association_member,welfare_member&order=member_number.asc&limit=600';
+        if (filter === 'association') {
+          query += '&association_member=eq.true&welfare_member=eq.false';
+        } else if (filter === 'welfare') {
+          query += '&welfare_member=eq.true&association_member=eq.false';
+        } else if (filter === 'both') {
+          query += '&association_member=eq.true&welfare_member=eq.true';
+        } else if (filter === 'association_any') {
+          query += '&association_member=eq.true';
+        } else if (filter === 'welfare_any') {
+          query += '&welfare_member=eq.true';
+        }
         const [{ data: rows }, statsRes] = await Promise.all([
-          sb(
-            'member_imports?select=member_number,full_name,email,plan,membership_label,status,association_member,welfare_member&order=member_number.asc&limit=100'
-          ),
+          sb(query),
           sb('member_import_stats?select=*').catch(() => ({ data: null }))
         ]);
         const stats = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
-        return json(res, 200, { rows: rows || [], stats: stats || null });
+        return json(res, 200, { rows: rows || [], stats: stats || null, filter });
       }
 
       if (resource === 'events') {

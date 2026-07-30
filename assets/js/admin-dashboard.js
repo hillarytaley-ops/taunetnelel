@@ -31,6 +31,9 @@
     enquiries: [],
     enquiryFilter: 'all',
     enquirySearch: '',
+    importFilter: 'all',
+    importSearch: '',
+    importRows: [],
     businessEditor: null
   };
 
@@ -91,7 +94,7 @@
       overview: 'Overview',
       enquiries: 'Form enquiries',
       members: 'Member profiles',
-      imports: 'Imported member list',
+      imports: 'Members — Association / Welfare',
       business: 'Business Hub',
       events: 'Events (database)',
       sponsors: 'Sponsors (database)',
@@ -219,7 +222,9 @@
   async function adminApi(resource, options = {}) {
     const pin = getStoredPin();
     if (!pin) throw new Error('Admin PIN session missing. Sign in again.');
-    const res = await fetch(`/api/admin/data?resource=${encodeURIComponent(resource)}`, {
+    const params = new URLSearchParams({ resource });
+    if (options.filter) params.set('filter', options.filter);
+    const res = await fetch(`/api/admin/data?${params.toString()}`, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -389,38 +394,88 @@
   }
 
   async function loadImports() {
-    const data = await adminApi('imports');
+    const data = await adminApi('imports', { filter: state.importFilter || 'all' });
     const stats = data.stats;
     let statsHtml = '';
     if (stats) {
       statsHtml = `<div class="admin-stats">
-          <div class="admin-stat"><strong>${stats.total ?? '—'}</strong><span>Total imported</span></div>
-          <div class="admin-stat"><strong>${stats.association_and_welfare ?? '—'}</strong><span>Association + Welfare</span></div>
-          <div class="admin-stat"><strong>${stats.association_only ?? '—'}</strong><span>Association only</span></div>
-          <div class="admin-stat"><strong>${stats.welfare_only ?? '—'}</strong><span>Welfare only</span></div>
-          <div class="admin-stat"><strong>${stats.pending_invite ?? '—'}</strong><span>Pending invite</span></div>
+          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="all"><strong>${stats.total ?? '—'}</strong><span>All members</span></button>
+          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="association"><strong>${stats.association_only ?? '—'}</strong><span>Association only</span></button>
+          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="welfare"><strong>${stats.welfare_only ?? '—'}</strong><span>Welfare only</span></button>
+          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="both"><strong>${stats.association_and_welfare ?? '—'}</strong><span>Both (A + W)</span></button>
+          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="welfare_any"><strong>${stats.welfare_member_total ?? '—'}</strong><span>Any welfare</span></button>
         </div>`;
     }
     const statsHost = document.getElementById('admin-imports-stats');
-    if (statsHost) statsHost.innerHTML = statsHtml;
+    if (statsHost) {
+      statsHost.innerHTML = statsHtml;
+      statsHost.querySelectorAll('[data-import-filter]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.importFilter === state.importFilter);
+        btn.addEventListener('click', () => {
+          state.importFilter = btn.dataset.importFilter;
+          const select = document.getElementById('imports-filter');
+          if (select) select.value = state.importFilter;
+          loadImports();
+        });
+      });
+    }
 
+    state.importRows = data.rows || [];
+    renderImports();
+  }
+
+  function renderImports() {
     const body = document.getElementById('admin-imports-body');
+    const countEl = document.getElementById('admin-imports-count');
     if (!body) return;
-    const rows = data.rows || [];
+
+    let rows = state.importRows || [];
+    const q = (state.importSearch || '').trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((r) =>
+        [r.full_name, r.email, r.member_number, r.membership_label]
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+
+    if (countEl) {
+      countEl.hidden = false;
+      const labels = {
+        all: 'All members',
+        association: 'Association only',
+        welfare: 'Welfare only',
+        both: 'Association + Welfare',
+        association_any: 'All with association',
+        welfare_any: 'All with welfare'
+      };
+      countEl.textContent = `Showing ${rows.length} — ${labels[state.importFilter] || state.importFilter}`;
+    }
+
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No import rows found.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No members match this filter.</td></tr>`;
       return;
     }
+
     body.innerHTML = rows
-      .map(
-        (row) => `<tr>
+      .map((row) => {
+        const label = row.membership_label || row.plan || '';
+        const chip =
+          row.association_member && row.welfare_member
+            ? 'both'
+            : row.welfare_member
+              ? 'welfare'
+              : '';
+        return `<tr>
           <td>${escapeHtml(row.member_number || '—')}</td>
           <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}</div></td>
-          <td><span class="admin-chip">${escapeHtml(row.membership_label || row.plan || '')}</span></td>
+          <td><span class="admin-chip admin-chip--${chip}">${escapeHtml(label)}</span></td>
           <td>${escapeHtml(row.status || '—')}</td>
-          <td>${row.association_member ? 'A' : '—'} / ${row.welfare_member ? 'W' : '—'}</td>
-        </tr>`
-      )
+          <td>${row.association_member ? 'Yes' : '—'}</td>
+          <td>${row.welfare_member ? 'Yes' : '—'}</td>
+        </tr>`;
+      })
       .join('');
   }
 
@@ -613,6 +668,16 @@
     document.getElementById('enquiry-search')?.addEventListener('input', (e) => {
       state.enquirySearch = e.target.value;
       renderEnquiries();
+    });
+
+    document.getElementById('imports-filter')?.addEventListener('change', (e) => {
+      state.importFilter = e.target.value;
+      loadImports();
+    });
+
+    document.getElementById('imports-search')?.addEventListener('input', (e) => {
+      state.importSearch = e.target.value;
+      renderImports();
     });
   }
 

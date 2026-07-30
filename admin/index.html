@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=4">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=5">
 </head>
 <body data-page="site-admin">
 
@@ -37,7 +37,7 @@
       <button type="button" data-admin-nav="overview" class="is-active">Overview</button>
       <button type="button" data-admin-nav="enquiries">Enquiries</button>
       <button type="button" data-admin-nav="members">Member profiles</button>
-      <button type="button" data-admin-nav="imports">Import list (540)</button>
+      <button type="button" data-admin-nav="imports">Members (A / Welfare)</button>
       <button type="button" data-admin-nav="business">Business Hub</button>
       <button type="button" data-admin-nav="events">Events (DB)</button>
       <button type="button" data-admin-nav="sponsors">Sponsors (DB)</button>
@@ -140,7 +140,22 @@
 
       <section class="site-admin__panel" data-admin-panel="imports">
         <div id="admin-imports-stats"></div>
-        <p class="admin-muted">First 100 rows of the ClientClub import staging table (full list is in Supabase).</p>
+        <p class="admin-muted">
+          Association (ordinary) and Welfare are stored as <strong>separate</strong> memberships.
+          Someone on both lists appears under <strong>Both</strong> — they are not collapsed to welfare-only.
+        </p>
+        <div class="admin-toolbar">
+          <select id="imports-filter" aria-label="Filter by membership type">
+            <option value="all">All members</option>
+            <option value="association">Association only (ordinary)</option>
+            <option value="welfare">Welfare only</option>
+            <option value="both">Association + Welfare (both)</option>
+            <option value="association_any">All with association</option>
+            <option value="welfare_any">All with welfare</option>
+          </select>
+          <input type="search" id="imports-search" placeholder="Search name or email…" aria-label="Search members">
+        </div>
+        <p class="admin-muted" id="admin-imports-count" hidden></p>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -149,11 +164,12 @@
                 <th>Name / email</th>
                 <th>Membership</th>
                 <th>Status</th>
-                <th>A / W</th>
+                <th>Association</th>
+                <th>Welfare</th>
               </tr>
             </thead>
             <tbody id="admin-imports-body">
-              <tr><td colspan="5" class="admin-empty">Open this tab to load imports.</td></tr>
+              <tr><td colspan="6" class="admin-empty">Open this tab to load members.</td></tr>
             </tbody>
           </table>
         </div>
@@ -308,6 +324,6 @@
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=6"></script>
+  <script src="../assets/js/admin-dashboard.js?v=7"></script>
 </body>
 </html>

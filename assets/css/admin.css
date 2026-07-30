@@ -389,6 +389,21 @@ body[data-page="site-admin"] {
   color: #3d2314;
 }
 
+.admin-stat--btn {
+  appearance: none;
+  border: 1px solid rgba(139, 69, 19, 0.12);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  width: 100%;
+}
+
+.admin-stat--btn:hover,
+.admin-stat--btn.is-active {
+  border-color: rgba(196, 98, 45, 0.55);
+  background: rgba(196, 98, 45, 0.08);
+}
+
 .admin-section-title {
   display: flex;
   justify-content: space-between;
