@@ -2,49 +2,27 @@
 
 ## URL
 
-Production: `https://taunetnelel.vercel.app/admin/`
+**Admin portal (PIN):** https://taunetnelel.vercel.app/admin/
 
-Local: open `admin/index.html`
+This is **separate** from the members area (`/members/login.html`).
 
-Business Hub tab: `https://taunetnelel.vercel.app/admin/#business`  
-(`admin/business.html` redirects here.)
+Default PIN: `TaunetAdmin2026`  
+Change it in `assets/js/supabase-config.js` → `adminPin`.
 
-## One-time setup
+## How access works
 
-1. In Supabase SQL Editor, run:
+1. **Admin PIN** — unlocks the committee portal (Business Hub, page links, layout).
+2. **Optional live database** — on Overview, connect a committee email from `site_admins` only if you need enquiries / members / imports from Supabase. That is not the public members login screen.
 
-   `supabase/migrations/009_admin_dashboard_access.sql`
+## One-time SQL (for live data)
 
-2. Confirm your email is in `site_admins`. Migration `010` seeds all five portal admins:
-   - `psowey@gmail.com`
-   - `hillarytaley@gmail.com`
-   - `alexissams71@gmail.com`
-   - `rutopsowey@gmail.com`
-   - `briankip57@gmail.com`
+1. `007` → `008` → `009` → `010` → **`011_fix_site_admin_recognition.sql`**
+2. Confirm emails in `site_admins`.
 
-   To add another:
+## Sections
 
-```sql
-insert into public.site_admins (email, full_name)
-values ('someone@email.com', 'Name')
-on conflict (email) do nothing;
-```
-
-3. That person must have a members Auth account (register/sign in on `/members/` first).
-
-4. Open `/admin/` and sign in with that email + password.
-
-## What it covers
-
-| Section | Source |
-|---------|--------|
-| Overview | Counts from Supabase |
-| Enquiries | `form_submissions` (status updates) |
-| Member profiles | `profiles` + Approve welfare |
-| Import list | `member_imports` + stats view |
-| **Business Hub** | Cards, news, blog — edit / export `business-content.json` |
-| Events / Sponsors / Gallery | DB tables (public pages may still use static JS/HTML) |
-| Newsletter | `newsletter_subscribers` |
-| Pages & tools | Links to public pages |
-
-No separate Business PIN page — everything uses committee admin sign-in.
+| Tab | Needs |
+|-----|--------|
+| Business Hub | PIN only |
+| Pages & tools | PIN only |
+| Enquiries / Members / Imports / Events / Sponsors / Gallery / Newsletter | PIN + live database connect |

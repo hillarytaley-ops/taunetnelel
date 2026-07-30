@@ -8,6 +8,8 @@
 window.TAUNET_SUPABASE = {
   url: '',
   anonKey: '',
-  // Optional hint only — real admin access is public.site_admins + migration 009
+  // Committee admin portal PIN (/admin/) — separate from members login
+  adminPin: 'TaunetAdmin2026',
+  // Optional hint only — real live-data access is public.site_admins + migration 011
   adminEmails: []
 };

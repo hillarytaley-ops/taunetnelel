@@ -7,25 +7,23 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=3">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=4">
 </head>
 <body data-page="site-admin">
 
   <div class="admin-gate" id="admin-auth-gate">
     <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:48px;margin-bottom:1rem"></a>
-    <h1>Committee admin</h1>
-    <p>Sign in with a Supabase member account that is listed in <code>site_admins</code> (migration 009). Use the same password as the members portal.</p>
+    <h1>Committee admin portal</h1>
+    <p>Separate from the members area. Enter the committee admin PIN to open the site dashboard.</p>
     <form id="admin-login-form">
-      <label for="admin-email">Email</label>
-      <input id="admin-email" type="email" name="email" required autocomplete="username" placeholder="you@email.com">
-      <label for="admin-password">Password</label>
-      <input id="admin-password" type="password" name="password" required autocomplete="current-password">
-      <button type="submit" class="btn btn--primary">Sign in to admin</button>
+      <label for="admin-pin">Admin PIN</label>
+      <input id="admin-pin" type="password" name="pin" required autocomplete="current-password" placeholder="Committee admin PIN">
+      <button type="submit" class="btn btn--primary">Enter admin portal</button>
     </form>
     <p class="admin-status" id="admin-auth-status" role="status" hidden></p>
     <p class="admin-muted" style="margin-top:1rem">
-      <a href="?preview=1">Preview the admin dashboard</a> (sample layout — no live data)
-      · Business Hub is under the <strong>Business Hub</strong> tab after you enter.
+      Default PIN: <code>TaunetAdmin2026</code> (change in <code>supabase-config.js</code>).<br>
+      Members login stays at <a href="../members/login.html">/members/login.html</a> — it is not used here.
     </p>
   </div>
 
@@ -50,7 +48,6 @@
         <button type="button" id="admin-refresh">Refresh data</button>
         <button type="button" id="admin-logout">Sign out</button>
         <a href="../index.html">Public website</a>
-        <a href="../members/dashboard.html">Member dashboard</a>
       </div>
     </aside>
 
@@ -60,7 +57,7 @@
           <h1 id="admin-panel-title">Overview</h1>
           <p>Review forms, members, and database content for the whole site.</p>
         </div>
-        <div class="site-admin__user">Signed in as<br><strong id="admin-user-label">—</strong></div>
+        <div class="site-admin__user">Admin session<br><strong id="admin-user-label">—</strong></div>
       </div>
 
       <p class="admin-status" id="admin-panel-status" role="status" hidden></p>
@@ -73,10 +70,28 @@
           <div class="admin-stat"><strong id="stat-imports">—</strong><span>Imported members</span></div>
           <div class="admin-stat"><strong id="stat-newsletter">—</strong><span>Newsletter</span></div>
         </div>
+        <div class="admin-card" id="admin-data-connect-card" style="margin-top:1rem">
+          <h2 style="margin:0 0 0.5rem;font-size:1.05rem">Live database (optional)</h2>
+          <p class="admin-muted" id="admin-data-connect-note">
+            Business Hub works with the admin PIN alone. To load live enquiries, members, and imports from Supabase, connect a committee data login (emails in <code>site_admins</code>). This is not the public members portal.
+          </p>
+          <form id="admin-data-login-form" class="admin-toolbar" style="align-items:flex-end">
+            <label class="admin-field" style="margin:0;flex:1;min-width:180px">
+              <span>Committee email</span>
+              <input type="email" name="email" required autocomplete="username" placeholder="admin@email.com">
+            </label>
+            <label class="admin-field" style="margin:0;flex:1;min-width:180px">
+              <span>Password</span>
+              <input type="password" name="password" required autocomplete="current-password">
+            </label>
+            <button type="submit" class="btn btn--primary btn--sm">Connect live data</button>
+          </form>
+          <p class="admin-status" id="admin-data-status" role="status" hidden></p>
+        </div>
         <div class="admin-card">
           <h2 style="margin:0 0 0.5rem;font-size:1.05rem">What this covers</h2>
           <p class="admin-muted" style="margin:0">
-            Live Supabase data (enquiries, members, imports, events, sponsors, gallery, newsletter) plus the Business Hub editor (cards, news, blog) — all in this one dashboard after committee sign-in.
+            Admin PIN unlocks this portal (separate from /members/). Live Supabase tabs need the optional committee data connection above. Business Hub editing works immediately after the PIN.
           </p>
         </div>
       </section>
@@ -303,6 +318,6 @@
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=4"></script>
+  <script src="../assets/js/admin-dashboard.js?v=5"></script>
 </body>
 </html>

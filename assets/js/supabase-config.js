@@ -10,5 +10,6 @@
  */
 window.TAUNET_SUPABASE = {
   url: 'https://wgecdsdeeirzdvshdfwo.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZWNkc2RlZWlyemR2c2hkZndvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyOTgxODEsImV4cCI6MjA5ODg3NDE4MX0.2V8mFE2uvixACwaHlTnnmYCprxPOgcpJtgQ0xIf2hEk'
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZWNkc2RlZWlyemR2c2hkZndvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyOTgxODEsImV4cCI6MjA5ODg3NDE4MX0.2V8mFE2uvixACwaHlTnnmYCprxPOgcpJtgQ0xIf2hEk',
+  adminPin: 'TaunetAdmin2026'
 };

@@ -19,10 +19,13 @@
     'pages'
   ];
 
+  const ADMIN_PIN_KEY = 'taunet_site_admin_pin';
+
   const state = {
     client: null,
     user: null,
     isAdmin: false,
+    pinOk: false,
     preview: false,
     enquiries: [],
     enquiryFilter: 'all',
@@ -200,6 +203,49 @@
     return state.client;
   }
 
+  function expectedAdminPin() {
+    return window.TAUNET_SUPABASE?.adminPin || 'TaunetAdmin2026';
+  }
+
+  function hasPinSession() {
+    return sessionStorage.getItem(ADMIN_PIN_KEY) === '1';
+  }
+
+  function enterPinPortal() {
+    state.pinOk = true;
+    state.preview = false;
+    if (els.userLabel) els.userLabel.textContent = 'PIN session (committee portal)';
+    showShell(true);
+    setAuthStatus('');
+    updateDataConnectUi();
+    const hash = (location.hash || '#overview').replace('#', '');
+    setPanel(hash);
+    ensureBusinessEditor();
+    // Live tabs only if committee data login already connected
+    if (state.isAdmin) {
+      refreshPanel(hash);
+    }
+  }
+
+  function updateDataConnectUi() {
+    const card = document.getElementById('admin-data-connect-card');
+    const note = document.getElementById('admin-data-connect-note');
+    const form = document.getElementById('admin-data-login-form');
+    if (!card) return;
+    if (state.isAdmin && state.user) {
+      if (note) {
+        note.textContent = `Live database connected as ${state.user.email}. Enquiries, members, and imports can load from Supabase.`;
+      }
+      if (form) form.hidden = true;
+    } else {
+      if (note) {
+        note.innerHTML =
+          'Business Hub works with the admin PIN alone. To load live enquiries, members, and imports from Supabase, connect a committee data login (emails in <code>site_admins</code>). This is not the public members portal.';
+      }
+      if (form) form.hidden = false;
+    }
+  }
+
   async function checkAdmin(client, user) {
     const email = (user?.email || '').toLowerCase().trim();
     if (!email) return { ok: false, reason: 'No email on this Auth session.' };
@@ -207,7 +253,6 @@
     const { data, error } = await client.rpc('is_site_admin');
     if (!error && data === true) return { ok: true };
 
-    // Fallback: own row (policy allows reading your email only)
     const { data: row, error: rowErr } = await client
       .from('site_admins')
       .select('email')
@@ -220,29 +265,29 @@
     return {
       ok: false,
       reason:
-        `Signed in as ${email}, but that address is not in site_admins` +
+        `Connected as ${email}, but that address is not in site_admins` +
         (hint ? ` (${hint})` : '') +
         '. Run 011_fix_site_admin_recognition.sql, then try again.'
     };
   }
 
-  async function enterAdmin(user) {
+  async function connectLiveData(user) {
     const client = await getClient();
     const result = await checkAdmin(client, user);
     if (!result.ok) {
       await client.auth.signOut();
-      showShell(false);
-      setAuthStatus(result.reason || 'Not recognized as a site admin.', true);
-      return;
+      state.user = null;
+      state.isAdmin = false;
+      return result;
     }
     state.user = user;
     state.isAdmin = true;
-    if (els.userLabel) els.userLabel.textContent = user.email || '';
-    showShell(true);
-    setAuthStatus('');
+    if (els.userLabel) {
+      els.userLabel.textContent = `PIN + live data (${user.email})`;
+    }
+    updateDataConnectUi();
     await loadOverview();
-    const hash = (location.hash || '#overview').replace('#', '');
-    setPanel(hash);
+    return { ok: true };
   }
 
   async function loadOverview() {
@@ -629,6 +674,32 @@
       return;
     }
 
+    if (id === 'business' || id === 'pages') {
+      if (id === 'business') ensureBusinessEditor();
+      return;
+    }
+
+    if (id === 'overview') {
+      updateDataConnectUi();
+      if (state.isAdmin) {
+        try {
+          await loadOverview();
+        } catch (_) { /* ignore */ }
+      }
+      return;
+    }
+
+    if (!state.isAdmin) {
+      const status = document.getElementById('admin-panel-status');
+      if (status) {
+        status.hidden = false;
+        status.classList.remove('is-error');
+        status.textContent =
+          'Connect live database from Overview (committee data login) to load this section. Business Hub works with the admin PIN alone.';
+      }
+      return;
+    }
+
     const status = document.getElementById('admin-panel-status');
     if (status) {
       status.hidden = false;
@@ -636,11 +707,9 @@
       status.textContent = 'Loading…';
     }
     try {
-      if (id === 'overview') await loadOverview();
       if (id === 'enquiries') await loadEnquiries();
       if (id === 'members') await loadMembers();
       if (id === 'imports') await loadImports();
-      if (id === 'business') ensureBusinessEditor();
       if (id === 'events') await loadEvents();
       if (id === 'sponsors') await loadSponsors();
       if (id === 'gallery') await loadGallery();
@@ -653,7 +722,7 @@
         status.classList.add('is-error');
         status.textContent =
           err.message ||
-          'Could not load data. Confirm migration 009 is applied and your email is in site_admins.';
+          'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
       }
     }
   }
@@ -692,51 +761,74 @@
       return;
     }
 
-    if (!window.taunetSupabaseApi?.isConfigured()) {
-      setAuthStatus('Supabase is not configured (assets/js/supabase-config.js).', true);
-      return;
-    }
-
-    els.loginForm?.addEventListener('submit', async (e) => {
+    els.loginForm?.addEventListener('submit', (e) => {
       e.preventDefault();
-      setAuthStatus('Signing in…');
+      const pin = els.loginForm.querySelector('[name="pin"]')?.value?.trim() || '';
+      if (pin !== expectedAdminPin()) {
+        setAuthStatus('Incorrect admin PIN.', true);
+        return;
+      }
+      sessionStorage.setItem(ADMIN_PIN_KEY, '1');
+      enterPinPortal();
+    });
+
+    document.getElementById('admin-data-login-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const status = document.getElementById('admin-data-status');
+      const setDataStatus = (msg, isError) => {
+        if (!status) return;
+        status.hidden = !msg;
+        status.textContent = msg || '';
+        status.classList.toggle('is-error', Boolean(isError));
+      };
+      setDataStatus('Connecting…');
       try {
+        if (!window.taunetSupabaseApi?.isConfigured()) {
+          throw new Error('Supabase is not configured.');
+        }
         const client = await getClient();
-        const email = els.loginForm.querySelector('[name="email"]')?.value?.trim();
-        const password = els.loginForm.querySelector('[name="password"]')?.value || '';
+        const email = form.querySelector('[name="email"]')?.value?.trim();
+        const password = form.querySelector('[name="password"]')?.value || '';
         const { data, error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        await enterAdmin(data.user);
-        await refreshPanel((location.hash || '#overview').replace('#', ''));
+        const result = await connectLiveData(data.user);
+        if (!result.ok) throw new Error(result.reason || 'Not an allowed committee email.');
+        setDataStatus('Live database connected.');
+        await refreshPanel('overview');
       } catch (err) {
-        setAuthStatus(err.message || 'Sign-in failed.', true);
+        setDataStatus(err.message || 'Could not connect live data.', true);
       }
     });
 
     els.logoutBtn?.addEventListener('click', async () => {
-      if (state.preview) {
-        window.location.href = 'index.html';
-        return;
-      }
-      try {
-        const client = await getClient();
-        await client.auth.signOut();
-      } catch (_) { /* ignore */ }
-      state.user = null;
+      sessionStorage.removeItem(ADMIN_PIN_KEY);
+      state.pinOk = false;
       state.isAdmin = false;
+      state.user = null;
+      state.preview = false;
+      try {
+        if (window.taunetSupabaseApi?.isConfigured()) {
+          const client = await getClient();
+          await client.auth.signOut();
+        }
+      } catch (_) { /* ignore */ }
       showShell(false);
-      setAuthStatus('Signed out.');
+      setAuthStatus('Signed out of admin portal.');
     });
 
-    try {
-      const client = await getClient();
-      const { data } = await client.auth.getSession();
-      if (data?.session?.user) {
-        await enterAdmin(data.session.user);
-        await refreshPanel((location.hash || '#overview').replace('#', ''));
+    // PIN session only — never auto-open admin from a members Auth session alone
+    if (hasPinSession()) {
+      enterPinPortal();
+      if (window.taunetSupabaseApi?.isConfigured()) {
+        try {
+          const client = await getClient();
+          const { data } = await client.auth.getSession();
+          if (data?.session?.user) {
+            await connectLiveData(data.session.user);
+          }
+        } catch (_) { /* ignore */ }
       }
-    } catch (err) {
-      console.warn(err);
     }
   }
 
