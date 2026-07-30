@@ -201,30 +201,38 @@
   }
 
   async function checkAdmin(client, user) {
-    const { data, error } = await client.rpc('is_site_admin');
-    if (!error && data === true) return true;
+    const email = (user?.email || '').toLowerCase().trim();
+    if (!email) return { ok: false, reason: 'No email on this Auth session.' };
 
-    // Fallback: try reading site_admins for own email (after 009 applied)
-    const email = (user?.email || '').toLowerCase();
-    if (!email) return false;
-    const { data: row } = await client
+    const { data, error } = await client.rpc('is_site_admin');
+    if (!error && data === true) return { ok: true };
+
+    // Fallback: own row (policy allows reading your email only)
+    const { data: row, error: rowErr } = await client
       .from('site_admins')
       .select('email')
       .eq('email', email)
       .maybeSingle();
-    return Boolean(row?.email);
+
+    if (row?.email) return { ok: true };
+
+    const hint = error?.message || rowErr?.message || '';
+    return {
+      ok: false,
+      reason:
+        `Signed in as ${email}, but that address is not in site_admins` +
+        (hint ? ` (${hint})` : '') +
+        '. Run 011_fix_site_admin_recognition.sql, then try again.'
+    };
   }
 
   async function enterAdmin(user) {
     const client = await getClient();
-    const ok = await checkAdmin(client, user);
-    if (!ok) {
+    const result = await checkAdmin(client, user);
+    if (!result.ok) {
       await client.auth.signOut();
       showShell(false);
-      setAuthStatus(
-        'Signed in, but this email is not on the committee admin list. Run migration 009 and add your email to site_admins.',
-        true
-      );
+      setAuthStatus(result.reason || 'Not recognized as a site admin.', true);
       return;
     }
     state.user = user;
