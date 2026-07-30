@@ -8,11 +8,13 @@ That WP portal only has **5** members (new BuddyBoss/MemberPress install). The *
 
 | MemberPress | Email | Notes |
 |-------------|-------|--------|
-| Ruto | `psowey@gmail.com` | Already in ClientClub import (Association + Welfare) |
-| Hillary Taley | `hillarytaley@gmail.com` | Committee — add to `site_admins` |
-| Alexis (Brian Ngetich) | `alexissams71@gmail.com` | Association |
-| Ruto Mangusho | `rutopsowey@gmail.com` | **Active** Standard on MemberPress (alt email) |
-| webmaster | `briankip57@gmail.com` | WP webmaster — add to `site_admins` |
+| Ruto | `psowey@gmail.com` | **Admin** — also on ClientClub import (Association + Welfare) |
+| Hillary Taley | `hillarytaley@gmail.com` | **Admin** — committee |
+| Alexis (Brian Ngetich) | `alexissams71@gmail.com` | **Admin** |
+| Ruto Mangusho | `rutopsowey@gmail.com` | **Admin** — Active Standard on MemberPress (alt email) |
+| webmaster | `briankip57@gmail.com` | **Admin** — WP webmaster |
+
+All five are inserted into `site_admins` so they can use `/admin/` after they have a Supabase Auth account.
 
 ## Steps
 
@@ -29,8 +31,8 @@ That WP portal only has **5** members (new BuddyBoss/MemberPress install). The *
    - Or invite with `docs/invite_members.py` (service role) for those emails only.
 
 4. **Committee admin** (`/admin/`):
-   - `hillarytaley@gmail.com` and `briankip57@gmail.com` are seeded as `site_admins`.
-   - They must have a members Auth password, then sign in at `/admin/`.
+   - All five emails above are in `site_admins`.
+   - Each must have a members Auth password, then sign in at `/admin/`.
 
 ## Important
 

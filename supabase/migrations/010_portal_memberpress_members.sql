@@ -146,10 +146,13 @@ set
 from _portal_mp_members p
 where lower(mi.email) = lower(p.email);
 
--- Committee / WP admins → site_admins (for /admin/ dashboard)
+-- All five MemberPress portal accounts are committee admins → site_admins
 insert into public.site_admins (email, full_name)
 values
+  ('psowey@gmail.com', 'Ruto Mangusho'),
   ('hillarytaley@gmail.com', 'Hillary Taley'),
+  ('alexissams71@gmail.com', 'Brian Ngetich'),
+  ('rutopsowey@gmail.com', 'Ruto Mangusho'),
   ('briankip57@gmail.com', 'Webmaster')
 on conflict (email) do update
 set full_name = excluded.full_name;

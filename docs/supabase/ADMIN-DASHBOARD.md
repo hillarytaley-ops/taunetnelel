@@ -15,7 +15,14 @@ Business Hub tab: `https://taunetnelel.vercel.app/admin/#business`
 
    `supabase/migrations/009_admin_dashboard_access.sql`
 
-2. Confirm your email is in `site_admins` (the migration seeds `hillarytaley@gmail.com` and `hillarykaptingei@gmail.com`). To add another:
+2. Confirm your email is in `site_admins`. Migration `010` seeds all five portal admins:
+   - `psowey@gmail.com`
+   - `hillarytaley@gmail.com`
+   - `alexissams71@gmail.com`
+   - `rutopsowey@gmail.com`
+   - `briankip57@gmail.com`
+
+   To add another:
 
 ```sql
 insert into public.site_admins (email, full_name)
