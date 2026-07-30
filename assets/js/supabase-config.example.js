@@ -7,5 +7,7 @@
  */
 window.TAUNET_SUPABASE = {
   url: '',
-  anonKey: ''
+  anonKey: '',
+  // Optional hint only — real admin access is public.site_admins + migration 009
+  adminEmails: []
 };

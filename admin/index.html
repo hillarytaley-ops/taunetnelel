@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Committee Admin | Taunet Nelel</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css?v=7">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=1">
+</head>
+<body data-page="site-admin">
+
+  <div class="admin-gate" id="admin-auth-gate">
+    <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:48px;margin-bottom:1rem"></a>
+    <h1>Committee admin</h1>
+    <p>Sign in with a Supabase member account that is listed in <code>site_admins</code> (migration 009). Use the same password as the members portal.</p>
+    <form id="admin-login-form">
+      <label for="admin-email">Email</label>
+      <input id="admin-email" type="email" name="email" required autocomplete="username" placeholder="you@email.com">
+      <label for="admin-password">Password</label>
+      <input id="admin-password" type="password" name="password" required autocomplete="current-password">
+      <button type="submit" class="btn btn--primary">Sign in to admin</button>
+    </form>
+    <p class="admin-status" id="admin-auth-status" role="status" hidden></p>
+    <p class="admin-muted" style="margin-top:1rem">Business Hub JSON editor (PIN): <a href="business.html">admin/business.html</a></p>
+  </div>
+
+  <div class="site-admin" id="admin-shell" hidden>
+    <aside class="site-admin__nav">
+      <div class="site-admin__nav-brand">
+        <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="">
+        <strong>Committee admin</strong>
+        <span>Taunet Nelel site</span>
+      </div>
+      <button type="button" data-admin-nav="overview" class="is-active">Overview</button>
+      <button type="button" data-admin-nav="enquiries">Enquiries</button>
+      <button type="button" data-admin-nav="members">Member profiles</button>
+      <button type="button" data-admin-nav="imports">Import list (540)</button>
+      <button type="button" data-admin-nav="events">Events (DB)</button>
+      <button type="button" data-admin-nav="sponsors">Sponsors (DB)</button>
+      <button type="button" data-admin-nav="gallery">Gallery (DB)</button>
+      <button type="button" data-admin-nav="newsletter">Newsletter</button>
+      <button type="button" data-admin-nav="pages">Pages &amp; tools</button>
+      <div class="site-admin__nav-foot">
+        <button type="button" id="admin-refresh">Refresh data</button>
+        <button type="button" id="admin-logout">Sign out</button>
+        <a href="../index.html">Public website</a>
+        <a href="../members/dashboard.html">Member dashboard</a>
+      </div>
+    </aside>
+
+    <main class="site-admin__main">
+      <div class="site-admin__header">
+        <div>
+          <h1 id="admin-panel-title">Overview</h1>
+          <p>Review forms, members, and database content for the whole site.</p>
+        </div>
+        <div class="site-admin__user">Signed in as<br><strong id="admin-user-label">—</strong></div>
+      </div>
+
+      <p class="admin-status" id="admin-panel-status" role="status" hidden></p>
+
+      <section class="site-admin__panel is-active" data-admin-panel="overview">
+        <div class="admin-stats">
+          <div class="admin-stat"><strong id="stat-enquiries">—</strong><span>Form submissions</span></div>
+          <div class="admin-stat"><strong id="stat-new">—</strong><span>New / unread</span></div>
+          <div class="admin-stat"><strong id="stat-profiles">—</strong><span>Auth profiles</span></div>
+          <div class="admin-stat"><strong id="stat-imports">—</strong><span>Imported members</span></div>
+          <div class="admin-stat"><strong id="stat-newsletter">—</strong><span>Newsletter</span></div>
+        </div>
+        <div class="admin-card">
+          <h2 style="margin:0 0 0.5rem;font-size:1.05rem">What this covers</h2>
+          <p class="admin-muted" style="margin:0">
+            Live data from Supabase: enquiries, profiles, imports, events/sponsors/gallery tables, newsletter.
+            Business Hub content still uses the separate PIN editor. Some public pages are still static HTML / JS until fully migrated.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="enquiries">
+        <div class="admin-toolbar">
+          <select id="enquiry-filter" aria-label="Filter by form type">
+            <option value="all">All types</option>
+            <option value="contact">Contact</option>
+            <option value="membership">Membership</option>
+            <option value="sponsorship">Sponsorship</option>
+            <option value="welfare">Welfare</option>
+            <option value="events">Events</option>
+            <option value="support">Support</option>
+          </select>
+          <input type="search" id="enquiry-search" placeholder="Search name, email, message…" aria-label="Search enquiries">
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Status / date</th>
+                <th>Type</th>
+                <th>From</th>
+                <th>Message / details</th>
+                <th>Update</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="admin-enquiries-body">
+              <tr><td colspan="6" class="admin-empty">Open this tab to load enquiries.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="members">
+        <p class="admin-muted">People who have registered / signed in. Use <strong>Approve welfare</strong> after reviewing a welfare registration enquiry.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Plan</th>
+                <th>Association</th>
+                <th>Welfare</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody id="admin-members-body">
+              <tr><td colspan="5" class="admin-empty">Open this tab to load profiles.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="imports">
+        <div id="admin-imports-stats"></div>
+        <p class="admin-muted">First 100 rows of the ClientClub import staging table (full list is in Supabase).</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name / email</th>
+                <th>Membership</th>
+                <th>Status</th>
+                <th>A / W</th>
+              </tr>
+            </thead>
+            <tbody id="admin-imports-body">
+              <tr><td colspan="5" class="admin-empty">Open this tab to load imports.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="events">
+        <p class="admin-muted">Database events table. The public Events page still primarily uses <code>events-phases.js</code> until that is switched over.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Location</th>
+                <th>Starts</th>
+                <th>Published</th>
+                <th>Registration</th>
+                <th>Featured</th>
+              </tr>
+            </thead>
+            <tbody id="admin-events-body">
+              <tr><td colspan="6" class="admin-empty">Open this tab to load events.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="sponsors">
+        <p class="admin-muted">Database sponsors table. Public sponsorship page is still mostly static.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Tier</th>
+                <th>Website</th>
+                <th>Published</th>
+                <th>Order</th>
+              </tr>
+            </thead>
+            <tbody id="admin-sponsors-body">
+              <tr><td colspan="5" class="admin-empty">Open this tab to load sponsors.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="gallery">
+        <p class="admin-muted">Toggle album published flags in the database. Public gallery also uses static <code>gallery-data.js</code>.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Album</th>
+                <th>Event date</th>
+                <th>Group</th>
+                <th>Published</th>
+                <th>Toggle</th>
+              </tr>
+            </thead>
+            <tbody id="admin-gallery-body">
+              <tr><td colspan="5" class="admin-empty">Open this tab to load albums.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="newsletter">
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>List</th>
+                <th>Subscribed</th>
+              </tr>
+            </thead>
+            <tbody id="admin-newsletter-body">
+              <tr><td colspan="3" class="admin-empty">Open this tab to load subscribers.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="pages">
+        <div class="admin-links">
+          <a href="business.html">Business Hub admin<span>Cards, news, blog (PIN)</span></a>
+          <a href="../contact.html">Contact<span>Public enquiry form</span></a>
+          <a href="../membership.html">Membership<span>Public join page</span></a>
+          <a href="../sponsorship.html">Sponsorship<span>Public sponsors page</span></a>
+          <a href="../welfare.html">Welfare<span>Public welfare page</span></a>
+          <a href="../events.html">Events<span>Public events</span></a>
+          <a href="../gallery.html">Gallery<span>Public albums</span></a>
+          <a href="../community.html#business">Community / Business<span>Public business hub</span></a>
+          <a href="../members/login.html">Members login<span>Portal sign-in</span></a>
+          <a href="../about.html">About<span>Static leadership content</span></a>
+          <a href="https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo" target="_blank" rel="noopener">Supabase dashboard<span>SQL, Auth, Table Editor</span></a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="../assets/js/supabase-config.js?v=2"></script>
+  <script src="../assets/js/supabase-init.js?v=3"></script>
+  <script src="../assets/js/admin-dashboard.js?v=1"></script>
+</body>
+</html>
