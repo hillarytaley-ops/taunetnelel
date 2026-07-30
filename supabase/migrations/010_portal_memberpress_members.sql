@@ -1,7 +1,33 @@
 -- Migrate MemberPress members from portal.taunetnelel.org
 -- Source: WP Admin → MemberPress → Members (5 records as of 2026-07)
--- Run in Supabase SQL Editor AFTER or AFTER using /admin/
--- Requires: 007_member_imports, 008_profiles, 009_site_admins
+-- Requires: 007 (member_imports). Creates site_admins if missing.
+-- Also run full 009_admin_dashboard_access.sql for admin RLS policies.
+
+create table if not exists public.site_admins (
+  email text primary key,
+  full_name text,
+  created_at timestamptz not null default now(),
+  constraint site_admins_email_lower check (email = lower(email))
+);
+
+alter table public.site_admins enable row level security;
+
+create or replace function public.is_site_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.site_admins a
+    where a.email = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+
+revoke all on function public.is_site_admin() from public;
+grant execute on function public.is_site_admin() to authenticated, anon;
 
 -- Snapshot from MemberPress:
 -- 16 Ruto              psowey@gmail.com          Status None
