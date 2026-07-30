@@ -398,24 +398,39 @@
     const stats = data.stats;
     let statsHtml = '';
     if (stats) {
-      statsHtml = `<div class="admin-stats">
-          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="all"><strong>${stats.total ?? '—'}</strong><span>All members</span></button>
-          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="association"><strong>${stats.association_only ?? '—'}</strong><span>Association only</span></button>
-          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="welfare"><strong>${stats.welfare_only ?? '—'}</strong><span>Welfare only</span></button>
-          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="both"><strong>${stats.association_and_welfare ?? '—'}</strong><span>Both (A + W)</span></button>
-          <button type="button" class="admin-stat admin-stat--btn" data-import-filter="welfare_any"><strong>${stats.welfare_member_total ?? '—'}</strong><span>Any welfare</span></button>
-        </div>`;
+      const cards = [
+        { key: 'all', value: stats.total, label: 'Total imported' },
+        { key: 'both', value: stats.association_and_welfare, label: 'Association + Welfare' },
+        { key: 'association', value: stats.association_only, label: 'Association only' },
+        { key: 'welfare', value: stats.welfare_only, label: 'Welfare only' },
+        { key: 'pending', value: stats.pending_invite, label: 'Pending invite' }
+      ];
+      statsHtml = `<div class="admin-stats">${cards
+        .map(
+          (c) => `<button type="button" class="admin-stat admin-stat--btn${
+            state.importFilter === c.key ? ' is-active' : ''
+          }" data-import-filter="${c.key}" aria-pressed="${state.importFilter === c.key}">
+          <strong>${c.value ?? '—'}</strong>
+          <span>${c.label}</span>
+          <em class="admin-stat__hint">Click to show list</em>
+        </button>`
+        )
+        .join('')}</div>`;
     }
     const statsHost = document.getElementById('admin-imports-stats');
     if (statsHost) {
       statsHost.innerHTML = statsHtml;
       statsHost.querySelectorAll('[data-import-filter]').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.dataset.importFilter === state.importFilter);
         btn.addEventListener('click', () => {
           state.importFilter = btn.dataset.importFilter;
           const select = document.getElementById('imports-filter');
           if (select) select.value = state.importFilter;
-          loadImports();
+          loadImports().then(() => {
+            document.getElementById('admin-imports-body')?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          });
         });
       });
     }
@@ -443,12 +458,13 @@
     if (countEl) {
       countEl.hidden = false;
       const labels = {
-        all: 'All members',
+        all: 'Total imported',
         association: 'Association only',
         welfare: 'Welfare only',
         both: 'Association + Welfare',
         association_any: 'All with association',
-        welfare_any: 'All with welfare'
+        welfare_any: 'All with welfare',
+        pending: 'Pending invite'
       };
       countEl.textContent = `Showing ${rows.length} — ${labels[state.importFilter] || state.importFilter}`;
     }

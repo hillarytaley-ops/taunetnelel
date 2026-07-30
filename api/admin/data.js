@@ -144,6 +144,8 @@ module.exports = async function handler(req, res) {
           query += '&association_member=eq.true';
         } else if (filter === 'welfare_any') {
           query += '&welfare_member=eq.true';
+        } else if (filter === 'pending') {
+          query += '&status=eq.pending_invite';
         }
         const [{ data: rows }, statsRes] = await Promise.all([
           sb(query),

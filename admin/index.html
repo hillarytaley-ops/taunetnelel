@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=5">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=6">
 </head>
 <body data-page="site-admin">
 
@@ -147,9 +147,10 @@
         <div class="admin-toolbar">
           <select id="imports-filter" aria-label="Filter by membership type">
             <option value="all">All members</option>
+            <option value="both">Association + Welfare</option>
             <option value="association">Association only (ordinary)</option>
             <option value="welfare">Welfare only</option>
-            <option value="both">Association + Welfare (both)</option>
+            <option value="pending">Pending invite</option>
             <option value="association_any">All with association</option>
             <option value="welfare_any">All with welfare</option>
           </select>
@@ -324,6 +325,6 @@
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=7"></script>
+  <script src="../assets/js/admin-dashboard.js?v=8"></script>
 </body>
 </html>

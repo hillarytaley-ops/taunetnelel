@@ -396,12 +396,32 @@ body[data-page="site-admin"] {
   text-align: left;
   font: inherit;
   width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.admin-stat--btn:hover {
+  transform: translateY(-1px);
 }
 
 .admin-stat--btn:hover,
 .admin-stat--btn.is-active {
   border-color: rgba(196, 98, 45, 0.55);
   background: rgba(196, 98, 45, 0.08);
+}
+
+.admin-stat__hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 500;
+  color: #8a6a52;
+  opacity: 0.9;
+}
+
+.admin-stat--btn.is-active .admin-stat__hint {
+  color: #3d2314;
+  font-weight: 600;
 }
 
 .admin-section-title {
