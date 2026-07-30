@@ -6,6 +6,9 @@ Production: `https://taunetnelel.vercel.app/admin/`
 
 Local: open `admin/index.html`
 
+Business Hub tab: `https://taunetnelel.vercel.app/admin/#business`  
+(`admin/business.html` redirects here.)
+
 ## One-time setup
 
 1. In Supabase SQL Editor, run:
@@ -32,10 +35,9 @@ on conflict (email) do nothing;
 | Enquiries | `form_submissions` (status updates) |
 | Member profiles | `profiles` + Approve welfare |
 | Import list | `member_imports` + stats view |
+| **Business Hub** | Cards, news, blog — edit / export `business-content.json` |
 | Events / Sponsors / Gallery | DB tables (public pages may still use static JS/HTML) |
 | Newsletter | `newsletter_subscribers` |
-| Pages & tools | Links to public pages + Business Hub PIN admin |
+| Pages & tools | Links to public pages |
 
-## Separate tool
-
-Business Hub content editor (JSON export): `/admin/business.html` — PIN `TaunetBiz2026`.
+No separate Business PIN page — everything uses committee admin sign-in.

@@ -11,6 +11,7 @@
     'enquiries',
     'members',
     'imports',
+    'business',
     'events',
     'sponsors',
     'gallery',
@@ -24,7 +25,8 @@
     isAdmin: false,
     enquiries: [],
     enquiryFilter: 'all',
-    enquirySearch: ''
+    enquirySearch: '',
+    businessEditor: null
   };
 
   const els = {
@@ -85,6 +87,7 @@
       enquiries: 'Form enquiries',
       members: 'Member profiles',
       imports: 'Imported member list',
+      business: 'Business Hub',
       events: 'Events (database)',
       sponsors: 'Sponsors (database)',
       gallery: 'Gallery (database)',
@@ -502,6 +505,16 @@
       .join('');
   }
 
+  function ensureBusinessEditor() {
+    const root = document.getElementById('admin-business-root');
+    if (!root || !window.TaunetBusinessAdmin) return;
+    if (state.businessEditor) {
+      state.businessEditor.reload?.();
+      return;
+    }
+    state.businessEditor = window.TaunetBusinessAdmin.mount(root, { basePath: '../' });
+  }
+
   async function refreshPanel(id) {
     const status = document.getElementById('admin-panel-status');
     if (status) {
@@ -514,6 +527,7 @@
       if (id === 'enquiries') await loadEnquiries();
       if (id === 'members') await loadMembers();
       if (id === 'imports') await loadImports();
+      if (id === 'business') ensureBusinessEditor();
       if (id === 'events') await loadEvents();
       if (id === 'sponsors') await loadSponsors();
       if (id === 'gallery') await loadGallery();

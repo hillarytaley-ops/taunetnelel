@@ -365,6 +365,92 @@ body[data-page="site-admin"] {
   max-width: 280px;
 }
 
+.admin-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-section-title h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.admin-field {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.admin-field span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.admin-field input,
+.admin-field textarea {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(139, 69, 19, 0.15);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.admin-field textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.admin-item {
+  border: 1px solid rgba(139, 69, 19, 0.12);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  background: #f7f1e8;
+}
+
+.admin-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-item__head h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.admin-item__remove {
+  border: none;
+  background: transparent;
+  color: #a33;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-help {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #6b4a36;
+}
+
+.admin-help ol {
+  margin: 0.75rem 0 0 1.1rem;
+}
+
+.business-admin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 @media (max-width: 860px) {
   .site-admin {
     grid-template-columns: 1fr;
