@@ -1,7 +1,7 @@
 -- Migrate MemberPress members from portal.taunetnelel.org
 -- Source: WP Admin → MemberPress → Members (5 records as of 2026-07)
--- Requires: 007 (member_imports). Creates site_admins if missing.
--- Also run full 009_admin_dashboard_access.sql for admin RLS policies.
+-- Requires: 007 (member_imports). Creates site_admins / profile columns if missing.
+-- Also run full 008 (Auth trigger) and 009 (admin RLS) for complete setup.
 
 create table if not exists public.site_admins (
   email text primary key,
@@ -28,6 +28,23 @@ $$;
 
 revoke all on function public.is_site_admin() from public;
 grant execute on function public.is_site_admin() to authenticated, anon;
+
+-- Ensure profiles has membership columns (normally from 008)
+alter table public.profiles
+  drop constraint if exists profiles_plan_check;
+
+alter table public.profiles
+  add constraint profiles_plan_check
+  check (plan in ('basic', 'welfare', 'both'));
+
+alter table public.profiles
+  add column if not exists association_member boolean not null default false;
+
+alter table public.profiles
+  add column if not exists welfare_member boolean not null default false;
+
+alter table public.profiles
+  add column if not exists email text;
 
 -- Snapshot from MemberPress:
 -- 16 Ruto              psowey@gmail.com          Status None
