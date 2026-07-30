@@ -23,6 +23,7 @@
     client: null,
     user: null,
     isAdmin: false,
+    preview: false,
     enquiries: [],
     enquiryFilter: 'all',
     enquirySearch: '',
@@ -95,8 +96,99 @@
       pages: 'Site pages & tools'
     };
     if (title) title.textContent = titles[next] || 'Admin';
-    history.replaceState(null, '', `#${next}`);
+    const previewQs = state.preview ? '?preview=1' : '';
+    history.replaceState(null, '', `${previewQs}#${next}`);
     if (next === 'enquiries') renderEnquiries();
+  }
+
+  function showPreviewBanner() {
+    if (!state.preview) return;
+    const main = document.querySelector('.site-admin__main');
+    if (!main || main.querySelector('.admin-preview-banner')) return;
+    const banner = document.createElement('div');
+    banner.className = 'admin-preview-banner';
+    banner.innerHTML = `
+      <p><strong>Preview mode.</strong> Sample layout only — not live member data. Sign in for real committee access.</p>
+      <a href="index.html" class="admin-preview-banner__link">Exit preview</a>
+    `;
+    main.insertBefore(banner, main.firstChild);
+  }
+
+  function loadPreviewDemo() {
+    document.getElementById('stat-enquiries').textContent = '12';
+    document.getElementById('stat-new').textContent = '3';
+    document.getElementById('stat-profiles').textContent = '2';
+    document.getElementById('stat-imports').textContent = '540';
+    document.getElementById('stat-newsletter').textContent = '8';
+
+    state.enquiries = [
+      {
+        id: 'demo-1',
+        form_type: 'welfare',
+        name: 'Sample Member',
+        email: 'sample@email.com',
+        phone: '0400 000 000',
+        message: 'Demo welfare registration request.',
+        metadata: { welfare_package: 'Welfare Plus — Individual ($300/year)' },
+        status: 'new',
+        admin_notes: '',
+        created_at: new Date().toISOString()
+      },
+      {
+        id: 'demo-2',
+        form_type: 'contact',
+        name: 'Jane Example',
+        email: 'jane@example.com',
+        phone: '',
+        message: 'Demo contact enquiry about membership.',
+        metadata: {},
+        status: 'reviewed',
+        admin_notes: '',
+        created_at: new Date(Date.now() - 86400000).toISOString()
+      }
+    ];
+
+    const membersBody = document.getElementById('admin-members-body');
+    if (membersBody) {
+      membersBody.innerHTML = `<tr>
+        <td>Demo Member<div class="admin-detail">demo@taunetnelel.org</div></td>
+        <td><span class="admin-chip">basic</span></td>
+        <td>Yes</td>
+        <td>No</td>
+        <td class="admin-detail">Preview only</td>
+      </tr>`;
+    }
+
+    const importsBody = document.getElementById('admin-imports-body');
+    if (importsBody) {
+      importsBody.innerHTML = `<tr>
+        <td>TN-0001</td>
+        <td>Demo Import Row<div class="admin-detail">import@example.com</div></td>
+        <td><span class="admin-chip">Association + Welfare</span></td>
+        <td>pending_invite</td>
+        <td>A / W</td>
+      </tr>`;
+    }
+
+    ['admin-events-body', 'admin-sponsors-body', 'admin-gallery-body', 'admin-newsletter-body'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = `<tr><td colspan="6" class="admin-empty">Preview mode — open Business Hub tab to try the editor, or sign in for live data.</td></tr>`;
+      }
+    });
+  }
+
+  function enterPreview() {
+    state.preview = true;
+    state.isAdmin = false;
+    if (els.userLabel) els.userLabel.textContent = 'Preview (not signed in)';
+    showShell(true);
+    showPreviewBanner();
+    loadPreviewDemo();
+    const hash = (location.hash || '#overview').replace('#', '');
+    setPanel(hash);
+    if (hash === 'business') ensureBusinessEditor();
+    else if (hash === 'enquiries') renderEnquiries();
   }
 
   async function getClient() {
@@ -262,6 +354,12 @@
     body.querySelectorAll('[data-status-for]').forEach((select) => {
       select.addEventListener('change', async () => {
         try {
+          if (state.preview) {
+            const item = state.enquiries.find((r) => r.id === select.dataset.statusFor);
+            if (item) item.status = select.value;
+            renderEnquiries();
+            return;
+          }
           const client = await getClient();
           const { error } = await client
             .from('form_submissions')
@@ -516,6 +614,13 @@
   }
 
   async function refreshPanel(id) {
+    if (state.preview) {
+      if (id === 'business') ensureBusinessEditor();
+      if (id === 'enquiries') renderEnquiries();
+      if (id === 'overview') loadPreviewDemo();
+      return;
+    }
+
     const status = document.getElementById('admin-panel-status');
     if (status) {
       status.hidden = false;
@@ -573,6 +678,12 @@
   async function init() {
     bindNav();
 
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('preview') === '1' || params.get('preview') === 'true') {
+      enterPreview();
+      return;
+    }
+
     if (!window.taunetSupabaseApi?.isConfigured()) {
       setAuthStatus('Supabase is not configured (assets/js/supabase-config.js).', true);
       return;
@@ -595,6 +706,10 @@
     });
 
     els.logoutBtn?.addEventListener('click', async () => {
+      if (state.preview) {
+        window.location.href = 'index.html';
+        return;
+      }
       try {
         const client = await getClient();
         await client.auth.signOut();

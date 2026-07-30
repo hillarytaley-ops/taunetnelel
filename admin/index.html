@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=3">
 </head>
 <body data-page="site-admin">
 
@@ -23,7 +23,10 @@
       <button type="submit" class="btn btn--primary">Sign in to admin</button>
     </form>
     <p class="admin-status" id="admin-auth-status" role="status" hidden></p>
-    <p class="admin-muted" style="margin-top:1rem">Need Business Hub? Sign in here, then open the <strong>Business Hub</strong> tab.</p>
+    <p class="admin-muted" style="margin-top:1rem">
+      <a href="?preview=1">Preview the admin dashboard</a> (sample layout — no live data)
+      · Business Hub is under the <strong>Business Hub</strong> tab after you enter.
+    </p>
   </div>
 
   <div class="site-admin" id="admin-shell" hidden>
@@ -300,6 +303,6 @@
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=2"></script>
+  <script src="../assets/js/admin-dashboard.js?v=3"></script>
 </body>
 </html>
