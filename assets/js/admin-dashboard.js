@@ -616,6 +616,8 @@
     const fd = new FormData(form);
     const startAt = fromDatetimeLocalValue(fd.get('start_at'));
     const endRaw = fd.get('end_at');
+    const flyerInput = form.querySelector('[name="flyer"]');
+    const flyerFile = flyerInput?.files?.[0] || null;
     const payload = {
       title: String(fd.get('title') || '').trim(),
       location: String(fd.get('location') || '').trim(),
@@ -632,13 +634,23 @@
     if (status) {
       status.hidden = false;
       status.classList.remove('is-error');
-      status.textContent = 'Saving event…';
+      status.textContent = flyerFile ? 'Uploading flyer and saving event…' : 'Saving event…';
     }
     try {
-      await adminApi('event-create', { method: 'POST', body: payload });
+      if (flyerFile) {
+        payload.flyer_data_url = await readFileAsDataUrl(flyerFile);
+        payload.flyer_name = flyerFile.name;
+      }
+      const result = await adminApi('event-create', { method: 'POST', body: payload });
       form.reset();
       form.querySelector('[name="is_published"]').checked = true;
-      if (status) status.textContent = 'Event saved.';
+      const preview = document.getElementById('admin-event-flyer-preview');
+      if (preview) preview.hidden = true;
+      if (status) {
+        status.textContent = result.warning
+          ? `Event saved. ${result.warning}`
+          : 'Event saved.';
+      }
       await loadEvents();
     } catch (err) {
       if (status) {
@@ -646,6 +658,25 @@
         status.textContent = err.message || 'Could not save event.';
       }
     }
+  }
+
+  function bindEventFlyerPreview() {
+    const input = document.querySelector('#admin-event-form [name="flyer"]');
+    const preview = document.getElementById('admin-event-flyer-preview');
+    const img = document.getElementById('admin-event-flyer-preview-img');
+    if (!input || !preview || !img) return;
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) {
+        preview.hidden = true;
+        img.removeAttribute('src');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      img.onload = () => URL.revokeObjectURL(url);
+      img.src = url;
+      preview.hidden = false;
+    });
   }
 
   async function seedEventsFromSite() {
@@ -928,6 +959,7 @@
     });
 
     document.getElementById('admin-event-form')?.addEventListener('submit', createEventFromForm);
+    bindEventFlyerPreview();
 
     document.getElementById('admin-newsletter-export')?.addEventListener('click', () => {
       exportNewsletterCsv();

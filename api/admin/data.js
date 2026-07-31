@@ -92,6 +92,61 @@ function normalizePhaseOverride(value) {
   return null;
 }
 
+function isMissingPhaseOverrideError(err) {
+  const text = `${err?.message || ''} ${JSON.stringify(err?.details || {})}`;
+  return text.includes('phase_override');
+}
+
+/** When phase_override column is missing, nudge dates so Auto placement still matches. */
+function applyPhaseViaDates(row, phase) {
+  if (!phase || phase === 'auto') return row;
+  const now = Date.now();
+  const startMs = new Date(row.start_at).getTime();
+  const endMs = new Date(row.end_at || row.start_at).getTime();
+  const durationMs =
+    Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+      ? endMs - startMs
+      : 4 * 60 * 60 * 1000;
+  if (phase === 'upcoming') {
+    const start = new Date(Math.max(now + 24 * 60 * 60 * 1000, Number.isFinite(startMs) ? startMs : 0));
+    row.start_at = start.toISOString();
+    row.end_at = new Date(start.getTime() + durationMs).toISOString();
+  } else if (phase === 'present') {
+    row.start_at = new Date(now - 60 * 60 * 1000).toISOString();
+    row.end_at = new Date(now + Math.max(durationMs, 2 * 60 * 60 * 1000)).toISOString();
+  } else if (phase === 'most-recent') {
+    const end = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    row.end_at = end.toISOString();
+    row.start_at = new Date(end.getTime() - durationMs).toISOString();
+  } else if (phase === 'past') {
+    const end = new Date(now - 100 * 24 * 60 * 60 * 1000);
+    row.end_at = end.toISOString();
+    row.start_at = new Date(end.getTime() - durationMs).toISOString();
+  }
+  return row;
+}
+
+async function uploadFlyerFromDataUrl(eventId, dataUrl, fileName) {
+  const decoded = decodeDataUrl(dataUrl);
+  if (!decoded) throw Object.assign(new Error('Invalid flyer image data'), { status: 400 });
+  if (!String(decoded.contentType || '').startsWith('image/')) {
+    throw Object.assign(new Error('Flyer must be an image file'), { status: 400 });
+  }
+  if (decoded.bytes.length > 3.5e6) {
+    throw Object.assign(new Error('Flyer must be under about 3.5 MB'), { status: 400 });
+  }
+  const ext = decoded.contentType.includes('png')
+    ? 'png'
+    : decoded.contentType.includes('webp')
+      ? 'webp'
+      : decoded.contentType.includes('gif')
+        ? 'gif'
+        : 'jpg';
+  const safeName = slugifyId(fileName || 'flyer');
+  const objectPath = `flyers/${eventId}/${Date.now()}-${safeName}.${ext}`;
+  return uploadGalleryObject(objectPath, decoded.bytes, decoded.contentType);
+}
+
 async function sb(path, options = {}) {
   if (!SUPABASE_URL || !SERVICE_KEY) {
     const err = new Error(
@@ -452,7 +507,25 @@ module.exports = async function handler(req, res) {
         if (!startAt) return json(res, 400, { error: 'Start date/time is required' });
         const endAt = String(body.end_at || startAt).trim();
         const id = slugifyId(body.id || `${title}-${startAt.slice(0, 10)}`);
-        const phaseOverride = normalizePhaseOverride(body.phase_override);
+        const requestedPhase = normalizePhaseOverride(body.phase_override);
+        let imagePath =
+          String(body.image_path || '').trim() ||
+          'wp-content/uploads/2025/09/Celebration.jpg';
+
+        if (body.flyer_data_url) {
+          try {
+            imagePath = await uploadFlyerFromDataUrl(id, body.flyer_data_url, body.flyer_name);
+          } catch (err) {
+            if (String(err.message || '').toLowerCase().includes('bucket') || err.status === 404) {
+              return json(res, 400, {
+                error:
+                  'Flyer storage is not ready. Run migration 017_event_phase_override_and_gallery_storage.sql in Supabase, then try again.'
+              });
+            }
+            throw err;
+          }
+        }
+
         const row = {
           id,
           title,
@@ -460,9 +533,7 @@ module.exports = async function handler(req, res) {
           location: String(body.location || '').trim() || null,
           meta: String(body.meta || '').trim() || null,
           badge: String(body.badge || '').trim() || null,
-          image_path:
-            String(body.image_path || '').trim() ||
-            'wp-content/uploads/2025/09/Celebration.jpg',
+          image_path: imagePath,
           booking_url: String(body.booking_url || '').trim() || null,
           gallery_url: String(body.gallery_url || '').trim() || null,
           start_at: startAt,
@@ -470,13 +541,29 @@ module.exports = async function handler(req, res) {
           featured: Boolean(body.featured),
           registration_open: Boolean(body.registration_open),
           is_published: body.is_published !== false,
-          phase_override: phaseOverride
+          phase_override: requestedPhase
         };
-        const { data } = await sb('events', {
-          method: 'POST',
-          body: JSON.stringify(row)
-        });
-        return json(res, 200, { rows: data || [row] });
+
+        try {
+          const { data } = await sb('events', {
+            method: 'POST',
+            body: JSON.stringify(row)
+          });
+          return json(res, 200, { rows: data || [row] });
+        } catch (err) {
+          if (!isMissingPhaseOverrideError(err)) throw err;
+          const { phase_override, ...withoutPhase } = row;
+          applyPhaseViaDates(withoutPhase, requestedPhase || 'auto');
+          const { data } = await sb('events', {
+            method: 'POST',
+            body: JSON.stringify(withoutPhase)
+          });
+          return json(res, 200, {
+            rows: data || [withoutPhase],
+            warning:
+              'Saved without phase_override. Run migration 017 in Supabase to enable board overrides.'
+          });
+        }
       }
 
       if (resource === 'event-photos') {
@@ -654,17 +741,51 @@ module.exports = async function handler(req, res) {
         if (body.featured != null) patch.featured = Boolean(body.featured);
         if (body.registration_open != null) patch.registration_open = Boolean(body.registration_open);
         if (body.is_published != null) patch.is_published = Boolean(body.is_published);
-        if (body.phase_override !== undefined) {
-          patch.phase_override = normalizePhaseOverride(body.phase_override);
+        if (body.flyer_data_url) {
+          patch.image_path = await uploadFlyerFromDataUrl(id, body.flyer_data_url, body.flyer_name);
+        }
+        const requestedPhase =
+          body.phase_override !== undefined ? normalizePhaseOverride(body.phase_override) : undefined;
+        if (requestedPhase !== undefined) {
+          patch.phase_override = requestedPhase;
         }
         if (!Object.keys(patch).length) {
           return json(res, 400, { error: 'No fields to update' });
         }
-        const { data } = await sb(`events?id=eq.${encodeURIComponent(id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify(patch)
-        });
-        return json(res, 200, { rows: data || [] });
+        try {
+          const { data } = await sb(`events?id=eq.${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(patch)
+          });
+          return json(res, 200, { rows: data || [] });
+        } catch (err) {
+          if (!isMissingPhaseOverrideError(err) || requestedPhase === undefined) throw err;
+          const { phase_override, ...withoutPhase } = patch;
+          if (requestedPhase) {
+            const { data: currentRows } = await sb(
+              `events?id=eq.${encodeURIComponent(id)}&select=start_at,end_at`
+            );
+            const current = Array.isArray(currentRows) ? currentRows[0] : null;
+            const dated = applyPhaseViaDates(
+              {
+                start_at: withoutPhase.start_at || current?.start_at,
+                end_at: withoutPhase.end_at || current?.end_at
+              },
+              requestedPhase
+            );
+            withoutPhase.start_at = dated.start_at;
+            withoutPhase.end_at = dated.end_at;
+          }
+          const { data } = await sb(`events?id=eq.${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(withoutPhase)
+          });
+          return json(res, 200, {
+            rows: data || [],
+            warning:
+              'Updated without phase_override. Run migration 017 in Supabase to enable board overrides.'
+          });
+        }
       }
 
       return json(res, 400, { error: 'Unknown PATCH resource' });

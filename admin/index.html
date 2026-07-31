@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=13">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=11">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=12">
 </head>
 <body data-page="site-admin">
 
@@ -254,8 +254,9 @@
 
       <section class="site-admin__panel" data-admin-panel="events">
         <p class="admin-muted">
-          Add events, move them between Upcoming / Present / Most Recent / Past, and upload photos after an event concludes.
-          Run migration <code>017_event_phase_override_and_gallery_storage.sql</code> in Supabase once.
+          Add events, move them between boards, upload a flyer, and add photos after an event concludes.
+          For board overrides and flyer storage, run
+          <code>017_event_phase_override_and_gallery_storage.sql</code> once in Supabase (events still save without it).
         </p>
 
         <form id="admin-event-form" class="admin-card admin-card--flush" style="margin-bottom:1rem">
@@ -279,6 +280,14 @@
             <label class="admin-field"><span>Badge</span><input name="badge" type="text" maxlength="40" placeholder="Family day"></label>
             <label class="admin-field admin-field--wide"><span>Summary</span><textarea name="summary" rows="2" maxlength="500" placeholder="Short description for the Events page"></textarea></label>
             <label class="admin-field admin-field--wide"><span>Meta line</span><input name="meta" type="text" maxlength="200" placeholder="Saturday, 12 April 2027 · 11am–4pm"></label>
+            <label class="admin-field admin-field--wide">
+              <span>Event flyer / image</span>
+              <input name="flyer" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+              <span class="admin-field__hint">Upload a flyer or photo for the Events page card (JPG, PNG, WebP · under 3.5 MB).</span>
+            </label>
+            <div class="admin-flyer-preview admin-field--wide" id="admin-event-flyer-preview" hidden>
+              <img alt="Flyer preview" id="admin-event-flyer-preview-img">
+            </div>
             <label class="admin-field admin-field--check"><input name="is_published" type="checkbox" checked> Published</label>
             <label class="admin-field admin-field--check"><input name="registration_open" type="checkbox"> Registration open</label>
             <label class="admin-field admin-field--check"><input name="featured" type="checkbox"> Featured</label>
@@ -431,6 +440,6 @@
   <script src="../assets/js/events-phases.js?v=16"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=3"></script>
-  <script src="../assets/js/admin-dashboard.js?v=13"></script>
+  <script src="../assets/js/admin-dashboard.js?v=14"></script>
 </body>
 </html>
