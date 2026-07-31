@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=11">
-  <link rel="stylesheet" href="assets/css/community.css?v=2">
+  <link rel="stylesheet" href="assets/css/community.css?v=3">
   <link rel="stylesheet" href="assets/css/business.css">
 </head>
 <body data-page="community">
@@ -106,28 +106,27 @@
     </div>
   </section>
 
-  <nav class="page-subnav page-subnav--cards page-subnav--cards-six" aria-label="Community page sections">
+  <nav class="page-subnav page-subnav--links" aria-label="Community page sections">
     <div class="container page-subnav__inner">
-      <a href="#language" class="page-subnav__card">Language</a>
-      <a href="#culture" class="page-subnav__card">Culture</a>
-      <a href="#wellbeing" class="page-subnav__card">Wellbeing</a>
-      <a href="#business" class="page-subnav__card">Business</a>
-      <a href="#sports" class="page-subnav__card">Sports</a>
-      <a href="#enquiry" class="page-subnav__card">Enquire</a>
+      <a href="#language">Language</a>
+      <a href="#culture">Culture</a>
+      <a href="#wellbeing">Wellbeing</a>
+      <a href="#business">Business</a>
+      <a href="#sports">Sports</a>
+      <a href="#enquiry">Enquire</a>
     </div>
   </nav>
 
   <div class="community-quick">
     <div class="container">
-      <a href="members/auth.html?tab=join" class="btn btn--primary btn--sm">Get Started Today</a>
-      <a href="events.html" class="btn btn--outline btn--sm">View Events</a>
-      <a href="membership.html" class="btn btn--outline btn--sm">Membership</a>
+      <a href="members/auth.html?tab=join" class="btn btn--primary btn--sm">Join Community</a>
+      <a href="events.html" class="btn btn--ghost btn--sm">View Events</a>
     </div>
   </div>
 
   <section class="section community-section community-section--card" id="language" aria-labelledby="language-heading">
     <div class="container">
-      <article class="community-card community-card--wide community-card--flush reveal">
+      <article class="community-card community-card--wide community-card--flush reveal" data-show-label="Show language school details" data-hide-label="Hide details">
         <div class="community-section-banner" style="background-image:url('wp-content/uploads/2026/06/community-language-hero.png')">
           <div class="community-section-banner__content">
             <span class="eyebrow">Culture &amp; Language</span>
@@ -201,7 +200,7 @@
 
   <section class="section community-section community-section--card" id="culture" aria-labelledby="culture-heading">
     <div class="container">
-      <article class="community-card community-card--wide community-card--flush reveal">
+      <article class="community-card community-card--wide community-card--flush reveal" data-show-label="Show culture details" data-hide-label="Hide details">
         <div class="community-section-banner community-section-banner--slideshow">
           <div class="community-section-banner__slideshow" aria-hidden="true">
             <div class="community-section-banner__slide" style="background-image:url('wp-content/uploads/2026/06/community-culture-hero-01.png')"></div>
@@ -261,11 +260,16 @@
 
   <section class="section community-section community-section--card" id="wellbeing" aria-labelledby="wellbeing-heading">
     <div class="container">
-      <article class="community-card community-card--wide reveal">
-        <span class="eyebrow">People &amp; Wellbeing</span>
-        <h2 id="wellbeing-heading">Supporting Our Community</h2>
-        <p class="community-card__lead">Dedicated groups for women, men, youth, mental health, and welfare — kerebeetab kaa.</p>
+      <article class="community-card community-card--wide community-card--flush reveal" data-show-label="Show groups &amp; programs" data-hide-label="Hide groups">
+        <div class="community-section-banner" style="background-image:url('wp-content/uploads/2026/06/community-hero-02-welfare.png')">
+          <div class="community-section-banner__content">
+            <span class="eyebrow">Health &amp; Wellbeing</span>
+            <h2 id="wellbeing-heading">Supporting Our Community</h2>
+            <p class="community-card__lead">Dedicated groups for women, men, youth, mental health, and welfare — kerebeetab kaa.</p>
+          </div>
+        </div>
 
+        <div class="community-card__inner">
         <div class="community-programs" data-community-programs>
           <div class="community-programs__toolbar" role="tablist" aria-label="Community programs">
             <button type="button" class="community-programs__tab is-active" role="tab" aria-selected="true" data-program="women">Women</button>
@@ -380,14 +384,15 @@
             </div>
           </div>
         </div>
+        </div>
       </article>
     </div>
   </section>
 
   <section class="section community-section community-section--card" id="business" aria-labelledby="business-heading">
     <div class="container">
-      <article class="community-card community-card--wide community-card--flush reveal">
-        <div class="community-section-banner" style="background-image:url('wp-content/uploads/2026/06/community-hero-03-youth.png')">
+      <article class="community-card community-card--wide community-card--flush reveal" data-show-label="Show business directory" data-hide-label="Hide directory">
+        <div class="community-section-banner community-section-banner--dark" style="background-image:url('wp-content/uploads/2026/06/community-hero-01-pageant.png')">
           <div class="community-section-banner__content">
             <span class="eyebrow">Community Business</span>
             <h2 id="business-heading">Business Hub</h2>
@@ -436,7 +441,7 @@
 
   <section class="section community-section community-section--card" id="sports" aria-labelledby="sports-heading">
     <div class="container">
-      <article class="community-card community-card--wide community-card--flush reveal">
+      <article class="community-card community-card--wide community-card--flush reveal" data-show-label="Show sports details" data-hide-label="Show less">
         <div class="community-sports__hero" style="background-image:url('wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg')">
           <div class="community-sports__hero-content">
             <span class="eyebrow">Sports &amp; Activities</span>
@@ -517,6 +522,6 @@
   <a href="members/auth.html?tab=join" class="mobile-join-fab">Join Us</a>
   <script src="assets/js/business-content.js"></script>
   <script src="assets/js/business.js"></script>
-  <script src="assets/js/main.js?v=12"></script>
+  <script src="assets/js/main.js?v=13"></script>
 </body>
 </html>

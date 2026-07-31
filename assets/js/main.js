@@ -524,14 +524,23 @@
         card.dataset.collapsibleReady = 'true';
         card.classList.add('collapsible-card');
 
+        const showLabel = card.dataset.showLabel || 'Show program details';
+        const hideLabel = card.dataset.hideLabel || 'Hide details';
         const banner = card.querySelector('.community-section-banner__content, .community-sports__hero-content');
         const inner = card.querySelector('.community-card__inner');
         const programs = card.querySelector('.community-programs');
 
         if (banner && inner) {
-          addMainCardToggle(banner, inner, 'Show program details', 'Hide details');
-          wrapAccordionSections(inner.querySelector('.community-card__body'));
-          initTopicCards(inner);
+          addMainCardToggle(banner, inner, showLabel, hideLabel);
+          const body = inner.querySelector('.community-card__body');
+          if (body) {
+            wrapAccordionSections(body);
+            initTopicCards(inner);
+          }
+          inner.querySelectorAll('.community-program').forEach((panel) => {
+            wrapAccordionSections(panel);
+            initTopicCards(panel);
+          });
           return;
         }
 
@@ -545,7 +554,7 @@
             panel.appendChild(child);
           });
           sportsHero.appendChild(panel);
-          addMainCardToggle(sportsHero, panel, 'Show more', 'Show less');
+          addMainCardToggle(sportsHero, panel, showLabel, hideLabel);
           return;
         }
 
@@ -555,7 +564,7 @@
           header.className = 'collapsible-card__header collapsible-card__header--stacked';
           headerBits.forEach((el) => header.appendChild(el));
           card.insertBefore(header, programs);
-          addMainCardToggle(header, programs, 'Show groups & programs', 'Hide groups');
+          addMainCardToggle(header, programs, showLabel, hideLabel);
           card.querySelectorAll('.community-program').forEach((panel) => {
             wrapAccordionSections(panel);
             initTopicCards(panel);
