@@ -528,10 +528,26 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'gallery') {
-        const { data } = await sb(
-          'gallery_albums?select=id,title,event_date,is_published,preview_limit,group_id&order=event_date.desc.nullslast&limit=100'
-        );
-        return json(res, 200, { rows: data || [] });
+        let data;
+        try {
+          ({ data } = await sb(
+            'gallery_albums?select=id,title,description,event_date,is_published,preview_limit,group_id,sort_date,gallery_photos(count)&order=sort_date.desc.nullslast&limit=100'
+          ));
+        } catch (_) {
+          ({ data } = await sb(
+            'gallery_albums?select=id,title,event_date,is_published,preview_limit,group_id&order=event_date.desc.nullslast&limit=100'
+          ));
+        }
+        const rows = (data || []).map((row) => {
+          const countWrap = Array.isArray(row.gallery_photos) ? row.gallery_photos[0] : row.gallery_photos;
+          const photoCount =
+            countWrap && typeof countWrap === 'object' && countWrap.count != null
+              ? Number(countWrap.count)
+              : null;
+          const { gallery_photos, ...rest } = row;
+          return { ...rest, photo_count: Number.isFinite(photoCount) ? photoCount : null };
+        });
+        return json(res, 200, { rows });
       }
 
       if (resource === 'newsletter') {
@@ -561,6 +577,73 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify(SEED_EVENTS)
         });
         return json(res, 200, { ok: true, count: Array.isArray(data) ? data.length : SEED_EVENTS.length });
+      }
+
+      if (resource === 'seed-gallery') {
+        const albums = Array.isArray(body.albums) ? body.albums : [];
+        if (!albums.length) return json(res, 400, { error: 'No albums to seed' });
+
+        let albumCount = 0;
+        let photoCount = 0;
+        for (const album of albums) {
+          const id = String(album.id || '').trim();
+          if (!id) continue;
+          const eventDate = album.event_date || album.sort_date || null;
+          await sb('gallery_albums?on_conflict=id', {
+            method: 'POST',
+            prefer: 'resolution=merge-duplicates,return=representation',
+            body: JSON.stringify([
+              {
+                id,
+                title: String(album.title || id).trim(),
+                description: String(album.description || '').trim() || null,
+                event_date: eventDate,
+                group_id: album.group_id === 'recent' ? 'recent' : 'past',
+                sort_date: album.sort_date || eventDate,
+                preview_limit: Number(album.preview_limit) || 12,
+                is_published: album.is_published !== false
+              }
+            ])
+          });
+          albumCount += 1;
+
+          const photos = Array.isArray(album.photos) ? album.photos : [];
+          if (!photos.length) continue;
+
+          await fetch(`${SUPABASE_URL}/rest/v1/gallery_photos?album_id=eq.${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: {
+              apikey: SERVICE_KEY,
+              Authorization: `Bearer ${SERVICE_KEY}`,
+              Prefer: 'return=minimal'
+            }
+          });
+
+          const photoRows = photos
+            .map((photo, index) => {
+              const path = String(photo.storage_path || photo.src || '').trim();
+              if (!path) return null;
+              return {
+                album_id: id,
+                storage_path: path,
+                alt_text: String(photo.alt_text || photo.alt || '').trim() || null,
+                download_name: String(photo.download_name || photo.downloadName || '').trim() || null,
+                sort_order: Number.isFinite(Number(photo.sort_order)) ? Number(photo.sort_order) : index,
+                is_member_only: false
+              };
+            })
+            .filter(Boolean);
+
+          if (photoRows.length) {
+            await sb('gallery_photos', {
+              method: 'POST',
+              body: JSON.stringify(photoRows)
+            });
+            photoCount += photoRows.length;
+          }
+        }
+
+        return json(res, 200, { ok: true, albums: albumCount, photos: photoCount });
       }
 
       if (resource === 'event-create') {

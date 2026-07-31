@@ -337,20 +337,29 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="gallery">
-        <p class="admin-muted">Toggle album published flags in the database. Public gallery also uses static <code>gallery-data.js</code>.</p>
+        <p class="admin-muted">
+          Albums from the public site list and the database. Existing event photos live in the site gallery list —
+          use <strong>Sync site albums to DB</strong> if you want publish toggles stored in Supabase.
+        </p>
+        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <button type="button" class="btn btn--sm btn--primary" id="admin-seed-gallery">Sync site albums to DB</button>
+          <a class="btn btn--sm btn--ghost" href="../gallery.html" target="_blank" rel="noopener">Open public gallery</a>
+          <p id="admin-gallery-status" class="admin-muted" hidden style="margin:0;"></p>
+        </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
               <tr>
                 <th>Album</th>
-                <th>Event date</th>
+                <th>Date</th>
                 <th>Group</th>
+                <th>Photos</th>
+                <th>Source</th>
                 <th>Published</th>
-                <th>Toggle</th>
               </tr>
             </thead>
             <tbody id="admin-gallery-body">
-              <tr><td colspan="5" class="admin-empty">Open this tab to load albums.</td></tr>
+              <tr><td colspan="6" class="admin-empty">Open this tab to load albums.</td></tr>
             </tbody>
           </table>
         </div>
@@ -439,6 +448,7 @@
   <script src="../assets/js/events-phases.js?v=17"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=3"></script>
-  <script src="../assets/js/admin-dashboard.js?v=14"></script>
+  <script src="../assets/js/gallery-data.js?v=2"></script>
+  <script src="../assets/js/admin-dashboard.js?v=15"></script>
 </body>
 </html>

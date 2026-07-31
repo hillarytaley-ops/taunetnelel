@@ -723,29 +723,85 @@
   }
 
   async function loadGallery() {
-    const data = await adminApi('gallery');
     const body = document.getElementById('admin-gallery-body');
     if (!body) return;
-    const rows = data.rows || [];
-    if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No gallery albums in DB (public gallery may still use gallery-data.js).</td></tr>`;
+
+    let dbRows = [];
+    try {
+      const data = await adminApi('gallery');
+      dbRows = data.rows || [];
+    } catch (_) {
+      dbRows = [];
+    }
+
+    const dbById = new Map(dbRows.map((row) => [row.id, row]));
+    const staticAlbums = Array.isArray(window.TAUNET_GALLERY) ? window.TAUNET_GALLERY : [];
+    const merged = [];
+    const seen = new Set();
+
+    staticAlbums.forEach((album) => {
+      if (!album?.id) return;
+      seen.add(album.id);
+      const db = dbById.get(album.id);
+      merged.push({
+        id: album.id,
+        title: album.title || album.nav || album.id,
+        event_date: album.sortDate || album.date || '',
+        group_id: album.group || 'past',
+        photo_count: Array.isArray(album.photos) ? album.photos.length : 0,
+        is_published: db ? Boolean(db.is_published) : true,
+        source: db ? 'Site + DB' : 'Site list',
+        in_db: Boolean(db)
+      });
+    });
+
+    dbRows.forEach((row) => {
+      if (seen.has(row.id)) return;
+      merged.push({
+        id: row.id,
+        title: row.title || row.id,
+        event_date: row.event_date || row.sort_date || '',
+        group_id: row.group_id || 'past',
+        photo_count: row.photo_count,
+        is_published: Boolean(row.is_published),
+        source: 'Database',
+        in_db: true
+      });
+    });
+
+    merged.sort((a, b) => String(b.event_date || '').localeCompare(String(a.event_date || '')));
+
+    if (!merged.length) {
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No gallery albums found yet.</td></tr>`;
       return;
     }
-    body.innerHTML = rows
-      .map(
-        (row) => `<tr>
-          <td>${escapeHtml(row.title || '—')}</td>
+
+    body.innerHTML = merged
+      .map((row) => {
+        const photoLabel =
+          row.photo_count == null || row.photo_count === ''
+            ? '—'
+            : String(row.photo_count);
+        const publishCell = row.in_db
+          ? `<label class="admin-actions">
+              <input type="checkbox" data-album-pub="${escapeHtml(row.id)}" ${row.is_published ? 'checked' : ''}>
+              ${row.is_published ? 'Yes' : 'No'}
+            </label>`
+          : `<span class="admin-detail">On site list<br><em>Sync to manage</em></span>`;
+        return `<tr>
+          <td>
+            <strong>${escapeHtml(row.title || '—')}</strong>
+            <div class="admin-detail">
+              <a href="../gallery.html#${escapeHtml(row.id)}" target="_blank" rel="noopener">View album</a>
+            </div>
+          </td>
           <td>${escapeHtml(row.event_date || '—')}</td>
           <td>${escapeHtml(row.group_id || '—')}</td>
-          <td>${row.is_published ? 'Yes' : 'No'}</td>
-          <td>
-            <label class="admin-actions">
-              <input type="checkbox" data-album-pub="${escapeHtml(row.id)}" ${row.is_published ? 'checked' : ''}>
-              Published
-            </label>
-          </td>
-        </tr>`
-      )
+          <td>${escapeHtml(photoLabel)}</td>
+          <td>${escapeHtml(row.source)}</td>
+          <td>${publishCell}</td>
+        </tr>`;
+      })
       .join('');
 
     body.querySelectorAll('[data-album-pub]').forEach((input) => {
@@ -755,12 +811,57 @@
             method: 'PATCH',
             body: { id: input.dataset.albumPub, is_published: input.checked }
           });
+          await loadGallery();
         } catch (err) {
           alert(err.message || 'Could not update album.');
           input.checked = !input.checked;
         }
       });
     });
+  }
+
+  async function seedGalleryFromSite() {
+    const status = document.getElementById('admin-gallery-status');
+    const albums = (window.TAUNET_GALLERY || []).map((album) => ({
+      id: album.id,
+      title: album.title || album.nav || album.id,
+      description: album.description || '',
+      event_date: album.sortDate || null,
+      sort_date: album.sortDate || null,
+      group_id: album.group || 'past',
+      preview_limit: album.previewLimit || 12,
+      is_published: true,
+      photos: (album.photos || []).map((photo, index) => ({
+        storage_path: photo.src,
+        alt_text: photo.alt || '',
+        download_name: photo.downloadName || '',
+        sort_order: index
+      }))
+    }));
+
+    if (!albums.length) {
+      alert('No site gallery albums found to sync.');
+      return;
+    }
+
+    if (status) {
+      status.hidden = false;
+      status.classList.remove('is-error');
+      status.textContent = 'Syncing site albums into the database…';
+    }
+
+    try {
+      const result = await adminApi('seed-gallery', { method: 'POST', body: { albums } });
+      if (status) {
+        status.textContent = `Synced ${result.albums || albums.length} albums and ${result.photos || 0} photos.`;
+      }
+      await loadGallery();
+    } catch (err) {
+      if (status) {
+        status.classList.add('is-error');
+        status.textContent = err.message || 'Could not sync gallery albums.';
+      }
+    }
   }
 
   async function loadNewsletter() {
@@ -956,6 +1057,10 @@
 
     document.getElementById('admin-seed-events')?.addEventListener('click', () => {
       seedEventsFromSite();
+    });
+
+    document.getElementById('admin-seed-gallery')?.addEventListener('click', () => {
+      seedGalleryFromSite();
     });
 
     document.getElementById('admin-event-form')?.addEventListener('submit', createEventFromForm);
