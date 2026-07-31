@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const RECENT_DAYS = 30;
+  const RECENT_MONTHS = 2;
 
   let EVENTS = [
     {
@@ -21,30 +21,30 @@
     {
       id: 'community-picnic-2026',
       title: 'Taunet Community Picnic',
-      start: '2026-08-15T11:00:00+10:00',
-      end: '2026-08-15T16:00:00+10:00',
+      start: '2025-08-10T11:00:00+10:00',
+      end: '2025-08-10T16:00:00+10:00',
       image: 'wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg',
-      location: 'Victoria · venue TBC',
+      location: 'Victoria',
       summary: 'Family picnic with food, games, and music. Alcohol-free and open to all ages.',
-      meta: 'Saturday, 15 August 2026 · 11am–4pm',
+      meta: 'Saturday, 10 August 2025 · 11am–4pm',
       badge: 'Family day',
-      featured: true,
-      bookingUrl: 'events.html#inquiry',
-      registrationOpen: true
+      featured: false,
+      galleryUrl: 'gallery.html',
+      registrationOpen: false
     },
     {
       id: 'language-festival-2026',
       title: 'Kalenjin Language Festival',
-      start: '2026-09-20T10:00:00+10:00',
-      end: '2026-09-20T15:00:00+10:00',
+      start: '2025-09-21T10:00:00+10:00',
+      end: '2025-09-21T15:00:00+10:00',
       image: 'wp-content/uploads/2025/09/Celebration.jpg',
-      location: 'Melbourne · venue TBC',
+      location: 'Melbourne',
       summary: 'Celebrate Kalenjin language through workshops, performances, and youth activities.',
-      meta: 'Sunday, 20 September 2026 · 10am–3pm',
+      meta: 'Sunday, 21 September 2025 · 10am–3pm',
       badge: 'Culture',
       featured: false,
-      bookingUrl: 'events.html#inquiry',
-      registrationOpen: true
+      galleryUrl: 'gallery.html',
+      registrationOpen: false
     },
     {
       id: 'midyear-social-2026',
@@ -139,9 +139,9 @@
   ];
 
   const PHASE_META = {
-    upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'Book tickets & save the date', mod: 'upcoming' },
+    upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'New dates appear when published', mod: 'upcoming' },
     present: { label: 'Present Events', icon: '●', hint: 'Live right now', mod: 'present', live: true },
-    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'Ended in the last 30 days', mod: 'recent' },
+    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'Ended in the last 2 months', mod: 'recent' },
     past: { label: 'Past Events', icon: '◷', hint: 'Browse photos & memories', mod: 'past' }
   };
 
@@ -207,16 +207,22 @@
   function getEventPhase(event, now) {
     const current = now || new Date();
     const start = parseDate(event.start);
-    const end = parseDate(event.end);
+    const end = parseDate(event.end || event.start);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return 'past';
+    }
+
+    // Ended events never stay in Upcoming — after 2 months they move to Past.
+    if (current > end) {
+      const recentUntil = new Date(end);
+      recentUntil.setMonth(recentUntil.getMonth() + RECENT_MONTHS);
+      if (current <= recentUntil) return 'most-recent';
+      return 'past';
+    }
 
     if (current < start) return 'upcoming';
-    if (current >= start && current <= end) return 'present';
-
-    const recentUntil = new Date(end);
-    recentUntil.setDate(recentUntil.getDate() + RECENT_DAYS);
-
-    if (current <= recentUntil) return 'most-recent';
-    return 'past';
+    return 'present';
   }
 
   function categorizeEvents(now) {
@@ -267,9 +273,9 @@
 
   function emptyMessage(phase) {
     const messages = {
-      upcoming: 'No upcoming events at the moment. Check back soon or send an enquiry.',
+      upcoming: 'No upcoming events yet — awaiting committee update.',
       present: 'No events are running right now.',
-      'most-recent': 'No events have finished recently.',
+      'most-recent': 'No events have finished in the last 2 months.',
       past: 'No past events to display yet.'
     };
     return messages[phase] || 'No events in this category.';
@@ -643,7 +649,7 @@
   }
 
   global.TaunetEventsPhases = {
-    RECENT_DAYS,
+    RECENT_MONTHS,
     EVENTS,
     getEventPhase,
     categorizeEvents,
