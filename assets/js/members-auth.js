@@ -159,6 +159,30 @@
     if (error) throw error;
   }
 
+  async function updateProfile({ fullName, phone }) {
+    const client = await getClient();
+    if (!client) throw new Error('Supabase is not configured.');
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const userId = sessionData?.session?.user?.id;
+    if (!userId) throw new Error('You must be signed in to update your profile.');
+
+    const { data, error } = await client
+      .from('profiles')
+      .update({
+        full_name: String(fullName || '').trim(),
+        phone: String(phone || '').trim() || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select('id,full_name,email,phone,plan,association_member,welfare_member,member_number,member_since,renews_at')
+      .maybeSingle();
+
+    if (error) throw error;
+    const email = data?.email || sessionData.session.user.email || '';
+    return profileToMember(data || { full_name: fullName, email, phone }, email);
+  }
+
   global.taunetMembersAuth = {
     getClient,
     handleAuthCallback,
@@ -167,6 +191,7 @@
     signUp,
     signOut,
     requestPasswordReset,
+    updateProfile,
     profileToMember,
     planLabel
   };

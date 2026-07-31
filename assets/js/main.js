@@ -250,6 +250,9 @@
   });
 
   document.querySelectorAll('.newsletter').forEach((newsletter) => {
+    // Supabase-backed forms are handled in supabase-init.js
+    if (newsletter.hasAttribute('data-supabase-newsletter')) return;
+
     const storageKey = newsletter.dataset.storageKey || 'taunet_newsletter_email';
     const newsletterMsg = newsletter.querySelector('.newsletter__message');
     const saved = localStorage.getItem(storageKey);

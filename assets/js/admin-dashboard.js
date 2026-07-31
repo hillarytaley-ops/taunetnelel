@@ -15,6 +15,7 @@
     'sponsors',
     'gallery',
     'newsletter',
+    'announcements',
     'pages'
   ];
 
@@ -389,7 +390,7 @@
     if (!body) return;
     const rows = data.rows || [];
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No events in the database yet. Run migration 014_seed_events.sql, or the public site will keep using the static fallback.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No events in the database yet. Use “Seed events from site list” below, or run migration 014.</td></tr>`;
       return;
     }
     body.innerHTML = rows
@@ -404,6 +405,27 @@
         </tr>`
       )
       .join('');
+  }
+
+  async function seedEventsFromSite() {
+    const status = document.getElementById('admin-events-seed-status');
+    if (status) {
+      status.hidden = false;
+      status.classList.remove('is-error');
+      status.textContent = 'Seeding events…';
+    }
+    try {
+      const result = await adminApi('seed-events', { method: 'POST', body: {} });
+      if (status) {
+        status.textContent = `Seeded ${result.count || 10} events from the site list.`;
+      }
+      await loadEvents();
+    } catch (err) {
+      if (status) {
+        status.classList.add('is-error');
+        status.textContent = err.message || 'Could not seed events.';
+      }
+    }
   }
 
   async function loadSponsors() {
@@ -474,6 +496,7 @@
     const body = document.getElementById('admin-newsletter-body');
     if (!body) return;
     const rows = data.rows || [];
+    state.newsletterRows = rows;
     if (!rows.length) {
       body.innerHTML = `<tr><td colspan="3" class="admin-empty">No newsletter subscribers yet.</td></tr>`;
       return;
@@ -487,6 +510,81 @@
         </tr>`
       )
       .join('');
+  }
+
+  function exportNewsletterCsv() {
+    const rows = state.newsletterRows || [];
+    if (!rows.length) {
+      alert('No subscribers to export yet.');
+      return;
+    }
+    const lines = ['email,list_key,subscribed_at'];
+    rows.forEach((row) => {
+      const email = String(row.email || '').replace(/"/g, '""');
+      const list = String(row.list_key || '').replace(/"/g, '""');
+      const when = String(row.subscribed_at || '').replace(/"/g, '""');
+      lines.push(`"${email}","${list}","${when}"`);
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `taunet-newsletter-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function loadAnnouncementsAdmin() {
+    const body = document.getElementById('admin-announcements-body');
+    if (!body) return;
+    try {
+      const data = await adminApi('announcements');
+      const rows = data.rows || [];
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="4" class="admin-empty">No announcements yet. Publish one below (requires migration 015).</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows
+        .map(
+          (row) => `<tr>
+            <td>${escapeHtml(row.title || '—')}</td>
+            <td>${escapeHtml(row.audience || 'all')}</td>
+            <td>${row.is_published ? 'Yes' : 'No'}</td>
+            <td>${escapeHtml(formatDate(row.published_at))}</td>
+          </tr>`
+        )
+        .join('');
+    } catch (err) {
+      body.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err.message || 'Could not load announcements. Run migration 015.')}</td></tr>`;
+    }
+  }
+
+  async function createAnnouncement(event) {
+    event.preventDefault();
+    const form = event.target;
+    const status = document.getElementById('admin-announcement-status');
+    const title = form.querySelector('[name="title"]')?.value?.trim();
+    const bodyText = form.querySelector('[name="body"]')?.value?.trim();
+    const audience = form.querySelector('[name="audience"]')?.value || 'all';
+    if (status) {
+      status.hidden = false;
+      status.classList.remove('is-error');
+      status.textContent = 'Publishing…';
+    }
+    try {
+      await adminApi('announcement-create', {
+        method: 'POST',
+        body: { title, body: bodyText, audience, is_published: true }
+      });
+      form.reset();
+      if (status) status.textContent = 'Announcement published.';
+      await loadAnnouncementsAdmin();
+    } catch (err) {
+      if (status) {
+        status.classList.add('is-error');
+        status.textContent = err.message || 'Could not publish. Run migration 015 first.';
+      }
+    }
   }
 
   function ensureBusinessEditor() {
@@ -530,6 +628,7 @@
       if (id === 'sponsors') await loadSponsors();
       if (id === 'gallery') await loadGallery();
       if (id === 'newsletter') await loadNewsletter();
+      if (id === 'announcements') await loadAnnouncementsAdmin();
       if (status) status.hidden = true;
     } catch (err) {
       console.error(err);
@@ -576,6 +675,16 @@
       state.importSearch = e.target.value;
       renderImports();
     });
+
+    document.getElementById('admin-seed-events')?.addEventListener('click', () => {
+      seedEventsFromSite();
+    });
+
+    document.getElementById('admin-newsletter-export')?.addEventListener('click', () => {
+      exportNewsletterCsv();
+    });
+
+    document.getElementById('admin-announcement-form')?.addEventListener('submit', createAnnouncement);
   }
 
   async function init() {

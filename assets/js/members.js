@@ -655,6 +655,100 @@
     }).join('');
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  async function loadAnnouncements(member) {
+    const root = document.querySelector('[data-announcements-list]');
+    if (!root) return;
+
+    const fallback = `<p style="margin:0;color:var(--color-muted,#5a4b3c);">No announcements yet. Committee updates will appear here.</p>`;
+
+    try {
+      const client = await window.taunetSupabaseApi?.ensureClient?.();
+      if (!client) {
+        root.innerHTML = fallback;
+        return;
+      }
+      const { data, error } = await client
+        .from('announcements')
+        .select('id,title,body,audience,published_at')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false })
+        .limit(5);
+      if (error || !data?.length) {
+        root.innerHTML = fallback;
+        return;
+      }
+
+      const isWelfare = isWelfareMember(member);
+      const filtered = data.filter((row) => {
+        if (row.audience === 'welfare') return isWelfare;
+        if (row.audience === 'association') return Boolean(member?.associationMember) || !isWelfare;
+        return true;
+      });
+
+      if (!filtered.length) {
+        root.innerHTML = fallback;
+        return;
+      }
+
+      root.innerHTML = filtered
+        .map((row) => {
+          const when = row.published_at
+            ? new Date(row.published_at).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })
+            : '';
+          return `<article class="announce-item" style="margin-bottom:1rem;">
+            <h3 style="margin:0 0 0.25rem;font-size:1.05rem;">${escapeHtml(row.title)}</h3>
+            ${when ? `<p class="meta" style="margin:0 0 0.35rem;font-size:0.85rem;">${escapeHtml(when)}</p>` : ''}
+            <p style="margin:0;white-space:pre-wrap;">${escapeHtml(row.body)}</p>
+          </article>`;
+        })
+        .join('');
+    } catch (error) {
+      console.warn('Announcements load skipped:', error);
+      root.innerHTML = fallback;
+    }
+  }
+
+  async function loadMemberResources() {
+    const root = document.querySelector('[data-member-resources]');
+    if (!root) return;
+
+    try {
+      const client = await window.taunetSupabaseApi?.ensureClient?.();
+      if (!client) return;
+      const { data, error } = await client
+        .from('member_resources')
+        .select('id,title,description,category,file_type,file_url,sort_order')
+        .eq('is_published', true)
+        .order('sort_order', { ascending: true });
+      if (error || !data?.length) return;
+
+      root.innerHTML = data
+        .map((row) => {
+          const label = row.file_type === 'VID' ? 'Watch' : row.file_type === 'LINK' ? 'Open' : 'Open';
+          return `<div class="resource-item">
+            <div class="file-icon">${escapeHtml(row.file_type || 'DOC')}</div>
+            <div><strong>${escapeHtml(row.title)}</strong><br><span class="meta">${escapeHtml(row.category || '')}${row.description ? ' · ' + escapeHtml(row.description) : ''}</span></div>
+            <a class="btn btn--ghost" href="${escapeHtml(row.file_url)}" ${row.file_url.startsWith('http') ? 'target="_blank" rel="noopener"' : ''}>${label}</a>
+          </div>`;
+        })
+        .join('');
+    } catch (error) {
+      console.warn('Resources load skipped:', error);
+    }
+  }
+
   function initDashboard() {
     const member = requireAuth();
     if (!member) return;
@@ -670,6 +764,9 @@
       renderMemberRegistrations(member);
     }
 
+    loadAnnouncements(member);
+    loadMemberResources();
+
     const welfareQuickAction = document.querySelector('.quick-actions [data-welfare-only]');
     const isWelfare = isWelfareMember(member);
     if (welfareQuickAction && !isWelfare) {
@@ -682,16 +779,28 @@
       profileForm.querySelector('[name="name"]').value = member.name;
       profileForm.querySelector('[name="email"]').value = member.email;
       profileForm.querySelector('[name="phone"]').value = member.phone || '';
-      profileForm.addEventListener('submit', (e) => {
+      profileForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const updated = {
-          ...member,
-          name: profileForm.querySelector('[name="name"]').value,
-          email: profileForm.querySelector('[name="email"]').value,
-          phone: profileForm.querySelector('[name="phone"]').value
-        };
-        setMember(updated);
-        alert('Profile updated successfully.');
+        const name = profileForm.querySelector('[name="name"]').value;
+        const phone = profileForm.querySelector('[name="phone"]').value;
+        const email = profileForm.querySelector('[name="email"]').value;
+        const submitBtn = profileForm.querySelector('[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+          let updated = { ...member, name, email, phone };
+          if (window.taunetMembersAuth?.updateProfile && member.id) {
+            updated = await window.taunetMembersAuth.updateProfile({ fullName: name, phone });
+          }
+          setMember(updated);
+          populateMemberFields(updated);
+          alert('Profile updated successfully.');
+        } catch (error) {
+          console.warn('Profile save failed, kept local copy:', error);
+          setMember({ ...member, name, email, phone });
+          alert(error.message || 'Could not save to the server. Changes kept on this device.');
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
       });
     }
 

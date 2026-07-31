@@ -66,12 +66,24 @@ Only remove `--limit` after SMTP is configured.
 
 ---
 
-## 5. Seed public events — RUN ONCE
+## 5. Seed public events — RUN ONCE (or use Admin button)
 
 Public Events/Sponsors/Gallery now read from Supabase (static HTML/JS as fallback).
 
-In Supabase → SQL Editor, run:
+**Option A:** In Supabase → SQL Editor, run `supabase/migrations/014_seed_events.sql`
 
-`supabase/migrations/014_seed_events.sql`
+**Option B (after deploy):** Admin → Events (DB) → **Seed events from site list**
 
 Sponsors were already seeded in `001`. Gallery enrich already uses `gallery_albums` / `gallery_photos`.
+
+---
+
+## 6. Portal extras — RUN ONCE
+
+In Supabase → SQL Editor, run:
+
+`supabase/migrations/015_announcements_and_resources.sql`
+
+This adds announcements + member resources, and allows newsletter re-subscribe updates.
+
+Newsletter: Contact page → `newsletter_subscribers`. Admin → Newsletter → Export CSV for Brevo / MailerLite / Resend.

@@ -27,6 +27,7 @@
       <button type="button" data-admin-nav="sponsors">Sponsors (DB)</button>
       <button type="button" data-admin-nav="gallery">Gallery (DB)</button>
       <button type="button" data-admin-nav="newsletter">Newsletter</button>
+      <button type="button" data-admin-nav="announcements">Announcements</button>
       <button type="button" data-admin-nav="pages">Pages &amp; tools</button>
       <div class="site-admin__nav-foot">
         <button type="button" id="admin-refresh">Refresh data</button>
@@ -212,6 +213,10 @@
 
       <section class="site-admin__panel" data-admin-panel="events">
         <p class="admin-muted">Published rows here power the public Events page and member dashboard (with a static fallback if the table is empty).</p>
+        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+          <button type="button" class="btn btn--sm btn--primary" id="admin-seed-events">Seed events from site list</button>
+          <p id="admin-events-seed-status" class="admin-muted" hidden style="margin:0;"></p>
+        </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -232,7 +237,7 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="sponsors">
-        <p class="admin-muted">Database sponsors table. Public sponsorship page is still mostly static.</p>
+        <p class="admin-muted">Database sponsors table. Public sponsorship page loads published rows (static HTML is the fallback).</p>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -272,6 +277,10 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="newsletter">
+        <p class="admin-muted">Public Contact page saves to <code>newsletter_subscribers</code>. Export CSV for Brevo, MailerLite, or Resend when you are ready to send campaigns.</p>
+        <div class="admin-toolbar" style="margin-bottom:0.75rem;">
+          <button type="button" class="btn btn--sm btn--outline" id="admin-newsletter-export">Export CSV</button>
+        </div>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -283,6 +292,45 @@
             </thead>
             <tbody id="admin-newsletter-body">
               <tr><td colspan="3" class="admin-empty">Open this tab to load subscribers.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="announcements">
+        <p class="admin-muted">Published announcements appear on the members dashboard. Requires migration <code>015_announcements_and_resources.sql</code>.</p>
+        <form id="admin-announcement-form" class="admin-card" style="margin-bottom:1rem;padding:1rem;">
+          <div class="form-group">
+            <label for="announcement-title">Title</label>
+            <input id="announcement-title" name="title" type="text" required maxlength="160" placeholder="e.g. AGM date confirmed">
+          </div>
+          <div class="form-group">
+            <label for="announcement-body">Message</label>
+            <textarea id="announcement-body" name="body" rows="4" required maxlength="2000" placeholder="Short update for members…"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="announcement-audience">Audience</label>
+            <select id="announcement-audience" name="audience">
+              <option value="all">All members</option>
+              <option value="association">Association</option>
+              <option value="welfare">Welfare only</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">Publish announcement</button>
+          <p id="admin-announcement-status" class="admin-muted" hidden style="margin-top:0.5rem;"></p>
+        </form>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Audience</th>
+                <th>Published</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="admin-announcements-body">
+              <tr><td colspan="4" class="admin-empty">Open this tab to load announcements.</td></tr>
             </tbody>
           </table>
         </div>
@@ -310,6 +358,6 @@
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=10"></script>
+  <script src="../assets/js/admin-dashboard.js?v=11"></script>
 </body>
 </html>

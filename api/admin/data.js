@@ -88,6 +88,170 @@ async function countRows(table, query = '') {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Same rows as supabase/migrations/014_seed_events.sql */
+const SEED_EVENTS = [
+  {
+    id: 'cultural-week-2026',
+    title: 'Winter Cultural Week',
+    summary: 'A week of language, culture, and community activities across Victoria.',
+    location: 'Victoria · multiple venues',
+    meta: '1–5 July 2026 · daily sessions',
+    badge: 'Live now',
+    image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
+    booking_url: null,
+    gallery_url: 'gallery.html#agm-2025',
+    start_at: '2026-07-01T10:00:00+10:00',
+    end_at: '2026-07-05T18:00:00+10:00',
+    featured: true,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'community-picnic-2026',
+    title: 'Taunet Community Picnic',
+    summary: 'Family picnic with food, games, and music. Alcohol-free and open to all ages.',
+    location: 'Victoria · venue TBC',
+    meta: 'Saturday, 15 August 2026 · 11am–4pm',
+    badge: 'Family day',
+    image_path: 'wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg',
+    booking_url: 'events.html#inquiry',
+    gallery_url: null,
+    start_at: '2026-08-15T11:00:00+10:00',
+    end_at: '2026-08-15T16:00:00+10:00',
+    featured: true,
+    registration_open: true,
+    is_published: true
+  },
+  {
+    id: 'language-festival-2026',
+    title: 'Kalenjin Language Festival',
+    summary: 'Celebrate Kalenjin language through workshops, performances, and youth activities.',
+    location: 'Melbourne · venue TBC',
+    meta: 'Sunday, 20 September 2026 · 10am–3pm',
+    badge: 'Culture',
+    image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
+    booking_url: 'events.html#inquiry',
+    gallery_url: null,
+    start_at: '2026-09-20T10:00:00+10:00',
+    end_at: '2026-09-20T15:00:00+10:00',
+    featured: false,
+    registration_open: true,
+    is_published: true
+  },
+  {
+    id: 'midyear-social-2026',
+    title: 'Mid-Year Community Social',
+    summary: 'An evening social bringing members together for food, music, and community updates.',
+    location: 'Almas Receptions',
+    meta: 'Saturday, 28 June 2026 · 2pm–8pm',
+    badge: 'Recently ended',
+    image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
+    booking_url: null,
+    gallery_url: 'gallery.html#gala-2026',
+    start_at: '2026-06-28T14:00:00+10:00',
+    end_at: '2026-06-28T20:00:00+10:00',
+    featured: false,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'gala-2026',
+    title: 'Taunet Nelel Gala 2026',
+    summary: 'Celebrate five years of Taunet Nelel with music, dancing, and delicious food.',
+    location: 'Almas Receptions, Victoria',
+    meta: 'Saturday, 18 April 2026 · 2pm–11pm · Almas Receptions, Victoria',
+    badge: 'Featured',
+    image_path: 'wp-content/uploads/2026/01/Taunet-Nelel-Galla.jpg',
+    booking_url: 'https://www.eventbrite.com.au/e/taunet-nelel-2026-gala-tickets-1980043622777',
+    gallery_url: 'gallery.html#gala-2026',
+    start_at: '2026-04-18T14:00:00+10:00',
+    end_at: '2026-04-18T23:00:00+10:00',
+    featured: true,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'sports-day-2026',
+    title: 'Sports Day',
+    summary: 'A fun-filled family sports day for all ages.',
+    location: 'Victoria · family sports day',
+    meta: 'Sunday, 19 April 2026 · Victoria',
+    badge: 'Family day',
+    image_path: 'wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg',
+    booking_url: null,
+    gallery_url: 'gallery.html#sports-day',
+    start_at: '2026-04-19T09:00:00+10:00',
+    end_at: '2026-04-19T17:00:00+10:00',
+    featured: false,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'agm-2025',
+    title: 'Annual General Meeting',
+    summary: 'Annual general meeting for Taunet Nelel members.',
+    location: 'Zoom',
+    meta: 'Zoom · 10am – 5pm',
+    badge: null,
+    image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
+    booking_url: null,
+    gallery_url: 'gallery.html#agm-2025',
+    start_at: '2025-11-29T10:00:00+11:00',
+    end_at: '2025-11-29T17:00:00+11:00',
+    featured: false,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'pageant-2025',
+    title: 'Mr & Miss Taunet 2025',
+    summary: 'Taunet beauty pageant celebrating culture and community.',
+    location: 'Almas Reception',
+    meta: 'Almas Reception · 2pm – 5pm',
+    badge: null,
+    image_path: 'wp-content/uploads/2025/11/TN-beauty-peagant.jpg',
+    booking_url: null,
+    gallery_url: 'gallery.html#pageant-2025',
+    start_at: '2025-11-08T14:00:00+11:00',
+    end_at: '2025-11-08T17:00:00+11:00',
+    featured: false,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'volleyball-2025',
+    title: 'Volleyball Tournament',
+    summary: 'Community volleyball tournament.',
+    location: 'Dandenong Stadium',
+    meta: 'Dandenong Stadium · 2pm – 5pm',
+    badge: null,
+    image_path: 'wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-14.04.38.jpeg',
+    booking_url: null,
+    gallery_url: 'gallery.html#volleyball-2025',
+    start_at: '2025-10-19T14:00:00+11:00',
+    end_at: '2025-10-19T17:00:00+11:00',
+    featured: false,
+    registration_open: false,
+    is_published: true
+  },
+  {
+    id: 'gala-2025',
+    title: 'Taunet Nelel Gala',
+    summary: 'Annual gala celebration.',
+    location: 'Dandenong Stadium',
+    meta: 'Dandenong Stadium · 2pm – 11pm',
+    badge: null,
+    image_path: 'wp-content/uploads/2025/10/TAUNET-NELE-GALA.jpg',
+    booking_url: null,
+    gallery_url: 'gallery.html#gala-2025',
+    start_at: '2025-04-26T14:00:00+10:00',
+    end_at: '2025-04-26T23:00:00+10:00',
+    featured: false,
+    registration_open: false,
+    is_published: true
+  }
+];
+
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -197,7 +361,49 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { rows: data || [] });
       }
 
+      if (resource === 'announcements') {
+        const { data } = await sb(
+          'announcements?select=id,title,body,audience,is_published,published_at&order=published_at.desc&limit=50'
+        );
+        return json(res, 200, { rows: data || [] });
+      }
+
       return json(res, 400, { error: 'Unknown resource' });
+    }
+
+    if (req.method === 'POST') {
+      const body = await readBody(req);
+
+      if (resource === 'seed-events') {
+        const { data } = await sb('events?on_conflict=id', {
+          method: 'POST',
+          prefer: 'resolution=merge-duplicates,return=representation',
+          body: JSON.stringify(SEED_EVENTS)
+        });
+        return json(res, 200, { ok: true, count: Array.isArray(data) ? data.length : SEED_EVENTS.length });
+      }
+
+      if (resource === 'announcement-create') {
+        const title = String(body.title || '').trim();
+        const announcementBody = String(body.body || '').trim();
+        const audience = ['all', 'association', 'welfare'].includes(body.audience) ? body.audience : 'all';
+        if (!title || !announcementBody) {
+          return json(res, 400, { error: 'Title and body are required' });
+        }
+        const { data } = await sb('announcements', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            body: announcementBody,
+            audience,
+            is_published: body.is_published !== false,
+            published_at: new Date().toISOString()
+          })
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      return json(res, 400, { error: 'Unknown POST resource' });
     }
 
     if (req.method === 'PATCH') {

@@ -207,11 +207,11 @@
         <h2>Event Updates</h2>
         <p>Subscribe for news about galas, sports days, and community gatherings.</p>
       </div>
-      <form class="newsletter newsletter--inline" aria-label="Newsletter signup">
+      <form class="newsletter newsletter--inline" aria-label="Newsletter signup" data-supabase-newsletter="events">
         <label for="newsletter-email" class="visually-hidden">Email for event updates</label>
         <input type="email" id="newsletter-email" name="email" placeholder="Your email for event updates" required>
         <button type="submit" class="btn btn--accent">Subscribe</button>
-        <p class="newsletter__message" role="status" aria-live="polite" hidden></p>
+        <p class="newsletter__message newsletter-form__message" role="status" aria-live="polite" hidden></p>
       </form>
     </div>
   </section>
@@ -237,7 +237,7 @@
   </footer>
 
   <script src="assets/js/supabase-config.js?v=2"></script>
-  <script src="assets/js/supabase-init.js?v=3"></script>
-  <script src="assets/js/main.js?v=7"></script>
+  <script src="assets/js/supabase-init.js?v=4"></script>
+  <script src="assets/js/main.js?v=9"></script>
 </body>
 </html>

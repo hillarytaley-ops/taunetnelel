@@ -212,16 +212,23 @@
           .from('newsletter_subscribers')
           .upsert({ email, list_key: listKey }, { onConflict: 'email' });
 
-        const message = form.querySelector('.newsletter-form__message');
+        const message =
+          form.querySelector('.newsletter-form__message') ||
+          form.querySelector('.newsletter__message');
         if (message) {
           message.hidden = false;
-          message.classList.toggle('is-error', Boolean(error));
-          message.textContent = error
-            ? 'Could not save your email right now. Please try again.'
-            : 'Thank you for subscribing!';
+          const duplicate = error && (error.code === '23505' || /duplicate|unique/i.test(error.message || ''));
+          message.classList.toggle('is-error', Boolean(error) && !duplicate);
+          if (!error || duplicate) {
+            message.textContent = duplicate
+              ? 'You are already subscribed. Thank you!'
+              : 'Thank you for subscribing!';
+          } else {
+            message.textContent = 'Could not save your email right now. Please try again.';
+          }
         }
 
-        if (!error && emailInput) {
+        if ((!error || (error && (error.code === '23505' || /duplicate|unique/i.test(error.message || '')))) && emailInput) {
           emailInput.value = '';
         }
       });
