@@ -1,57 +1,77 @@
-/* About page — card-based layout */
+/* About page */
 
 body[data-page="about"] .page-hero--about {
-  background-position: center 35%;
+  background-position: 62% 32%;
+  min-height: min(48vh, 460px);
+  max-height: 520px;
+  padding: clamp(2rem, 4.5vw, 3rem) 0;
 }
 
-.about-quick {
-  background: var(--color-bg);
-  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
-  padding: 1rem 0;
+body[data-page="about"] .page-hero--about::before {
+  background: linear-gradient(
+    100deg,
+    rgba(20, 10, 4, 0.55) 0%,
+    rgba(20, 10, 4, 0.28) 42%,
+    rgba(20, 10, 4, 0.12) 68%,
+    rgba(20, 10, 4, 0.22) 100%
+  );
 }
 
-.about-quick .container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+body[data-page="about"] {
+  --page-subnav-h: 3.25rem;
+}
+
+/* Slim text-link subnav (not card grid) */
+body[data-page="about"] .page-subnav--links {
+  padding: 0;
+  background: rgba(255, 255, 255, 0.97);
+}
+
+body[data-page="about"] .page-subnav--links .page-subnav__inner {
   justify-content: center;
+  gap: 0.15rem;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+body[data-page="about"] .page-subnav--links a {
+  padding: 0.7rem 0.85rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+}
+
+body[data-page="about"] .impact {
+  padding: 1.75rem 0;
 }
 
 .about-section {
   scroll-margin-top: calc(var(--header-h) + var(--page-subnav-h) + 1rem);
+  padding: clamp(3rem, 6vw, 4.25rem) 0;
 }
 
-.about-section--card {
-  padding: 1rem 0;
-  background: var(--color-bg);
+.about-section--story {
+  padding-top: clamp(2.75rem, 5vw, 3.5rem);
 }
 
-.about-section--card:first-of-type {
-  padding-top: 2.5rem;
+.about-section--alt {
+  background: linear-gradient(
+    180deg,
+    rgba(139, 69, 19, 0.035) 0%,
+    rgba(255, 248, 240, 0.65) 40%,
+    rgba(139, 69, 19, 0.03) 100%
+  );
 }
 
-.about-section--card:last-of-type {
-  padding-bottom: 3rem;
+.about-block {
+  max-width: 46rem;
+  margin-inline: 0;
 }
 
-/* Shared content card */
-.about-card {
-  background: var(--color-white);
-  border-radius: var(--radius);
-  padding: clamp(1.75rem, 4vw, 2.5rem);
-  box-shadow: var(--shadow);
-  border: 1px solid rgba(139, 69, 19, 0.08);
-  border-top: 4px solid var(--color-accent);
-  max-width: 820px;
-  margin-inline: auto;
-  text-align: center;
-}
-
-.about-card--wide {
+.about-block--wide {
   max-width: var(--max-w);
 }
 
-.about-card .eyebrow {
+.about-block .eyebrow {
   display: inline-block;
   color: var(--color-accent);
   font-weight: 600;
@@ -60,45 +80,45 @@ body[data-page="about"] .page-hero--about {
   font-size: 0.8rem;
 }
 
-.about-card h2 {
-  margin-top: 0.35rem;
-  margin-bottom: 1rem;
-  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+.about-block h2 {
+  margin-top: 0.4rem;
+  margin-bottom: 1.1rem;
+  font-size: clamp(1.45rem, 2.8vw, 1.9rem);
+  line-height: 1.25;
 }
 
-.about-card__head {
-  margin-bottom: 1.25rem;
+.about-block__head {
+  margin-bottom: 1.35rem;
 }
 
-.about-card__head h2 {
+.about-block__head h2 {
   margin-bottom: 0;
 }
 
-.about-card__sub {
+.about-block__sub {
   margin-top: 0.65rem;
   color: var(--color-text-muted);
-  font-size: 0.95rem;
+  font-size: 0.98rem;
+  max-width: 36rem;
 }
 
-.about-card__lead,
-.about-card__body p {
+.about-block__lead,
+.about-block__body p {
   font-size: 1.05rem;
   line-height: 1.75;
   color: var(--color-text-muted);
-  margin-bottom: 1rem;
-  text-align: center;
+  margin-bottom: 1.05rem;
 }
 
-.about-card__body p:last-child {
+.about-block__body p:last-child {
   margin-bottom: 0;
 }
 
-.about-card__actions {
+.about-block__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-top: 1.5rem;
-  justify-content: center;
+  margin-top: 1.75rem;
 }
 
 .about-activities {
@@ -106,10 +126,9 @@ body[data-page="about"] .page-hero--about {
   flex-wrap: wrap;
   gap: 0.5rem;
   list-style: none;
-  margin: 1.5rem 0 0;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(139, 69, 19, 0.08);
-  justify-content: center;
+  margin: 1.75rem 0 0;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(139, 69, 19, 0.1);
 }
 
 .about-activities li {
@@ -124,10 +143,10 @@ body[data-page="about"] .page-hero--about {
 .about-commitments {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(139, 69, 19, 0.08);
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(139, 69, 19, 0.1);
   list-style: none;
 }
 
@@ -137,39 +156,40 @@ body[data-page="about"] .page-hero--about {
   align-items: flex-start;
   font-size: 0.92rem;
   line-height: 1.55;
-  padding: 0.85rem 1rem;
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(139, 69, 19, 0.06);
+  padding: 0.15rem 0;
   text-align: left;
 }
 
 .about-commitments li::before {
-  content: "●";
-  color: var(--color-accent);
-  font-size: 0.65rem;
-  margin-top: 0.35rem;
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-accent);
   flex-shrink: 0;
 }
 
-.about-card .team-grid {
+.about-block .team-grid {
   margin-top: 0.5rem;
-  text-align: initial;
 }
 
 .about-faq {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  margin-top: 0.5rem;
-  text-align: left;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
 }
 
 .about-faq__item {
-  background: var(--color-bg);
+  background: var(--color-white);
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(139, 69, 19, 0.08);
+  border: 1px solid rgba(139, 69, 19, 0.1);
   overflow: hidden;
+}
+
+.about-section--alt .about-faq__item {
+  background: rgba(255, 255, 255, 0.85);
 }
 
 .about-faq__item summary {
@@ -251,13 +271,15 @@ body[data-page="about"] .page-hero--about {
   }
 }
 
-@media (max-width: 768px) {
-  .about-quick .container {
-    justify-content: stretch;
+@media (max-width: 640px) {
+  body[data-page="about"] .page-hero--about {
+    min-height: min(42vh, 400px);
+    max-height: none;
+    background-position: center 28%;
   }
 
-  .about-quick .btn {
-    flex: 1 1 calc(50% - 0.35rem);
-    min-width: 0;
+  body[data-page="about"] .page-subnav--links a {
+    padding: 0.65rem 0.7rem;
+    font-size: 0.76rem;
   }
 }
