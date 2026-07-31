@@ -423,12 +423,16 @@
     const row = document.querySelector('.events-phases-row');
     const flowMount = document.querySelector('[data-events-phase-flow]');
 
-    if (flowMount) {
-      flowMount.innerHTML = renderPhaseFlowStrip();
-    }
+    // Public page: skip the phase-flow legend (column headers already explain phases).
+    if (flowMount) flowMount.innerHTML = '';
 
     if (row) {
-      row.innerHTML = PHASE_ORDER.map((phase) => {
+      const visiblePhases = PHASE_ORDER.filter(
+        (phase) => phase !== 'present' || groups.present.length > 0
+      );
+      row.classList.toggle('events-phases-row--three', visiblePhases.length === 3);
+      row.classList.toggle('events-phases-row--four', visiblePhases.length === 4);
+      row.innerHTML = visiblePhases.map((phase) => {
         const meta = PHASE_META[phase];
         const sectionId = phase === 'most-recent' ? 'most-recent' : phase;
         return `
@@ -440,6 +444,15 @@
           </section>
         `;
       }).join('');
+
+      // Compact live status when nothing is running (instead of an empty column).
+      row.parentElement?.querySelectorAll('.events-live-status').forEach((el) => el.remove());
+      if (!groups.present.length) {
+        const status = document.createElement('p');
+        status.className = 'events-live-status';
+        status.innerHTML = '<span class="events-live-status__dot" aria-hidden="true"></span> No events are live right now';
+        row.insertAdjacentElement('beforebegin', status);
+      }
     } else {
       PHASE_ORDER.forEach((phase) => {
         const root = document.getElementById(`events-${phase}-root`);

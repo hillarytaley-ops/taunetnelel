@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=11">
-  <link rel="stylesheet" href="assets/css/events.css?v=11">
+  <link rel="stylesheet" href="assets/css/events.css?v=12">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -116,11 +116,11 @@
     </div>
   </section>
 
-  <nav class="page-subnav page-subnav--cards page-subnav--cards-three" aria-label="Events page sections">
+  <nav class="page-subnav page-subnav--links" aria-label="Events page sections">
     <div class="container page-subnav__inner">
-      <a href="#events-phases" class="page-subnav__card">Events</a>
-      <a href="#gallery" class="page-subnav__card">Gallery</a>
-      <a href="#inquiry" class="page-subnav__card">Enquiry</a>
+      <a href="#events-phases">Events</a>
+      <a href="#gallery">Gallery</a>
+      <a href="#inquiry">Enquiry</a>
     </div>
   </nav>
 
@@ -132,10 +132,8 @@
           <header class="events-card__head">
             <span class="eyebrow">Taunet calendar</span>
             <h2>Community Events</h2>
-            <p>Events move automatically from upcoming → present → most recent → past based on their dates.</p>
+            <p>Browse upcoming gatherings, recent celebrations, and past events — dates update the boards automatically.</p>
           </header>
-
-          <div data-events-phase-flow></div>
 
           <div class="events-phases-row"></div>
 
@@ -182,11 +180,13 @@
     <section class="section events-section events-section--card" id="inquiry" aria-labelledby="inquiry-heading">
       <div class="container">
         <article class="events-card events-card--wide reveal">
+          <header class="events-card__head">
+            <span class="eyebrow">Get in touch</span>
+            <h2 id="inquiry-heading">Make an Inquiry</h2>
+            <p>Ask about tickets, volunteering, accessibility, membership, or sponsorship.</p>
+          </header>
           <div class="events-contact">
             <aside class="site-form-aside events-contact__info">
-              <span class="eyebrow">Get in touch</span>
-              <h2 id="inquiry-heading">Make an Inquiry</h2>
-              <p>Make an inquiry about our past or upcoming events — tickets, volunteering, accessibility, membership, or sponsorship.</p>
               <ul class="site-form-aside__highlights">
                 <li>
                   <span class="site-form-aside__icon" aria-hidden="true">&#9733;</span>
@@ -210,7 +210,7 @@
                   </div>
                 </li>
               </ul>
-              <a href="contact.html" class="btn btn--outline btn--sm">Contact the committee</a>
+              <a href="contact.html" class="btn btn--ghost btn--sm">Contact the committee</a>
             </aside>
 
             <form class="site-form card events-inquiry" data-supabase-form="events" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Event enquiry form">
@@ -309,7 +309,7 @@
 
   <a href="members/auth.html?tab=join" class="mobile-join-fab">Join Us</a>
 
-  <script src="assets/js/events-phases.js?v=12"></script>
+  <script src="assets/js/events-phases.js?v=13"></script>
   <script src="assets/js/supabase-config.js?v=2"></script>
   <script src="assets/js/supabase-init.js?v=3"></script>
   <script src="assets/js/events-supabase.js?v=1"></script>
