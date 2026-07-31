@@ -14,7 +14,10 @@
   function profileToMember(profile, email) {
     const association = Boolean(profile?.association_member) || profile?.plan === 'basic' || profile?.plan === 'both';
     const welfare = Boolean(profile?.welfare_member) || profile?.plan === 'welfare' || profile?.plan === 'both';
-    const plan = profile?.plan || (association && welfare ? 'both' : welfare ? 'welfare' : 'basic');
+    let plan = profile?.plan || 'basic';
+    if (association && welfare) plan = 'both';
+    else if (welfare && !association) plan = 'welfare';
+    else if (association) plan = plan === 'welfare' ? 'both' : 'basic';
 
     return {
       id: profile?.id || null,
@@ -151,7 +154,7 @@
     if (!client) throw new Error('Supabase is not configured.');
 
     const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/members/login.html`
+      redirectTo: `${window.location.origin}/members/auth.html?tab=signin`
     });
     if (error) throw error;
   }

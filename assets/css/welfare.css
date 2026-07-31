@@ -203,6 +203,14 @@ body[data-page="welfare"] .page-hero--welfare::before {
   min-width: min(100%, 14rem);
 }
 
+.welfare-cta-strip__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+}
+
 .welfare-enquiry {
   padding-bottom: clamp(2rem, 5vw, 3rem);
 }
@@ -361,6 +369,10 @@ body[data-page="welfare"] .container {
   .welfare-cta-strip .btn {
     width: 100%;
     max-width: none;
+  }
+
+  .welfare-cta-strip__actions {
+    flex-direction: column;
   }
 
   .welfare-enquiry {

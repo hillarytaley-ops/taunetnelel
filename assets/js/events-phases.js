@@ -3,7 +3,7 @@
 
   const RECENT_DAYS = 30;
 
-  const EVENTS = [
+  let EVENTS = [
     {
       id: 'cultural-week-2026',
       title: 'Winter Cultural Week',
@@ -604,9 +604,29 @@
     renderMemberDashboard();
   }
 
+  let lastMember = null;
+
   function initMemberEvents(member) {
+    lastMember = member || null;
     renderMemberDashboard();
-    renderMemberEventsPage(member);
+    renderMemberEventsPage(lastMember);
+  }
+
+  function setEvents(next) {
+    if (!Array.isArray(next) || !next.length) return false;
+    EVENTS = next.slice();
+    global.TaunetEventsPhases.EVENTS = EVENTS;
+    return true;
+  }
+
+  function refresh() {
+    if (document.body.dataset.page === 'events') {
+      renderPublicPage();
+    }
+    renderMemberDashboard();
+    if (document.querySelector('[data-events-member-page]')) {
+      renderMemberEventsPage(lastMember);
+    }
   }
 
   global.TaunetEventsPhases = {
@@ -614,6 +634,8 @@
     EVENTS,
     getEventPhase,
     categorizeEvents,
+    setEvents,
+    refresh,
     init,
     initMemberEvents,
     renderPublicPage,

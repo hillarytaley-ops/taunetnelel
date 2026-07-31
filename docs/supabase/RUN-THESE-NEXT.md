@@ -1,92 +1,77 @@
-# Complete these 4 migration steps
+# Migration steps — current status (2026-07-30)
 
-Do them in order. Steps 1–2 need the Supabase/Vercel dashboards (secrets). Steps 3–4 can use files already in this repo.
+## 1. Vercel env + redeploy — DONE
 
----
+Already set on Production/Preview: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PIN`.  
+Redeployed with `.vercelignore` (excludes `backups/` ~620MB).
 
-## 1. Vercel env vars + redeploy
+Live check: PIN `TaunetAdmin2026` → `/api/admin/data?resource=overview` returns counts.
 
-I can’t set these from Cursor without your Vercel login + service_role key.
-
-1. Open [Vercel Dashboard](https://vercel.com/dashboard) → project **taunetnelel** (or your site name)  
-2. **Settings → Environment Variables** → add for **Production** (and Preview if you want):
-
-| Name | Value |
-|------|--------|
-| `SUPABASE_URL` | `https://wgecdsdeeirzdvshdfwo.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → **Project Settings → API** → `service_role` (secret) |
-| `ADMIN_PIN` | `TaunetAdmin2026` |
-
-3. **Deployments → … on latest → Redeploy** (or push an empty commit)
-
-4. Test: https://taunetnelel.vercel.app/admin/ → PIN `TaunetAdmin2026` → **Members (A / Welfare)** should show counts/list
+Admin: https://taunetnelel.vercel.app/admin/
 
 ---
 
-## 2. Confirm SQL applied
+## 2. Confirm SQL — PARTIAL
 
-In Supabase → **SQL Editor**, run:
+| Check | Result |
+|-------|--------|
+| `member_imports` | **540** rows |
+| Stats | assoc-only 205, welfare-only 22, both 313 |
+| `profiles` | 1 registered so far |
+| `form_submissions.status` | **Missing** → migration **009** not fully applied |
+| `site_admins` / `011` | Confirm in SQL Editor (API can’t list without service_role) |
 
-`supabase/migrations/012_verify_migration_status.sql`
+**You:** In Supabase → SQL Editor, run:
 
-You want roughly:
+`supabase/migrations/013_ensure_009_status_and_admins.sql`
 
-| Check | Expected |
-|-------|----------|
-| `member_imports` | exists, ~540 rows (or more with portal admins) |
-| `site_admins` | 5–6 committee emails |
-| `profiles` columns | `plan`, `association_member`, `welfare_member`, `email` |
-| `is_site_admin` | function exists |
-| stats | association_only ~205, welfare_only ~22, both ~313 |
+Then optionally `012_verify_migration_status.sql`.
 
-If something is missing, run in order:
-
-1. `007_member_import_staging.sql`  
-2. `008_profiles_membership_auth.sql`  
-3. `009_admin_dashboard_access.sql`  
-4. `011_fix_site_admin_recognition.sql`  
-5. `010_portal_memberpress_members.sql` (the 5 portal admins)
+If you prefer full re-runs instead of 013: `008` → `009` → `011` → `010`.
 
 ---
 
-## 3. Re-load 540 members (only if count ≠ ~540)
+## 3. Re-load `import_members.sql` — SKIP
 
-**Warning:** `import_members.sql` starts with `DELETE FROM member_imports` — it wipes the table, then inserts 540.
-
-1. In SQL Editor, open/run `backups/migration-ready/import_members.sql`  
-   (Do **not** paste the CSV.)  
-2. Re-run `010_portal_memberpress_members.sql` so the 5 portal admins are restored  
-3. Re-run `012_verify_migration_status.sql` and confirm totals  
-
-If Table Editor already shows **540** and the Association/Welfare cards look right, **skip this step**.
+Imports are complete (**540**). Do **not** re-run `import_members.sql` (it deletes then re-inserts).
 
 ---
 
-## 4. Member access (invite vs self-register)
+## 4. 540 member access — NOT STARTED (rate limits)
 
-### Option A — Self-register (simplest)
-Members open https://taunetnelel.vercel.app/members/register.html with their **list email** and set a password.  
-Confirm email is on (or temporarily off for testing).  
-Built-in Supabase email ≈ **2/hour** — use custom SMTP before bulk.
+All **540** still `pending_invite`. Options:
 
-### Option B — Invites (script)
+### A — Self-register (safest without SMTP)
+Members use https://taunetnelel.vercel.app/members/register.html with their **list email**.
 
-In PowerShell (from the repo folder):
+### B — Test invites (5), then pause
+Built-in Auth email ≈ **2/hour**. Add custom SMTP before bulk.
 
 ```powershell
+cd C:\Users\hilla\Desktop\Taunet
 $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"
 $env:SUPABASE_SERVICE_ROLE_KEY = "paste-service-role-here"
 python docs/invite_members.py --limit 5
 ```
 
-If that works, run without `--limit` later (still watch rate limits / SMTP).
+Only remove `--limit` after SMTP is configured.
 
 ---
 
-## After you’re done
+## After 013
 
-Reply with:
+1. Admin Overview + Enquiries should show `status` without fallbacks  
+2. Reply with `site_admins` emails from the 013 result set  
+3. Say whether you want a 5-invite test or self-serve only  
 
-1. Admin Members list loads? (yes/no)  
-2. `012` verify: `member_imports` count = ?  
-3. Invites: test of 5 done, or self-serve only?
+---
+
+## 5. Seed public events — RUN ONCE
+
+Public Events/Sponsors/Gallery now read from Supabase (static HTML/JS as fallback).
+
+In Supabase → SQL Editor, run:
+
+`supabase/migrations/014_seed_events.sql`
+
+Sponsors were already seeded in `001`. Gallery enrich already uses `gallery_albums` / `gallery_photos`.

@@ -91,9 +91,9 @@ Each row includes:
 
 ## Next steps (optional)
 
-1. Member login with Supabase Auth
-2. Load sponsors from `sponsors` table on sponsorship page
-3. Move events from `events-phases.js` into `events` table
+1. Member login with Supabase Auth — in progress
+2. Load sponsors from `sponsors` table — done (`sponsors-supabase.js`)
+3. Move events into `events` table — done (`events-supabase.js` + `014_seed_events.sql`)
 4. Store newsletter signups in `newsletter_subscribers`
 
 ## Troubleshooting

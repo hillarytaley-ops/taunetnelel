@@ -140,6 +140,18 @@ alter table public.gallery_photos enable row level security;
 alter table public.businesses enable row level security;
 alter table public.business_news enable row level security;
 
+-- API roles need table privileges in addition to RLS policies
+grant usage on schema public to anon, authenticated;
+grant insert on table public.form_submissions to anon, authenticated;
+grant insert on table public.newsletter_subscribers to anon, authenticated;
+grant select on table public.sponsors to anon, authenticated;
+grant select on table public.events to anon, authenticated;
+grant select on table public.gallery_albums to anon, authenticated;
+grant select on table public.gallery_photos to anon, authenticated;
+grant select on table public.businesses to anon, authenticated;
+grant select on table public.business_news to anon, authenticated;
+grant select, insert, update on table public.profiles to authenticated;
+
 -- Policies (drop first so this script can be re-run safely)
 drop policy if exists "Public can submit forms" on public.form_submissions;
 drop policy if exists "Public can read published sponsors" on public.sponsors;

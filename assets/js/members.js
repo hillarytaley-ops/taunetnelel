@@ -96,6 +96,22 @@
       return member;
     }
 
+    // Stale localStorage / admin-approved welfare while plan column still "basic"
+    if (
+      member.planLabel === 'Association + Welfare' ||
+      (member.welfareStatus === 'active' && member.welfarePackage)
+    ) {
+      member.plan = 'both';
+      member.associationMember = true;
+      member.welfareMember = true;
+      member.welfareRegistered = true;
+      member.welfareStatus = member.welfareStatus || 'active';
+      member.welfarePackage = member.welfarePackage || 'Welfare membership';
+      member.planLabel = 'Association + Welfare';
+      if (member.welfareAlertsEnabled === undefined) member.welfareAlertsEnabled = true;
+      return member;
+    }
+
     if (member.plan === 'welfare' || member.welfareRegistered === true || member.welfareMember === true) {
       member.welfareRegistered = true;
       member.welfareMember = true;
@@ -131,11 +147,14 @@
   }
 
   function isWelfareMember(member) {
+    if (!member) return false;
     return (
       member.plan === 'welfare' ||
       member.plan === 'both' ||
       member.welfareMember === true ||
-      member.welfareRegistered === true
+      member.welfareRegistered === true ||
+      member.welfareStatus === 'active' ||
+      member.welfareStatus === 'pending'
     );
   }
 
@@ -145,11 +164,19 @@
     return 'Welfare Plus — Individual';
   }
 
+  function isAuthPagePath(pathname) {
+    return /\/members\/(auth|login|register)\.html/i.test(pathname || '');
+  }
+
+  function authPageUrl(tab) {
+    const base = window.location.pathname.includes('/members/') ? '' : 'members/';
+    return `${base}auth.html?tab=${tab || 'signin'}`;
+  }
+
   function requireAuth() {
     const member = getMember();
-    if (!member && !window.location.pathname.includes('login') && !window.location.pathname.includes('register')) {
-      const base = window.location.pathname.includes('/members/') ? '' : 'members/';
-      window.location.href = base + 'login.html';
+    if (!member && !isAuthPagePath(window.location.pathname)) {
+      window.location.href = authPageUrl('signin');
     }
     return member;
   }
@@ -592,11 +619,15 @@
 
     if (isWelfare) {
       welfareGate.hidden = true;
+      welfareGate.setAttribute('hidden', '');
       welfareContent.hidden = false;
+      welfareContent.removeAttribute('hidden');
       initWelfarePortal(member);
     } else {
       welfareGate.hidden = false;
+      welfareGate.removeAttribute('hidden');
       welfareContent.hidden = true;
+      welfareContent.setAttribute('hidden', '');
     }
   }
 
@@ -673,7 +704,7 @@
       } catch (error) {
         console.warn('Sign out error:', error);
       }
-      window.location.href = 'login.html';
+      window.location.href = authPageUrl('signin');
     });
   }
 
@@ -700,7 +731,7 @@
 
   async function bootMembersArea() {
     const path = window.location.pathname;
-    const onAuthPage = path.includes('login') || path.includes('register');
+    const onAuthPage = isAuthPagePath(path);
 
     if (onAuthPage) {
       if (new URLSearchParams(window.location.search).get('exit') === 'preview') {
@@ -709,7 +740,7 @@
         try {
           await window.taunetMembersAuth?.signOut();
         } catch (_) { /* ignore */ }
-        history.replaceState(null, '', path.includes('register') ? 'register.html' : 'login.html');
+        history.replaceState(null, '', 'auth.html?tab=signin');
       }
       await initAuth();
       return;

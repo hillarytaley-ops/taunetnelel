@@ -16,6 +16,11 @@ body[data-page="site-admin"] {
   min-height: 100vh;
 }
 
+.site-admin[hidden],
+.admin-gate[hidden] {
+  display: none !important;
+}
+
 .site-admin__nav {
   background: #3d2314;
   color: #f5ebe0;
@@ -363,30 +368,6 @@ body[data-page="site-admin"] {
   color: #6b4a36;
   white-space: pre-wrap;
   max-width: 280px;
-}
-
-.admin-preview-banner {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  background: rgba(196, 98, 45, 0.12);
-  border: 1px solid rgba(196, 98, 45, 0.28);
-  font-size: 0.88rem;
-  color: #3d2314;
-}
-
-.admin-preview-banner p {
-  margin: 0;
-}
-
-.admin-preview-banner__link {
-  font-weight: 600;
-  color: #3d2314;
 }
 
 .admin-stat--btn {

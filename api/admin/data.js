@@ -106,20 +106,34 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       if (resource === 'overview') {
-        const [enquiries, newEnquiries, profiles, imports, newsletter] = await Promise.all([
+        const [enquiries, profiles, imports, newsletter] = await Promise.all([
           countRows('form_submissions'),
-          countRows('form_submissions', 'status=eq.new'),
           countRows('profiles'),
           countRows('member_imports'),
           countRows('newsletter_subscribers')
         ]);
+        // status column comes from migration 009; tolerate older schemas
+        let newEnquiries = 0;
+        try {
+          newEnquiries = await countRows('form_submissions', 'status=eq.new');
+        } catch (_) {
+          newEnquiries = enquiries;
+        }
         return json(res, 200, { enquiries, newEnquiries, profiles, imports, newsletter });
       }
 
       if (resource === 'enquiries') {
-        const { data } = await sb(
-          'form_submissions?select=id,form_type,name,email,phone,message,metadata,status,admin_notes,created_at&order=created_at.desc&limit=200'
-        );
+        // Prefer full admin columns (009); fall back if status/admin_notes not migrated yet
+        let data;
+        try {
+          ({ data } = await sb(
+            'form_submissions?select=id,form_type,name,email,phone,message,metadata,status,admin_notes,created_at&order=created_at.desc&limit=200'
+          ));
+        } catch (_) {
+          ({ data } = await sb(
+            'form_submissions?select=id,form_type,name,email,phone,message,metadata,created_at&order=created_at.desc&limit=200'
+          ));
+        }
         return json(res, 200, { rows: data || [] });
       }
 

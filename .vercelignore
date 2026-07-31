@@ -1,0 +1,16 @@
+# Heavy / non-runtime — keep production deploys small
+backups/
+docs/
+supabase/
+.cursor/
+.git/
+wp-includes/
+wp-content/themes/
+wp-content/plugins/
+wp-content/et-cache/
+*.pdf
+*.docx
+*.sql
+.env*
+.vercel
+node_modules/

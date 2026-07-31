@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=7">
-  <link rel="stylesheet" href="assets/css/welfare.css">
+  <link rel="stylesheet" href="assets/css/welfare.css?v=2">
 </head>
 <body data-page="welfare">
 
@@ -53,8 +53,7 @@
         </ul>
       </nav>
       <div class="header-actions">
-        <a href="members/login.html" class="btn btn--ghost">Member Login</a>
-        <a href="members/register.html" class="btn btn--primary">Join Us</a>
+        <a href="members/auth.html" class="btn btn--primary">Members</a>
       </div>
       <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel"><span></span><span></span><span></span></button>
     </div>
@@ -74,8 +73,7 @@
         <li><a href="membership.html" data-nav="membership">Membership</a></li>
         <li><a href="contact.html" data-nav="contact">Contact</a></li>
       </ul>
-      <a href="members/login.html" class="btn btn--ghost">Member Login</a>
-      <a href="members/register.html" class="btn btn--primary">Join Us</a>
+      <a href="members/auth.html" class="btn btn--primary">Members</a>
     </div>
   </div>
 
@@ -100,7 +98,8 @@
 
   <div class="welfare-quick">
     <div class="container">
-      <a href="members/register.html" class="btn btn--primary btn--sm">Join Us Today</a>
+      <a href="members/auth.html?tab=join" class="btn btn--outline btn--sm">Register for Welfare</a>
+      <a href="members/auth.html?tab=signin" class="btn btn--primary btn--sm">Sign in</a>
       <a href="membership.html" class="btn btn--outline btn--sm">Welfare Plus Plan</a>
       <a href="members/welfare.html" class="btn btn--outline btn--sm">Member Portal</a>
     </div>
@@ -124,7 +123,8 @@
         <p>Losing a loved one is emotionally and financially overwhelming. For many families, especially those far from home, the burden can be heavy. Taunet Nelel Welfare was formed in response to this reality &mdash; recognising the need for a reliable, structured support system that our community can turn to in times of crisis.</p>
         <p>Our goal is to ease the immediate financial pressure following a loss and to honour our culture of standing together during difficult moments. The Welfare promotes community resilience, dignity in grief, and a shared responsibility to care for one another.</p>
         <div class="welfare-card__actions">
-          <a href="members/register.html" class="btn btn--primary">Join Us Today</a>
+          <a href="members/auth.html?tab=join" class="btn btn--outline">Register for Welfare</a>
+          <a href="members/auth.html?tab=signin" class="btn btn--primary">Sign in</a>
         </div>
       </article>
     </div>
@@ -167,7 +167,10 @@
     <div class="container">
       <h2>Join Us</h2>
       <p>Taunet Nelel Welfare isn&rsquo;t just a financial service &mdash; it&rsquo;s a community promise. Together, we honour our culture, protect our people, and build a caring legacy for generations to come.</p>
-      <a href="members/register.html" class="btn btn--outline">Join Us Today</a>
+      <div class="welfare-cta-strip__actions">
+        <a href="members/auth.html?tab=join" class="btn btn--outline">Register for Welfare</a>
+        <a href="members/auth.html?tab=signin" class="btn btn--primary">Sign in</a>
+      </div>
     </div>
   </section>
 
@@ -201,7 +204,8 @@
               </div>
             </li>
           </ul>
-          <a href="members/register.html" class="btn btn--outline">Join Welfare Plus online</a>
+          <a href="members/auth.html?tab=join" class="btn btn--outline">Register for Welfare</a>
+          <a href="members/auth.html?tab=signin" class="btn btn--primary" style="margin-top:0.75rem">Sign in</a>
         </aside>
 
         <form class="site-form card welfare-inquiry__form" data-supabase-form="welfare" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Welfare enquiry form">
@@ -267,8 +271,7 @@
       <div class="footer-col">
         <h4>Members</h4>
         <ul>
-          <li><a href="members/login.html">Member Login</a></li>
-          <li><a href="members/register.html">Join Us</a></li>
+          <li><a href="members/auth.html">Members</a></li>
           <li><a href="members/welfare.html">Welfare Portal</a></li>
         </ul>
       </div>

@@ -86,7 +86,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None, help="Invite only N members (test)")
     parser.add_argument(
         "--redirect",
-        default="https://taunetnelel.vercel.app/members/login.html",
+        default="https://taunetnelel.vercel.app/members/auth.html?tab=signin",
         help="Invite email redirect URL",
     )
     parser.add_argument("--delay", type=float, default=0.35, help="Seconds between invites")

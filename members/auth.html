@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in | Taunet Nelel</title>
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css?v=7">
+  <link rel="stylesheet" href="../assets/css/members.css?v=22">
+</head>
+<body class="login-page auth-unified-page">
+  <div class="login-bg" aria-hidden="true"></div>
+  <div class="login-overlay" aria-hidden="true"></div>
+
+  <main class="login-shell">
+    <div class="login-card auth-unified-card" id="auth-card">
+      <a href="../index.html" class="login-logo">
+        <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel">
+      </a>
+
+      <div class="auth-tabs" role="tablist" aria-label="Account options">
+        <button type="button" class="auth-tabs__btn is-active" role="tab" aria-selected="true" data-auth-tab="signin" id="tab-signin">Sign in</button>
+        <button type="button" class="auth-tabs__btn" role="tab" aria-selected="false" data-auth-tab="join" id="tab-join">Join</button>
+        <button type="button" class="auth-tabs__btn" role="tab" aria-selected="false" data-auth-tab="admin" id="tab-admin">Committee</button>
+      </div>
+
+      <!-- Member sign in -->
+      <div class="auth-panel is-active" data-auth-panel="signin" role="tabpanel" aria-labelledby="tab-signin">
+        <div class="login-card__header">
+          <h1>Welcome Back</h1>
+          <p>Sign in to access your member dashboard, events, and community updates.</p>
+        </div>
+        <form class="login-form" id="login-form" novalidate>
+          <p class="auth-form__message" role="status" hidden></p>
+          <div class="form-group">
+            <label for="signin-email">Email address</label>
+            <input type="email" id="signin-email" name="email" placeholder="you@email.com" autocomplete="email" required>
+          </div>
+          <div class="form-group">
+            <label for="signin-password">Password</label>
+            <div class="input-password">
+              <input type="password" id="signin-password" name="password" placeholder="Your password" autocomplete="current-password" required>
+              <button type="button" class="input-password__toggle input-password__toggle--dark" aria-label="Show password" data-password-toggle="signin-password">
+                <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="login-form__forgot">
+            <a href="#" id="forgot-password">Forgot password?</a>
+          </p>
+          <button type="submit" class="btn btn--primary login-submit">Sign in</button>
+          <p class="login-form__footer">
+            Don't have an account?
+            <button type="button" class="auth-inline-link" data-auth-tab="join">Join Taunet Nelel</button>
+            <span class="login-form__footer-sep" aria-hidden="true">·</span>
+            <a href="../index.html" class="login-form__footer-link">Back to website</a>
+          </p>
+        </form>
+      </div>
+
+      <!-- Join / register -->
+      <div class="auth-panel" data-auth-panel="join" role="tabpanel" aria-labelledby="tab-join" hidden>
+        <div class="login-card__header">
+          <h1>Join our community</h1>
+          <p>Celebrate Kalenjin heritage across Australia.</p>
+        </div>
+        <form class="login-form auth-join-form" id="register-form" novalidate>
+          <p class="auth-form__message" role="status" hidden></p>
+          <div class="auth-join-grid">
+            <div class="form-group">
+              <label for="join-name">Full name</label>
+              <input type="text" id="join-name" name="name" placeholder="Jane Kiprotich" autocomplete="name" required>
+            </div>
+            <div class="form-group">
+              <label for="join-email">Email address</label>
+              <input type="email" id="join-email" name="email" placeholder="you@email.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label for="join-phone">Phone <span class="label-optional">optional</span></label>
+              <input type="tel" id="join-phone" name="phone" placeholder="+61 400 000 000" autocomplete="tel">
+            </div>
+            <div class="form-group">
+              <label for="join-password">Password</label>
+              <div class="input-password">
+                <input type="password" id="join-password" name="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+                <button type="button" class="input-password__toggle input-password__toggle--dark" aria-label="Show password" data-password-toggle="join-password">
+                  <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="plan" value="basic">
+          <button type="submit" class="btn btn--primary login-submit">Create account</button>
+          <p class="login-form__footer">
+            Already a member?
+            <button type="button" class="auth-inline-link" data-auth-tab="signin">Sign in</button>
+            <span class="login-form__footer-sep" aria-hidden="true">·</span>
+            <a href="../index.html" class="login-form__footer-link">Back to website</a>
+          </p>
+        </form>
+      </div>
+
+      <!-- Committee admin PIN (separate from members Auth) -->
+      <div class="auth-panel" data-auth-panel="admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+        <div class="login-card__header">
+          <h1>Committee admin</h1>
+          <p>Separate from the members area. Enter the committee PIN to open the site dashboard.</p>
+        </div>
+        <form class="login-form" id="admin-pin-form" novalidate>
+          <p class="auth-form__message" id="admin-pin-status" role="status" hidden></p>
+          <div class="form-group">
+            <label for="admin-pin">Admin PIN</label>
+            <input type="password" id="admin-pin" name="pin" placeholder="Committee admin PIN" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="btn btn--primary login-submit">Enter admin portal</button>
+          <p class="login-form__footer">
+            <a href="../index.html" class="login-form__footer-link">Back to website</a>
+          </p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="../assets/js/supabase-config.js?v=2"></script>
+  <script src="../assets/js/supabase-init.js?v=3"></script>
+  <script src="../assets/js/members-auth.js?v=4"></script>
+  <script src="../assets/js/members.js?v=18"></script>
+  <script>
+    (function () {
+      var ADMIN_PIN_KEY = 'taunet_site_admin_pin';
+      var ADMIN_PIN_VALUE_KEY = 'taunet_site_admin_pin_value';
+      var params = new URLSearchParams(window.location.search);
+      var tabParam = (params.get('tab') || params.get('mode') || 'signin').toLowerCase();
+      if (tabParam === 'register' || tabParam === 'signup') tabParam = 'join';
+      if (tabParam === 'login' || tabParam === 'sign-in') tabParam = 'signin';
+      if (tabParam === 'committee') tabParam = 'admin';
+
+      function setTab(tab) {
+        var allowed = { signin: 1, join: 1, admin: 1 };
+        if (!allowed[tab]) tab = 'signin';
+        document.querySelectorAll('.auth-tabs [data-auth-tab]').forEach(function (btn) {
+          var on = btn.getAttribute('data-auth-tab') === tab;
+          btn.classList.toggle('is-active', on);
+          btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-auth-panel]').forEach(function (panel) {
+          var on = panel.getAttribute('data-auth-panel') === tab;
+          panel.classList.toggle('is-active', on);
+          panel.hidden = !on;
+        });
+        var card = document.getElementById('auth-card');
+        if (card) card.classList.toggle('auth-unified-card--wide', tab === 'join');
+        var url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString() + url.hash);
+        document.title = (tab === 'join' ? 'Join' : tab === 'admin' ? 'Committee admin' : 'Sign in') + ' | Taunet Nelel';
+      }
+
+      document.querySelectorAll('[data-auth-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          setTab(btn.getAttribute('data-auth-tab'));
+        });
+      });
+
+      setTab(tabParam);
+
+      document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var input = document.getElementById(btn.dataset.passwordToggle);
+          if (!input) return;
+          var show = input.type === 'password';
+          input.type = show ? 'text' : 'password';
+          btn.querySelector('.icon-eye').hidden = show;
+          btn.querySelector('.icon-eye-off').hidden = !show;
+          btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        });
+      });
+
+      var adminForm = document.getElementById('admin-pin-form');
+      var adminStatus = document.getElementById('admin-pin-status');
+      adminForm?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var pin = adminForm.querySelector('[name="pin"]')?.value?.trim() || '';
+        var expected = window.TAUNET_SUPABASE?.adminPin || 'TaunetAdmin2026';
+        if (pin !== expected) {
+          if (adminStatus) {
+            adminStatus.hidden = false;
+            adminStatus.classList.add('is-error');
+            adminStatus.textContent = 'Incorrect admin PIN.';
+          }
+          return;
+        }
+        sessionStorage.setItem(ADMIN_PIN_KEY, '1');
+        sessionStorage.setItem(ADMIN_PIN_VALUE_KEY, pin);
+        var next = params.get('next') || '../admin/';
+        window.location.href = next;
+      });
+    })();
+  </script>
+</body>
+</html>

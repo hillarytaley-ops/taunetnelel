@@ -7,25 +7,9 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=6">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=8">
 </head>
 <body data-page="site-admin">
-
-  <div class="admin-gate" id="admin-auth-gate">
-    <a href="../index.html"><img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" style="height:48px;margin-bottom:1rem"></a>
-    <h1>Committee admin portal</h1>
-    <p>Separate from the members area. Enter the committee admin PIN to open the site dashboard.</p>
-    <form id="admin-login-form">
-      <label for="admin-pin">Admin PIN</label>
-      <input id="admin-pin" type="password" name="pin" required autocomplete="current-password" placeholder="Committee admin PIN">
-      <button type="submit" class="btn btn--primary">Enter admin portal</button>
-    </form>
-    <p class="admin-status" id="admin-auth-status" role="status" hidden></p>
-    <p class="admin-muted" style="margin-top:1rem">
-      Default PIN: <code>TaunetAdmin2026</code> (change in <code>supabase-config.js</code>).<br>
-      Members login stays at <a href="../members/login.html">/members/login.html</a> — it is not used here.
-    </p>
-  </div>
 
   <div class="site-admin" id="admin-shell" hidden>
     <aside class="site-admin__nav">
@@ -55,7 +39,7 @@
       <div class="site-admin__header">
         <div>
           <h1 id="admin-panel-title">Overview</h1>
-          <p>Review forms, members, and database content for the whole site.</p>
+          <p>Forms, members, and database content for the whole site.</p>
         </div>
         <div class="site-admin__user">Admin session<br><strong id="admin-user-label">—</strong></div>
       </div>
@@ -227,7 +211,7 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="events">
-        <p class="admin-muted">Database events table. The public Events page still primarily uses <code>events-phases.js</code> until that is switched over.</p>
+        <p class="admin-muted">Published rows here power the public Events page and member dashboard (with a static fallback if the table is empty).</p>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -313,7 +297,8 @@
           <a href="../welfare.html">Welfare<span>Public welfare page</span></a>
           <a href="../events.html">Events<span>Public events</span></a>
           <a href="../gallery.html">Gallery<span>Public albums</span></a>
-          <a href="../members/login.html">Members login<span>Portal sign-in</span></a>
+          <a href="../members/auth.html?tab=signin">Members login<span>Unified sign-in / join</span></a>
+          <a href="../members/auth.html?tab=admin">Committee auth<span>Admin PIN entry</span></a>
           <a href="../about.html">About<span>Static leadership content</span></a>
           <a href="https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo" target="_blank" rel="noopener">Supabase dashboard<span>SQL, Auth, Table Editor</span></a>
         </div>
@@ -325,6 +310,6 @@
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=8"></script>
+  <script src="../assets/js/admin-dashboard.js?v=10"></script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 /**
  * Taunet Nelel — site-wide committee admin dashboard.
- * Requires: supabase-config.js, supabase-init.js, members-auth.js (optional helpers)
- * Access: signed-in Supabase user whose email is in public.site_admins (migration 009).
+ * Access: committee admin PIN (session) → /api/admin/data
  */
 (function () {
   'use strict';
@@ -27,7 +26,6 @@
     user: null,
     isAdmin: false,
     pinOk: false,
-    preview: false,
     enquiries: [],
     enquiryFilter: 'all',
     enquirySearch: '',
@@ -38,10 +36,7 @@
   };
 
   const els = {
-    gate: document.getElementById('admin-auth-gate'),
     shell: document.getElementById('admin-shell'),
-    loginForm: document.getElementById('admin-login-form'),
-    status: document.getElementById('admin-auth-status'),
     userLabel: document.getElementById('admin-user-label'),
     logoutBtn: document.getElementById('admin-logout'),
     nav: document.querySelectorAll('[data-admin-nav]'),
@@ -56,6 +51,14 @@
       .replace(/"/g, '&quot;');
   }
 
+  function showShell(show) {
+    if (els.shell) els.shell.hidden = !show;
+  }
+
+  function authEntryUrl() {
+    return '../members/auth.html?tab=admin&next=' + encodeURIComponent('../admin/');
+  }
+
   function formatDate(value) {
     if (!value) return '—';
     const d = new Date(value);
@@ -67,18 +70,6 @@
       hour: '2-digit',
       minute: '2-digit'
     });
-  }
-
-  function setAuthStatus(message, isError) {
-    if (!els.status) return;
-    els.status.hidden = !message;
-    els.status.textContent = message || '';
-    els.status.classList.toggle('is-error', Boolean(isError));
-  }
-
-  function showShell(show) {
-    if (els.gate) els.gate.hidden = show;
-    if (els.shell) els.shell.hidden = !show;
   }
 
   function setPanel(id) {
@@ -103,99 +94,8 @@
       pages: 'Site pages & tools'
     };
     if (title) title.textContent = titles[next] || 'Admin';
-    const previewQs = state.preview ? '?preview=1' : '';
-    history.replaceState(null, '', `${previewQs}#${next}`);
+    history.replaceState(null, '', `#${next}`);
     if (next === 'enquiries') renderEnquiries();
-  }
-
-  function showPreviewBanner() {
-    if (!state.preview) return;
-    const main = document.querySelector('.site-admin__main');
-    if (!main || main.querySelector('.admin-preview-banner')) return;
-    const banner = document.createElement('div');
-    banner.className = 'admin-preview-banner';
-    banner.innerHTML = `
-      <p><strong>Preview mode.</strong> Sample layout only — not live member data. Sign in for real committee access.</p>
-      <a href="index.html" class="admin-preview-banner__link">Exit preview</a>
-    `;
-    main.insertBefore(banner, main.firstChild);
-  }
-
-  function loadPreviewDemo() {
-    document.getElementById('stat-enquiries').textContent = '12';
-    document.getElementById('stat-new').textContent = '3';
-    document.getElementById('stat-profiles').textContent = '2';
-    document.getElementById('stat-imports').textContent = '540';
-    document.getElementById('stat-newsletter').textContent = '8';
-
-    state.enquiries = [
-      {
-        id: 'demo-1',
-        form_type: 'welfare',
-        name: 'Sample Member',
-        email: 'sample@email.com',
-        phone: '0400 000 000',
-        message: 'Demo welfare registration request.',
-        metadata: { welfare_package: 'Welfare Plus — Individual ($300/year)' },
-        status: 'new',
-        admin_notes: '',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: 'demo-2',
-        form_type: 'contact',
-        name: 'Jane Example',
-        email: 'jane@example.com',
-        phone: '',
-        message: 'Demo contact enquiry about membership.',
-        metadata: {},
-        status: 'reviewed',
-        admin_notes: '',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      }
-    ];
-
-    const membersBody = document.getElementById('admin-members-body');
-    if (membersBody) {
-      membersBody.innerHTML = `<tr>
-        <td>Demo Member<div class="admin-detail">demo@taunetnelel.org</div></td>
-        <td><span class="admin-chip">basic</span></td>
-        <td>Yes</td>
-        <td>No</td>
-        <td class="admin-detail">Preview only</td>
-      </tr>`;
-    }
-
-    const importsBody = document.getElementById('admin-imports-body');
-    if (importsBody) {
-      importsBody.innerHTML = `<tr>
-        <td>TN-0001</td>
-        <td>Demo Import Row<div class="admin-detail">import@example.com</div></td>
-        <td><span class="admin-chip">Association + Welfare</span></td>
-        <td>pending_invite</td>
-        <td>A / W</td>
-      </tr>`;
-    }
-
-    ['admin-events-body', 'admin-sponsors-body', 'admin-gallery-body', 'admin-newsletter-body'].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.innerHTML = `<tr><td colspan="6" class="admin-empty">Preview mode — open Business Hub tab to try the editor, or sign in for live data.</td></tr>`;
-      }
-    });
-  }
-
-  function enterPreview() {
-    state.preview = true;
-    state.isAdmin = false;
-    if (els.userLabel) els.userLabel.textContent = 'Preview (not signed in)';
-    showShell(true);
-    showPreviewBanner();
-    loadPreviewDemo();
-    const hash = (location.hash || '#overview').replace('#', '');
-    setPanel(hash);
-    if (hash === 'business') ensureBusinessEditor();
-    else if (hash === 'enquiries') renderEnquiries();
   }
 
   async function getClient() {
@@ -205,10 +105,6 @@
     state.client = await api.ensureClient();
     if (!state.client) throw new Error('Could not load Supabase client.');
     return state.client;
-  }
-
-  function expectedAdminPin() {
-    return window.TAUNET_SUPABASE?.adminPin || 'TaunetAdmin2026';
   }
 
   function hasPinSession() {
@@ -247,10 +143,8 @@
   function enterPinPortal() {
     state.pinOk = true;
     state.isAdmin = true;
-    state.preview = false;
     if (els.userLabel) els.userLabel.textContent = 'PIN session (committee portal)';
     showShell(true);
-    setAuthStatus('');
     const hash = (location.hash || '#overview').replace('#', '');
     setPanel(hash);
     ensureBusinessEditor();
@@ -330,12 +224,6 @@
     body.querySelectorAll('[data-status-for]').forEach((select) => {
       select.addEventListener('change', async () => {
         try {
-          if (state.preview) {
-            const item = state.enquiries.find((r) => r.id === select.dataset.statusFor);
-            if (item) item.status = select.value;
-            renderEnquiries();
-            return;
-          }
           await adminApi('enquiry-status', {
             method: 'PATCH',
             body: { id: select.dataset.statusFor, status: select.value }
@@ -501,7 +389,7 @@
     if (!body) return;
     const rows = data.rows || [];
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No events in the database yet. Public events still come from events-phases.js.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No events in the database yet. Run migration 014_seed_events.sql, or the public site will keep using the static fallback.</td></tr>`;
       return;
     }
     body.innerHTML = rows
@@ -612,13 +500,6 @@
   }
 
   async function refreshPanel(id) {
-    if (state.preview) {
-      if (id === 'business') ensureBusinessEditor();
-      if (id === 'enquiries') renderEnquiries();
-      if (id === 'overview') loadPreviewDemo();
-      return;
-    }
-
     if (id === 'business' || id === 'pages') {
       if (id === 'business') ensureBusinessEditor();
       return;
@@ -700,46 +581,27 @@
   async function init() {
     bindNav();
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('preview') === '1' || params.get('preview') === 'true') {
-      enterPreview();
-      return;
-    }
-
-    els.loginForm?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const pin = els.loginForm.querySelector('[name="pin"]')?.value?.trim() || '';
-      if (pin !== expectedAdminPin()) {
-        setAuthStatus('Incorrect admin PIN.', true);
-        return;
-      }
-      sessionStorage.setItem(ADMIN_PIN_KEY, '1');
-      sessionStorage.setItem(ADMIN_PIN_VALUE_KEY, pin);
-      enterPinPortal();
-    });
-
-
     els.logoutBtn?.addEventListener('click', async () => {
       sessionStorage.removeItem(ADMIN_PIN_KEY);
       sessionStorage.removeItem(ADMIN_PIN_VALUE_KEY);
       state.pinOk = false;
       state.isAdmin = false;
       state.user = null;
-      state.preview = false;
       try {
         if (window.taunetSupabaseApi?.isConfigured()) {
           const client = await getClient();
           await client.auth.signOut();
         }
       } catch (_) { /* ignore */ }
-      showShell(false);
-      setAuthStatus('Signed out of admin portal.');
+      window.location.href = authEntryUrl();
     });
 
     // PIN session only — never auto-open admin from a members Auth session alone
     if (hasPinSession()) {
       enterPinPortal();
+      return;
     }
+    window.location.replace(authEntryUrl());
   }
 
   if (document.readyState === 'loading') {
