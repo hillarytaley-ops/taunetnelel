@@ -82,21 +82,42 @@
       panel.classList.toggle('is-active', panel.dataset.adminPanel === next);
     });
     const title = document.getElementById('admin-panel-title');
+    const blurb = document.getElementById('admin-panel-blurb');
     const titles = {
       overview: 'Overview',
-      enquiries: 'Form enquiries',
+      enquiries: 'Enquiries',
       members: 'Member profiles',
-      imports: 'Members — Association / Welfare',
+      imports: 'Association & Welfare',
       business: 'Business Hub',
-      events: 'Events (database)',
-      sponsors: 'Sponsors (database)',
-      gallery: 'Gallery (database)',
-      newsletter: 'Newsletter subscribers',
-      pages: 'Site pages & tools'
+      events: 'Events',
+      sponsors: 'Sponsors',
+      gallery: 'Gallery',
+      newsletter: 'Newsletter',
+      announcements: 'Announcements',
+      pages: 'Pages & tools'
+    };
+    const blurbs = {
+      overview: 'Your committee home — counts, alerts, and shortcuts.',
+      enquiries: 'Contact, membership, and other form submissions.',
+      members: 'People who have registered or signed in online.',
+      imports: 'Association and Welfare membership lists.',
+      business: 'Edit business cards, news, and blog posts.',
+      events: 'Published events for the public site and members.',
+      sponsors: 'Sponsor listings for the public sponsorship page.',
+      gallery: 'Album visibility for the public gallery.',
+      newsletter: 'Event update subscribers from the Contact page.',
+      announcements: 'Messages shown on the members dashboard.',
+      pages: 'Shortcuts to public pages and committee tools.'
     };
     if (title) title.textContent = titles[next] || 'Admin';
+    if (blurb) blurb.textContent = blurbs[next] || '';
     history.replaceState(null, '', `#${next}`);
     if (next === 'enquiries') renderEnquiries();
+  }
+
+  function jumpToPanel(id) {
+    setPanel(id);
+    refreshPanel(id);
   }
 
   async function getClient() {
@@ -153,18 +174,77 @@
   }
 
   async function loadOverview() {
-    const data = await adminApi('overview');
-    const map = {
-      'stat-enquiries': data.enquiries,
-      'stat-new': data.newEnquiries,
-      'stat-profiles': data.profiles,
-      'stat-imports': data.imports,
-      'stat-newsletter': data.newsletter
-    };
-    Object.entries(map).forEach(([id, value]) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = value ?? '—';
-    });
+    const errorEl = document.getElementById('admin-overview-error');
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+
+    try {
+      const [data, enquiriesData] = await Promise.all([
+        adminApi('overview'),
+        adminApi('enquiries').catch(() => ({ rows: [] }))
+      ]);
+
+      const map = {
+        'stat-enquiries': data.enquiries,
+        'stat-new': data.newEnquiries,
+        'stat-profiles': data.profiles,
+        'stat-imports': data.imports,
+        'stat-newsletter': data.newsletter
+      };
+      Object.entries(map).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value ?? '—';
+      });
+
+      const newCount = Number(data.newEnquiries) || 0;
+      const attention = document.getElementById('admin-overview-attention');
+      const attentionCount = document.getElementById('admin-attention-count');
+      if (attentionCount) attentionCount.textContent = String(newCount);
+      if (attention) attention.hidden = newCount < 1;
+
+      const rows = enquiriesData.rows || [];
+      state.enquiries = rows;
+      renderOverviewRecent(rows.slice(0, 6));
+    } catch (err) {
+      if (errorEl) {
+        errorEl.hidden = false;
+        errorEl.textContent =
+          'Could not load live counts. Try Refresh data, or sign out and enter your admin PIN again.';
+      }
+      renderOverviewRecent([]);
+      throw err;
+    }
+  }
+
+  function renderOverviewRecent(rows) {
+    const list = document.getElementById('admin-overview-recent');
+    if (!list) return;
+
+    if (!rows.length) {
+      list.innerHTML = '<li class="admin-muted">No enquiries yet. New form messages will appear here.</li>';
+      return;
+    }
+
+    list.innerHTML = rows
+      .map((row) => {
+        const status = row.status || 'new';
+        const preview = String(row.message || '').trim() || 'No message text';
+        const short = preview.length > 110 ? `${preview.slice(0, 110)}…` : preview;
+        return `<li>
+          <button type="button" class="admin-recent-item" data-admin-jump="enquiries">
+            <span class="admin-recent-item__top">
+              <span class="admin-chip admin-chip--${escapeHtml(status)}">${escapeHtml(status)}</span>
+              <span class="admin-chip">${escapeHtml(row.form_type || 'form')}</span>
+              <time>${escapeHtml(formatDate(row.created_at))}</time>
+            </span>
+            <strong>${escapeHtml(row.name || row.email || 'Unknown')}</strong>
+            <span class="admin-detail">${escapeHtml(short)}</span>
+          </button>
+        </li>`;
+      })
+      .join('');
   }
 
   async function loadEnquiries() {
@@ -646,14 +726,20 @@
     els.nav.forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.adminNav;
-        setPanel(id);
-        refreshPanel(id);
+        jumpToPanel(id);
       });
     });
 
     document.getElementById('admin-refresh')?.addEventListener('click', () => {
       const active = document.querySelector('[data-admin-nav].is-active');
       refreshPanel(active?.dataset.adminNav || 'overview');
+    });
+
+    document.addEventListener('click', (e) => {
+      const jump = e.target.closest('[data-admin-jump]');
+      if (!jump || !document.getElementById('admin-shell')?.contains(jump)) return;
+      e.preventDefault();
+      jumpToPanel(jump.dataset.adminJump);
     });
 
     document.getElementById('enquiry-filter')?.addEventListener('change', (e) => {
