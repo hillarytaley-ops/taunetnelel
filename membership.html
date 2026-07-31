@@ -7,7 +7,7 @@
   <link rel="icon" href="wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=11">
-  <link rel="stylesheet" href="assets/css/membership.css?v=2">
+  <link rel="stylesheet" href="assets/css/membership.css?v=4">
 </head>
 <body data-page="membership">
 
@@ -76,37 +76,79 @@
       <div class="membership-hero__card">
         <span class="page-hero__eyebrow">Membership Program</span>
         <h1>Building a Stronger Kalenjin Community</h1>
-        <p>At Taunet Nelel, community is at the heart of everything we do. Whether through social gatherings, language sessions, or cultural education, we strive to create a welcoming and inclusive environment where everyone can thrive. Become a member and contribute to the ongoing legacy of our community in Australia.</p>
+        <p>Join Taunet Nelel for cultural events, language and wellbeing programs, and a welcoming home away from home in Victoria.</p>
+        <div class="membership-hero__actions">
+          <a href="members/auth.html?tab=join" class="btn btn--primary">Join online</a>
+          <a href="#plans" class="btn btn--ghost">Compare plans</a>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="section section--cream membership-benefits" aria-labelledby="membership-benefits-heading">
+  <nav class="page-subnav page-subnav--links" aria-label="Membership page sections">
+    <div class="container page-subnav__inner">
+      <a href="#why">Why join</a>
+      <a href="#how">How it works</a>
+      <a href="#plans">Plans</a>
+      <a href="#compare">Compare</a>
+      <a href="#enquiry">Enquire</a>
+    </div>
+  </nav>
+
+  <section class="section section--cream membership-benefits" id="why" aria-labelledby="membership-benefits-heading">
     <div class="container">
       <article class="membership-benefits__card card reveal">
         <span class="eyebrow">Membership</span>
         <h2 id="membership-benefits-heading">Why you should become a Member</h2>
-        <p class="membership-benefits__intro">Taunet Nelel is more than just an organization&mdash;it&rsquo;s a thriving community that brings people together, fosters cultural pride, and builds lifelong connections.</p>
-        <p class="membership-benefits__intro">Whether you&rsquo;re looking to reconnect with your heritage, meet new people, or make a difference through volunteering or sponsorship, Taunet Nelel offers countless opportunities to get involved.</p>
+        <p class="membership-benefits__intro">Taunet Nelel is a thriving community that brings people together, fosters cultural pride, and builds lifelong connections across Victoria.</p>
         <ul class="membership-benefits__grid">
-          <li>Gain access to exclusive cultural events and workshops.</li>
-          <li>Connect with like-minded individuals who share your values.</li>
-          <li>Participate in educational programs that preserve Kalenjin culture.</li>
-          <li>Receive special discounts and benefits at selected events.</li>
-          <li>Have the opportunity to take on leadership or volunteer roles within the community.</li>
+          <li>Exclusive cultural events and workshops</li>
+          <li>Connect with members who share your values</li>
+          <li>Educational programs that preserve Kalenjin culture</li>
+          <li>Member discounts at selected events</li>
+          <li>Leadership and volunteer opportunities</li>
+          <li>Family-friendly gatherings year-round</li>
         </ul>
       </article>
     </div>
   </section>
 
-  <section class="section">
+  <section class="section membership-how" id="how" aria-labelledby="membership-how-heading">
     <div class="container">
-      <div class="steps" style="margin-bottom:3rem;">
-        <div><div class="step__num">1</div><h3>Sign Up</h3><p>Complete a simple registration form online.</p></div>
-        <div><div class="step__num">2</div><h3>Get Involved</h3><p>Access the member portal and join community activities.</p></div>
-        <div><div class="step__num">3</div><h3>Make an Impact</h3><p>Participate in initiatives that align with your passion.</p></div>
+      <header class="membership-section-head reveal">
+        <span class="eyebrow">Getting started</span>
+        <h2 id="membership-how-heading">How it works</h2>
+        <p>Three simple steps from signup to making an impact in the community.</p>
+      </header>
+      <div class="steps reveal">
+        <div class="step">
+          <div class="step__num">1</div>
+          <h3>Sign Up</h3>
+          <p>Complete a simple registration form online.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">2</div>
+          <h3>Get Involved</h3>
+          <p>Access the member portal and join community activities.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">3</div>
+          <h3>Make an Impact</h3>
+          <p>Participate in initiatives that align with your passion.</p>
+        </div>
       </div>
-      <div class="plans">
+    </div>
+  </section>
+
+  <section class="section section--cream membership-plans" id="plans" aria-labelledby="membership-plans-heading">
+    <div class="container">
+      <header class="membership-section-head reveal">
+        <span class="eyebrow">Choose your plan</span>
+        <h2 id="membership-plans-heading">Membership Plans</h2>
+        <p>Start with Basic, or add Welfare Plus for bereavement support and the welfare portal.</p>
+      </header>
+
+      <div class="plans reveal">
         <div class="plan">
           <h3>Basic Plan</h3>
           <div class="plan__price">$50 <small>/ year</small></div>
@@ -118,7 +160,7 @@
             <li>Volunteer &amp; leadership opportunities</li>
             <li>Family-oriented cultural activities</li>
           </ul>
-          <a href="members/auth.html?tab=join" class="btn btn--primary">Join Us</a>
+          <a href="members/auth.html?tab=join" class="btn btn--primary">Join Basic</a>
         </div>
         <div class="plan plan--featured">
           <h3>Welfare Plus</h3>
@@ -133,28 +175,41 @@
           <a href="members/auth.html?tab=join" class="btn btn--accent">Join Welfare Plus</a>
         </div>
       </div>
-      <table class="compare-table">
-        <thead><tr><th>Benefit</th><th>Basic ($50)</th><th>Welfare Plus ($300)</th></tr></thead>
-        <tbody>
-          <tr><td>Exclusive events &amp; programs</td><td class="check">✓</td><td class="check">✓</td></tr>
-          <tr><td>Event fee discounts</td><td class="check">✓</td><td class="check">✓</td></tr>
-          <tr><td>Cultural resources</td><td class="check">✓</td><td class="check">✓</td></tr>
-          <tr><td>Volunteer opportunities</td><td class="check">✓</td><td class="check">✓</td></tr>
-          <tr><td>Global diaspora network</td><td class="check">✓</td><td class="check">✓</td></tr>
-          <tr><td>Welfare financial support</td><td class="dash">—</td><td class="check">✓</td></tr>
-          <tr><td>Welfare support portal</td><td class="dash">—</td><td class="check">✓</td></tr>
-        </tbody>
-      </table>
+
+      <div class="membership-compare reveal" id="compare">
+        <h3 class="membership-compare__title">Benefit comparison</h3>
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th>Benefit</th>
+              <th>Basic ($50)</th>
+              <th>Welfare Plus ($300)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Exclusive events &amp; programs</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Event fee discounts</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Cultural resources</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Volunteer opportunities</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Global diaspora network</td><td class="check">✓</td><td class="check">✓</td></tr>
+            <tr><td>Welfare financial support</td><td class="dash">—</td><td class="check">✓</td></tr>
+            <tr><td>Welfare support portal</td><td class="dash">—</td><td class="check">✓</td></tr>
+            <tr><td>Priority access to select events</td><td class="dash">—</td><td class="check">✓</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
 
-  <section class="section section--cream membership-enquiry" id="enquiry" aria-labelledby="membership-enquiry-heading">
+  <section class="section membership-enquiry" id="enquiry" aria-labelledby="membership-enquiry-heading">
     <div class="container">
+      <header class="membership-section-head reveal">
+        <span class="eyebrow">Get started</span>
+        <h2 id="membership-enquiry-heading">Membership Enquiry</h2>
+        <p>Questions about plans, welfare cover, or joining online? Send a message and we will guide you.</p>
+      </header>
       <div class="site-form-panel reveal">
         <aside class="site-form-aside">
-          <span class="eyebrow">Get started</span>
-          <h2 id="membership-enquiry-heading">Membership Enquiry</h2>
-          <p>Have questions about plans, welfare cover, or joining online? Send us a message and our team will guide you through the next steps.</p>
           <ul class="site-form-aside__highlights">
             <li>
               <span class="site-form-aside__icon" aria-hidden="true">&#9201;</span>
@@ -178,7 +233,7 @@
               </div>
             </li>
           </ul>
-          <a href="members/auth.html?tab=join" class="btn btn--outline">Join online instead</a>
+          <a href="members/auth.html?tab=join" class="btn btn--ghost">Join online instead</a>
         </aside>
 
         <form class="site-form card membership-enquiry__form" data-supabase-form="membership" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Membership enquiry form">
@@ -218,10 +273,21 @@
 
           <div class="site-form__actions">
             <button type="submit" class="btn btn--primary">Send enquiry</button>
-            <p class="site-form__note">Prefer to talk? Call or email us using the details on the left.</p>
+            <p class="site-form__note">Prefer to talk? Call or email us using the details beside the form.</p>
           </div>
           <p class="inquiry-form__message" role="status" aria-live="polite" hidden></p>
         </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="membership-cta-strip" aria-label="Join today">
+    <div class="container reveal">
+      <h2>Ready to join Taunet Nelel?</h2>
+      <p>Start with Basic or Welfare Plus — then step into events, programs, and community life in Victoria.</p>
+      <div class="membership-cta-strip__actions">
+        <a href="members/auth.html?tab=join" class="btn btn--primary">Join online</a>
+        <a href="#enquiry" class="btn btn--outline">Ask a question</a>
       </div>
     </div>
   </section>
@@ -284,6 +350,6 @@
   </footer>
   <script src="assets/js/supabase-config.js?v=2"></script>
   <script src="assets/js/supabase-init.js?v=3"></script>
-  <script src="assets/js/main.js?v=12"></script>
+  <script src="assets/js/main.js?v=13"></script>
 </body>
 </html>
