@@ -205,6 +205,11 @@
   }
 
   function getEventPhase(event, now) {
+    const override = String(event.phaseOverride || event.phase_override || '').trim();
+    if (override && override !== 'auto' && ['upcoming', 'present', 'most-recent', 'past'].includes(override)) {
+      return override;
+    }
+
     const current = now || new Date();
     const start = parseDate(event.start);
     const end = parseDate(event.end || event.start);
@@ -217,7 +222,7 @@
     const startMs = start.getTime();
     const endMs = end.getTime();
 
-    // Hard rule: once an event has ended it can never stay in Upcoming.
+    // Hard rule: once an event has ended it can never stay in Upcoming (unless overridden above).
     // 0–2 months after end → Most Recent; after that → Past.
     if (currentMs > endMs) {
       const recentUntil = new Date(endMs);
@@ -244,8 +249,10 @@
       groups[phase].push(event);
     });
 
-    // Safety net: never leave an ended event in Upcoming (bad/future DB dates aside).
+    // Safety net: never leave an auto-dated ended event in Upcoming.
     groups.upcoming = groups.upcoming.filter((event) => {
+      const override = String(event.phaseOverride || event.phase_override || '').trim();
+      if (override && override !== 'auto') return true;
       const end = parseDate(event.end || event.start);
       return !Number.isNaN(end.getTime()) && end.getTime() >= current.getTime();
     });

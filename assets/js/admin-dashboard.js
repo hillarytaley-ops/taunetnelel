@@ -464,27 +464,188 @@
       .join('');
   }
 
+  function toDatetimeLocalValue(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function fromDatetimeLocalValue(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toISOString();
+  }
+
+  function inferBoardPhase(row) {
+    const override = String(row.phase_override || '').trim();
+    if (override && override !== 'auto') return override;
+    if (window.TaunetEventsPhases?.getEventPhase) {
+      return window.TaunetEventsPhases.getEventPhase({
+        start: row.start_at,
+        end: row.end_at || row.start_at,
+        phaseOverride: row.phase_override
+      });
+    }
+    return 'auto';
+  }
+
   async function loadEvents() {
     const data = await adminApi('events');
     const body = document.getElementById('admin-events-body');
     if (!body) return;
     const rows = data.rows || [];
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No events in the database yet. Use “Seed events from site list” below, or run migration 014.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No events yet. Add one above, or seed from the site list.</td></tr>`;
       return;
     }
     body.innerHTML = rows
-      .map(
-        (row) => `<tr>
-          <td>${escapeHtml(row.title || '—')}</td>
-          <td>${escapeHtml(row.location || '—')}</td>
-          <td>${escapeHtml(formatDate(row.start_at))}</td>
+      .map((row) => {
+        const board = inferBoardPhase(row);
+        const phaseValue = row.phase_override || 'auto';
+        return `<tr data-event-id="${escapeHtml(row.id)}">
+          <td>
+            <strong>${escapeHtml(row.title || '—')}</strong>
+            <div class="admin-detail">${escapeHtml(row.location || '')}${row.gallery_url ? `<br><a href="../${escapeHtml(row.gallery_url)}">Gallery link</a>` : ''}</div>
+          </td>
+          <td class="admin-detail">${escapeHtml(formatDate(row.start_at))}${row.end_at ? `<br>→ ${escapeHtml(formatDate(row.end_at))}` : ''}</td>
+          <td>
+            <select data-event-phase="${escapeHtml(row.id)}" aria-label="Board placement for ${escapeHtml(row.title || 'event')}">
+              <option value="auto"${phaseValue === 'auto' || !row.phase_override ? ' selected' : ''}>Auto (${escapeHtml(board)})</option>
+              <option value="upcoming"${phaseValue === 'upcoming' ? ' selected' : ''}>Upcoming</option>
+              <option value="present"${phaseValue === 'present' ? ' selected' : ''}>Present</option>
+              <option value="most-recent"${phaseValue === 'most-recent' ? ' selected' : ''}>Most Recent</option>
+              <option value="past"${phaseValue === 'past' ? ' selected' : ''}>Past</option>
+            </select>
+            <div class="admin-actions" style="margin-top:0.4rem">
+              <button type="button" data-event-publish="${escapeHtml(row.id)}" data-published="${row.is_published ? '1' : '0'}">
+                ${row.is_published ? 'Unpublish' : 'Publish'}
+              </button>
+            </div>
+          </td>
           <td>${row.is_published ? 'Yes' : 'No'}</td>
-          <td>${row.registration_open ? 'Open' : 'Closed'}</td>
-          <td>${row.featured ? 'Yes' : '—'}</td>
-        </tr>`
-      )
+          <td>
+            <label class="admin-upload-btn">
+              Upload photos
+              <input type="file" accept="image/*" multiple hidden data-event-photos="${escapeHtml(row.id)}">
+            </label>
+            <div class="admin-detail" data-event-photo-status="${escapeHtml(row.id)}"></div>
+          </td>
+        </tr>`;
+      })
       .join('');
+
+    body.querySelectorAll('[data-event-phase]').forEach((select) => {
+      select.addEventListener('change', async () => {
+        try {
+          await adminApi('event-update', {
+            method: 'PATCH',
+            body: { id: select.dataset.eventPhase, phase_override: select.value }
+          });
+          await loadEvents();
+        } catch (err) {
+          alert(err.message || 'Could not move event. Run migration 017 if phase_override is missing.');
+          await loadEvents();
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-event-publish]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await adminApi('event-update', {
+            method: 'PATCH',
+            body: {
+              id: btn.dataset.eventPublish,
+              is_published: btn.dataset.published !== '1'
+            }
+          });
+          await loadEvents();
+        } catch (err) {
+          alert(err.message || 'Could not update publish state.');
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-event-photos]').forEach((input) => {
+      input.addEventListener('change', async () => {
+        const eventId = input.dataset.eventPhotos;
+        const status = document.querySelector(`[data-event-photo-status="${eventId}"]`);
+        const files = Array.from(input.files || []).slice(0, 6);
+        if (!files.length) return;
+        if (status) status.textContent = 'Uploading…';
+        try {
+          const photos = [];
+          for (const file of files) {
+            const dataUrl = await readFileAsDataUrl(file);
+            photos.push({ name: file.name, dataUrl, alt: file.name });
+          }
+          const result = await adminApi('event-photos', {
+            method: 'POST',
+            body: { event_id: eventId, photos, move_to_recent: true }
+          });
+          if (status) {
+            status.textContent = `Uploaded ${result.uploaded || photos.length} photo(s). Event moved to Most Recent.`;
+          }
+          await loadEvents();
+        } catch (err) {
+          if (status) status.textContent = err.message || 'Upload failed.';
+          else alert(err.message || 'Upload failed.');
+        } finally {
+          input.value = '';
+        }
+      });
+    });
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Could not read image file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function createEventFromForm(event) {
+    event.preventDefault();
+    const form = event.target;
+    const status = document.getElementById('admin-events-seed-status');
+    const fd = new FormData(form);
+    const startAt = fromDatetimeLocalValue(fd.get('start_at'));
+    const endRaw = fd.get('end_at');
+    const payload = {
+      title: String(fd.get('title') || '').trim(),
+      location: String(fd.get('location') || '').trim(),
+      start_at: startAt,
+      end_at: endRaw ? fromDatetimeLocalValue(endRaw) : startAt,
+      summary: String(fd.get('summary') || '').trim(),
+      meta: String(fd.get('meta') || '').trim(),
+      badge: String(fd.get('badge') || '').trim(),
+      phase_override: String(fd.get('phase_override') || 'auto'),
+      is_published: form.querySelector('[name="is_published"]')?.checked !== false,
+      registration_open: Boolean(form.querySelector('[name="registration_open"]')?.checked),
+      featured: Boolean(form.querySelector('[name="featured"]')?.checked)
+    };
+    if (status) {
+      status.hidden = false;
+      status.classList.remove('is-error');
+      status.textContent = 'Saving event…';
+    }
+    try {
+      await adminApi('event-create', { method: 'POST', body: payload });
+      form.reset();
+      form.querySelector('[name="is_published"]').checked = true;
+      if (status) status.textContent = 'Event saved.';
+      await loadEvents();
+    } catch (err) {
+      if (status) {
+        status.classList.add('is-error');
+        status.textContent = err.message || 'Could not save event.';
+      }
+    }
   }
 
   async function seedEventsFromSite() {
@@ -765,6 +926,8 @@
     document.getElementById('admin-seed-events')?.addEventListener('click', () => {
       seedEventsFromSite();
     });
+
+    document.getElementById('admin-event-form')?.addEventListener('submit', createEventFromForm);
 
     document.getElementById('admin-newsletter-export')?.addEventListener('click', () => {
       exportNewsletterCsv();

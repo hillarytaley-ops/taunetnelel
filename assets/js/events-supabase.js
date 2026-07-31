@@ -19,7 +19,8 @@
       featured: Boolean(row.featured),
       bookingUrl: row.booking_url || undefined,
       galleryUrl: row.gallery_url || undefined,
-      registrationOpen: Boolean(row.registration_open)
+      registrationOpen: Boolean(row.registration_open),
+      phaseOverride: row.phase_override || null
     };
   }
 
@@ -30,13 +31,24 @@
     const client = await api.ensureClient();
     if (!client) return null;
 
-    const { data, error } = await client
+    let query = client
       .from('events')
       .select(
-        'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published'
+        'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override'
       )
       .eq('is_published', true)
       .order('start_at', { ascending: false });
+
+    let { data, error } = await query;
+    if (error && String(error.message || '').includes('phase_override')) {
+      ({ data, error } = await client
+        .from('events')
+        .select(
+          'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published'
+        )
+        .eq('is_published', true)
+        .order('start_at', { ascending: false }));
+    }
 
     if (error || !data || !data.length) return null;
     return data.map(mapEvent);

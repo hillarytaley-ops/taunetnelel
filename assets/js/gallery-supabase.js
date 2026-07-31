@@ -78,12 +78,19 @@
       remoteAlbums.filter((a) => curatedIds.has(a.id)).map((a) => [a.id, a])
     );
 
-    // Prefer curated static albums; only take remote when it has more photos
-    global.TAUNET_GALLERY = current.map((album) => {
+    // Prefer curated static albums; take remote when it has more photos.
+    const mergedCurated = current.map((album) => {
       const remote = remoteById.get(album.id);
       if (remote && remote.photos.length > album.photos.length) return remote;
       return album;
     });
+
+    // Append committee-uploaded albums (e.g. event-* from admin photo uploads).
+    const extras = remoteAlbums
+      .filter((album) => !curatedIds.has(album.id) && !isDumpAlbumId(album.id) && album.photos.length)
+      .sort((a, b) => String(b.sortDate || '').localeCompare(String(a.sortDate || '')));
+
+    global.TAUNET_GALLERY = [...extras, ...mergedCurated];
   }
 
   async function init() {

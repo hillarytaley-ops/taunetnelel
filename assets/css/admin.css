@@ -729,11 +729,61 @@ body[data-page="site-admin"] {
   margin: 0.75rem 0 0 1.1rem;
 }
 
-.business-admin__actions {
+.admin-event-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.admin-field--wide {
+  grid-column: 1 / -1;
+}
+
+.admin-field--check {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.admin-field--check input {
+  width: auto;
+  margin: 0;
+}
+
+.admin-field select {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(139, 69, 19, 0.15);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.admin-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(139, 69, 19, 0.2);
+  background: #fff;
+  color: #3d2314;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-upload-btn:hover {
+  border-color: rgba(196, 98, 45, 0.45);
+}
+
+@media (max-width: 720px) {
+  .admin-event-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 860px) {

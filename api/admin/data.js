@@ -18,12 +18,12 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = 4.5e6) {
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (chunk) => {
       data += chunk;
-      if (data.length > 1e6) reject(new Error('Body too large'));
+      if (data.length > maxBytes) reject(new Error('Body too large'));
     });
     req.on('end', () => {
       if (!data) return resolve({});
@@ -35,6 +35,61 @@ function readBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function slugifyId(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || `event-${Date.now()}`;
+}
+
+function publicStorageUrl(path) {
+  return `${SUPABASE_URL}/storage/v1/object/public/gallery/${path}`;
+}
+
+async function uploadGalleryObject(objectPath, bytes, contentType) {
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${objectPath}`, {
+    method: 'POST',
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${SERVICE_KEY}`,
+      'Content-Type': contentType || 'application/octet-stream',
+      'x-upsert': 'true'
+    },
+    body: bytes
+  });
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (_) {
+    data = text;
+  }
+  if (!response.ok) {
+    const err = new Error((data && (data.message || data.error)) || 'Storage upload failed');
+    err.status = response.status;
+    err.details = data;
+    throw err;
+  }
+  return publicStorageUrl(objectPath);
+}
+
+function decodeDataUrl(dataUrl) {
+  const match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return {
+    contentType: match[1],
+    bytes: Buffer.from(match[2], 'base64')
+  };
+}
+
+function normalizePhaseOverride(value) {
+  const phase = String(value || 'auto').trim();
+  if (!phase || phase === 'auto') return null;
+  if (['upcoming', 'present', 'most-recent', 'past'].includes(phase)) return phase;
+  return null;
 }
 
 async function sb(path, options = {}) {
@@ -334,9 +389,16 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'events') {
-        const { data } = await sb(
-          'events?select=id,title,location,start_at,is_published,registration_open,featured&limit=100'
-        );
+        let data;
+        try {
+          ({ data } = await sb(
+            'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override&order=start_at.desc&limit=100'
+          ));
+        } catch (_) {
+          ({ data } = await sb(
+            'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published&order=start_at.desc&limit=100'
+          ));
+        }
         return json(res, 200, { rows: data || [] });
       }
 
@@ -381,6 +443,137 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify(SEED_EVENTS)
         });
         return json(res, 200, { ok: true, count: Array.isArray(data) ? data.length : SEED_EVENTS.length });
+      }
+
+      if (resource === 'event-create') {
+        const title = String(body.title || '').trim();
+        if (!title) return json(res, 400, { error: 'Title is required' });
+        const startAt = String(body.start_at || '').trim();
+        if (!startAt) return json(res, 400, { error: 'Start date/time is required' });
+        const endAt = String(body.end_at || startAt).trim();
+        const id = slugifyId(body.id || `${title}-${startAt.slice(0, 10)}`);
+        const phaseOverride = normalizePhaseOverride(body.phase_override);
+        const row = {
+          id,
+          title,
+          summary: String(body.summary || '').trim() || null,
+          location: String(body.location || '').trim() || null,
+          meta: String(body.meta || '').trim() || null,
+          badge: String(body.badge || '').trim() || null,
+          image_path:
+            String(body.image_path || '').trim() ||
+            'wp-content/uploads/2025/09/Celebration.jpg',
+          booking_url: String(body.booking_url || '').trim() || null,
+          gallery_url: String(body.gallery_url || '').trim() || null,
+          start_at: startAt,
+          end_at: endAt,
+          featured: Boolean(body.featured),
+          registration_open: Boolean(body.registration_open),
+          is_published: body.is_published !== false,
+          phase_override: phaseOverride
+        };
+        const { data } = await sb('events', {
+          method: 'POST',
+          body: JSON.stringify(row)
+        });
+        return json(res, 200, { rows: data || [row] });
+      }
+
+      if (resource === 'event-photos') {
+        const eventId = String(body.event_id || '').trim();
+        const photos = Array.isArray(body.photos) ? body.photos : [];
+        if (!eventId) return json(res, 400, { error: 'event_id is required' });
+        if (!photos.length) return json(res, 400, { error: 'Add at least one photo' });
+        if (photos.length > 6) return json(res, 400, { error: 'Upload up to 6 photos at a time' });
+
+        const { data: eventRows } = await sb(
+          `events?id=eq.${encodeURIComponent(eventId)}&select=id,title,gallery_url,end_at,start_at`
+        );
+        const event = Array.isArray(eventRows) ? eventRows[0] : null;
+        if (!event) return json(res, 404, { error: 'Event not found' });
+
+        const albumId = `event-${eventId}`.slice(0, 80);
+        const eventDate = String(event.end_at || event.start_at || '').slice(0, 10) || null;
+        await sb('gallery_albums?on_conflict=id', {
+          method: 'POST',
+          prefer: 'resolution=merge-duplicates,return=representation',
+          body: JSON.stringify([
+            {
+              id: albumId,
+              title: `${event.title} photos`,
+              description: `Photos from ${event.title}`,
+              event_date: eventDate,
+              group_id: 'recent',
+              sort_date: eventDate,
+              preview_limit: 12,
+              is_published: true
+            }
+          ])
+        });
+
+        const uploaded = [];
+        for (let i = 0; i < photos.length; i += 1) {
+          const photo = photos[i] || {};
+          const decoded = decodeDataUrl(photo.dataUrl);
+          if (!decoded) continue;
+          if (!String(decoded.contentType || '').startsWith('image/')) {
+            return json(res, 400, { error: 'Only image uploads are allowed' });
+          }
+          if (decoded.bytes.length > 3.5e6) {
+            return json(res, 400, { error: 'Each photo must be under about 3.5 MB' });
+          }
+          const ext =
+            decoded.contentType.includes('png')
+              ? 'png'
+              : decoded.contentType.includes('webp')
+                ? 'webp'
+                : decoded.contentType.includes('gif')
+                  ? 'gif'
+                  : 'jpg';
+          const safeName = slugifyId(photo.name || `photo-${i + 1}`);
+          const objectPath = `${albumId}/${Date.now()}-${i}-${safeName}.${ext}`;
+          const publicUrl = await uploadGalleryObject(objectPath, decoded.bytes, decoded.contentType);
+          await sb('gallery_photos', {
+            method: 'POST',
+            body: JSON.stringify({
+              album_id: albumId,
+              storage_path: publicUrl,
+              alt_text: photo.alt || `${event.title} photo ${i + 1}`,
+              download_name: `${safeName}.${ext}`,
+              sort_order: i,
+              is_member_only: false
+            })
+          });
+          uploaded.push(publicUrl);
+        }
+
+        if (!uploaded.length) {
+          return json(res, 400, { error: 'No valid image data received' });
+        }
+
+        const galleryUrl = `gallery.html#${albumId}`;
+        const eventPatch = { gallery_url: galleryUrl };
+        if (body.move_to_recent !== false) {
+          eventPatch.phase_override = 'most-recent';
+        }
+        try {
+          await sb(`events?id=eq.${encodeURIComponent(eventId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify(eventPatch)
+          });
+        } catch (_) {
+          await sb(`events?id=eq.${encodeURIComponent(eventId)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ gallery_url: galleryUrl })
+          });
+        }
+
+        return json(res, 200, {
+          ok: true,
+          album_id: albumId,
+          gallery_url: galleryUrl,
+          uploaded: uploaded.length
+        });
       }
 
       if (resource === 'announcement-create') {
@@ -440,6 +633,36 @@ module.exports = async function handler(req, res) {
         const { data } = await sb(`gallery_albums?id=eq.${encodeURIComponent(body.id)}`, {
           method: 'PATCH',
           body: JSON.stringify({ is_published: Boolean(body.is_published) })
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'event-update') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Event id is required' });
+        const patch = {};
+        if (body.title != null) patch.title = String(body.title).trim();
+        if (body.summary != null) patch.summary = String(body.summary).trim() || null;
+        if (body.location != null) patch.location = String(body.location).trim() || null;
+        if (body.meta != null) patch.meta = String(body.meta).trim() || null;
+        if (body.badge != null) patch.badge = String(body.badge).trim() || null;
+        if (body.image_path != null) patch.image_path = String(body.image_path).trim() || null;
+        if (body.booking_url != null) patch.booking_url = String(body.booking_url).trim() || null;
+        if (body.gallery_url != null) patch.gallery_url = String(body.gallery_url).trim() || null;
+        if (body.start_at != null) patch.start_at = String(body.start_at).trim();
+        if (body.end_at != null) patch.end_at = String(body.end_at).trim() || null;
+        if (body.featured != null) patch.featured = Boolean(body.featured);
+        if (body.registration_open != null) patch.registration_open = Boolean(body.registration_open);
+        if (body.is_published != null) patch.is_published = Boolean(body.is_published);
+        if (body.phase_override !== undefined) {
+          patch.phase_override = normalizePhaseOverride(body.phase_override);
+        }
+        if (!Object.keys(patch).length) {
+          return json(res, 400, { error: 'No fields to update' });
+        }
+        const { data } = await sb(`events?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(patch)
         });
         return json(res, 200, { rows: data || [] });
       }

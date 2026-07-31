@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=13">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=10">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=11">
 </head>
 <body data-page="site-admin">
 
@@ -253,25 +253,56 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="events">
-        <p class="admin-muted">Published rows here power the public Events page and member dashboard (with a static fallback if the table is empty).</p>
-        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
-          <button type="button" class="btn btn--sm btn--primary" id="admin-seed-events">Seed events from site list</button>
-          <p id="admin-events-seed-status" class="admin-muted" hidden style="margin:0;"></p>
-        </div>
+        <p class="admin-muted">
+          Add events, move them between Upcoming / Present / Most Recent / Past, and upload photos after an event concludes.
+          Run migration <code>017_event_phase_override_and_gallery_storage.sql</code> in Supabase once.
+        </p>
+
+        <form id="admin-event-form" class="admin-card admin-card--flush" style="margin-bottom:1rem">
+          <div class="admin-section-title">
+            <h2>Add event</h2>
+          </div>
+          <div class="admin-event-form-grid">
+            <label class="admin-field"><span>Title</span><input name="title" type="text" required maxlength="160" placeholder="e.g. Sports Day 2027"></label>
+            <label class="admin-field"><span>Location</span><input name="location" type="text" maxlength="160" placeholder="Victoria"></label>
+            <label class="admin-field"><span>Starts</span><input name="start_at" type="datetime-local" required></label>
+            <label class="admin-field"><span>Ends</span><input name="end_at" type="datetime-local"></label>
+            <label class="admin-field"><span>Board placement</span>
+              <select name="phase_override">
+                <option value="auto">Auto (by dates)</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="present">Present</option>
+                <option value="most-recent">Most Recent</option>
+                <option value="past">Past</option>
+              </select>
+            </label>
+            <label class="admin-field"><span>Badge</span><input name="badge" type="text" maxlength="40" placeholder="Family day"></label>
+            <label class="admin-field admin-field--wide"><span>Summary</span><textarea name="summary" rows="2" maxlength="500" placeholder="Short description for the Events page"></textarea></label>
+            <label class="admin-field admin-field--wide"><span>Meta line</span><input name="meta" type="text" maxlength="200" placeholder="Saturday, 12 April 2027 · 11am–4pm"></label>
+            <label class="admin-field admin-field--check"><input name="is_published" type="checkbox" checked> Published</label>
+            <label class="admin-field admin-field--check"><input name="registration_open" type="checkbox"> Registration open</label>
+            <label class="admin-field admin-field--check"><input name="featured" type="checkbox"> Featured</label>
+          </div>
+          <div class="business-admin__actions">
+            <button type="submit" class="btn btn--primary btn--sm">Save event</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="admin-seed-events">Seed from site list</button>
+          </div>
+          <p id="admin-events-seed-status" class="admin-muted" hidden style="margin-top:0.65rem"></p>
+        </form>
+
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Location</th>
-                <th>Starts</th>
+                <th>Event</th>
+                <th>When</th>
+                <th>Board</th>
                 <th>Published</th>
-                <th>Registration</th>
-                <th>Featured</th>
+                <th>Photos</th>
               </tr>
             </thead>
             <tbody id="admin-events-body">
-              <tr><td colspan="6" class="admin-empty">Open this tab to load events.</td></tr>
+              <tr><td colspan="5" class="admin-empty">Open this tab to load events.</td></tr>
             </tbody>
           </table>
         </div>
@@ -397,8 +428,9 @@
 
   <script src="../assets/js/supabase-config.js?v=2"></script>
   <script src="../assets/js/supabase-init.js?v=3"></script>
+  <script src="../assets/js/events-phases.js?v=16"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
   <script src="../assets/js/business-admin.js?v=3"></script>
-  <script src="../assets/js/admin-dashboard.js?v=12"></script>
+  <script src="../assets/js/admin-dashboard.js?v=13"></script>
 </body>
 </html>
