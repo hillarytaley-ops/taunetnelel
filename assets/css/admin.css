@@ -597,16 +597,25 @@ body[data-page="site-admin"] {
 }
 
 .admin-field textarea {
-  min-height: 5rem;
+  min-height: 3.25rem;
+  max-height: 12rem;
   resize: vertical;
 }
 
 .admin-item {
   border: 1px solid rgba(139, 69, 19, 0.12);
   border-radius: 10px;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.55rem;
   background: #f7f1e8;
+}
+
+.admin-item.is-collapsed {
+  padding: 0.55rem 0.75rem;
+}
+
+.admin-item.is-collapsed .admin-item__fields {
+  display: none;
 }
 
 .admin-item__head {
@@ -614,21 +623,100 @@ body[data-page="site-admin"] {
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+}
+
+.admin-item.is-open .admin-item__head {
   margin-bottom: 0.75rem;
 }
 
+.admin-item__title-wrap {
+  min-width: 0;
+  flex: 1;
+}
+
 .admin-item__head h3 {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   margin: 0;
+  line-height: 1.3;
+}
+
+.admin-item__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #6b4a36;
+}
+
+.admin-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.admin-item__toggle {
+  border: 1px solid rgba(139, 69, 19, 0.2);
+  background: #fff;
+  color: #3d2314;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+}
+
+.admin-item__toggle:hover {
+  border-color: rgba(196, 98, 45, 0.45);
 }
 
 .admin-item__remove {
   border: none;
   background: transparent;
   color: #a33;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+  padding: 0.3rem 0.35rem;
+}
+
+.admin-biz-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-biz-tabs button {
+  appearance: none;
+  border: 1px solid rgba(139, 69, 19, 0.16);
+  background: #fff;
+  color: #6b4a36;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+}
+
+.admin-biz-tabs button span {
+  display: inline-block;
+  margin-left: 0.3rem;
+  min-width: 1.1rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(139, 69, 19, 0.1);
+  font-size: 0.72rem;
+}
+
+.admin-biz-tabs button.is-active {
+  background: rgba(196, 98, 45, 0.16);
+  border-color: rgba(196, 98, 45, 0.4);
+  color: #3d2314;
+}
+
+.admin-biz-hint {
+  margin: -0.25rem 0 0.75rem;
+  font-size: 0.8rem;
 }
 
 .admin-help {
@@ -645,7 +733,7 @@ body[data-page="site-admin"] {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 @media (max-width: 860px) {

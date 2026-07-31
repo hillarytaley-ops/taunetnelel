@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=13">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=9">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=10">
 </head>
 <body data-page="site-admin">
 
@@ -198,49 +198,55 @@
 
       <section class="site-admin__panel" data-admin-panel="business">
         <div id="admin-business-root">
-          <div class="admin-card" style="margin-bottom:1rem">
-            <h2 style="margin:0 0 0.5rem;font-size:1.05rem">Publish workflow</h2>
-            <p class="admin-help">
-              Edit business cards, news, and blog posts below. Last saved:
-              <strong data-biz-updated>&mdash;</strong>
+          <div class="admin-card admin-card--flush" style="margin-bottom:1rem">
+            <div class="admin-section-title">
+              <h2>Business Hub</h2>
+              <p class="admin-muted" style="margin:0">Last saved: <strong data-biz-updated>&mdash;</strong></p>
+            </div>
+            <p class="admin-help" style="margin-top:0">
+              Edit one section at a time. Export JSON, replace <code>assets/data/business-content.json</code>, then push to publish.
             </p>
-            <ol class="admin-help">
-              <li>Edit content below (or import a JSON file).</li>
-              <li>Click <strong>Export JSON</strong> to download <code>business-content.json</code>.</li>
-              <li>Replace <code>assets/data/business-content.json</code> in the project and push to GitHub — Vercel redeploys automatically.</li>
-            </ol>
             <div class="business-admin__actions">
               <button type="button" class="btn btn--primary" data-biz-export>Export JSON</button>
-              <button type="button" class="btn btn--outline" data-biz-save>Save draft (browser)</button>
+              <button type="button" class="btn btn--outline" data-biz-save>Save draft</button>
               <label class="btn btn--ghost" for="admin-biz-import-file">Import JSON</label>
               <input type="file" id="admin-biz-import-file" data-biz-import accept="application/json,.json" hidden>
-              <button type="button" class="btn btn--ghost" data-biz-reset>Reset local draft</button>
+              <button type="button" class="btn btn--ghost" data-biz-reset>Reset draft</button>
               <a href="../community.html#business" class="btn btn--ghost">View public page</a>
             </div>
             <p class="admin-status" data-biz-status role="status" hidden></p>
           </div>
 
-          <div class="admin-card" style="margin-bottom:1rem">
+          <div class="admin-biz-tabs" role="tablist" aria-label="Business Hub sections">
+            <button type="button" role="tab" data-biz-tab="business" class="is-active" aria-selected="true">Business cards <span data-biz-count="business">0</span></button>
+            <button type="button" role="tab" data-biz-tab="news" aria-selected="false">News <span data-biz-count="news">0</span></button>
+            <button type="button" role="tab" data-biz-tab="blog" aria-selected="false">Blog <span data-biz-count="blog">0</span></button>
+          </div>
+
+          <div class="admin-card admin-card--flush" data-biz-panel="business">
             <div class="admin-section-title">
               <h2>Business cards</h2>
               <button type="button" class="btn btn--sm btn--outline" data-biz-add-business>Add business</button>
             </div>
+            <p class="admin-muted admin-biz-hint">Collapsed by default — click Edit to open one card at a time.</p>
             <div data-biz-business-list></div>
           </div>
 
-          <div class="admin-card" style="margin-bottom:1rem">
+          <div class="admin-card admin-card--flush" data-biz-panel="news" hidden>
             <div class="admin-section-title">
               <h2>Business news</h2>
               <button type="button" class="btn btn--sm btn--outline" data-biz-add-news>Add news item</button>
             </div>
+            <p class="admin-muted admin-biz-hint">Collapsed by default — click Edit to open one item at a time.</p>
             <div data-biz-news-list></div>
           </div>
 
-          <div class="admin-card">
+          <div class="admin-card admin-card--flush" data-biz-panel="blog" hidden>
             <div class="admin-section-title">
               <h2>Blog posts</h2>
               <button type="button" class="btn btn--sm btn--outline" data-biz-add-blog>Add blog post</button>
             </div>
+            <p class="admin-muted admin-biz-hint">Collapsed by default — click Edit to open one post at a time.</p>
             <div data-biz-blog-list></div>
           </div>
         </div>
@@ -392,7 +398,7 @@
   <script src="../assets/js/supabase-config.js?v=2"></script>
   <script src="../assets/js/supabase-init.js?v=3"></script>
   <script src="../assets/js/business-content.js?v=2"></script>
-  <script src="../assets/js/business-admin.js?v=2"></script>
+  <script src="../assets/js/business-admin.js?v=3"></script>
   <script src="../assets/js/admin-dashboard.js?v=12"></script>
 </body>
 </html>
