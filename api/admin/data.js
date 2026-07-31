@@ -49,7 +49,61 @@ function publicStorageUrl(path) {
   return `${SUPABASE_URL}/storage/v1/object/public/gallery/${path}`;
 }
 
-async function uploadGalleryObject(objectPath, bytes, contentType) {
+let galleryBucketReady = false;
+
+async function ensureGalleryBucket() {
+  if (galleryBucketReady) return;
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    throw Object.assign(new Error('Server missing Supabase storage credentials'), { status: 500 });
+  }
+
+  const headers = {
+    apikey: SERVICE_KEY,
+    Authorization: `Bearer ${SERVICE_KEY}`,
+    'Content-Type': 'application/json'
+  };
+
+  const getRes = await fetch(`${SUPABASE_URL}/storage/v1/bucket/gallery`, { headers });
+  if (getRes.ok) {
+    galleryBucketReady = true;
+    return;
+  }
+
+  const createRes = await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      id: 'gallery',
+      name: 'gallery',
+      public: true,
+      file_size_limit: 5242880,
+      allowed_mime_types: ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    })
+  });
+
+  if (!createRes.ok && createRes.status !== 409) {
+    const text = await createRes.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (_) {
+      data = text;
+    }
+    const msg = String((data && (data.message || data.error)) || text || '');
+    if (!/already exists|duplicate|exists/i.test(msg)) {
+      const err = new Error(msg || 'Could not create gallery storage bucket');
+      err.status = createRes.status;
+      err.details = data;
+      throw err;
+    }
+  }
+
+  galleryBucketReady = true;
+}
+
+async function uploadGalleryObject(objectPath, bytes, contentType, retried = false) {
+  await ensureGalleryBucket();
+
   const response = await fetch(`${SUPABASE_URL}/storage/v1/object/gallery/${objectPath}`, {
     method: 'POST',
     headers: {
@@ -68,7 +122,16 @@ async function uploadGalleryObject(objectPath, bytes, contentType) {
     data = text;
   }
   if (!response.ok) {
-    const err = new Error((data && (data.message || data.error)) || 'Storage upload failed');
+    const msg = String((data && (data.message || data.error)) || response.statusText || 'Storage upload failed');
+    const missingBucket =
+      response.status === 404 ||
+      /bucket|not found|does not exist/i.test(msg);
+    if (missingBucket && !retried) {
+      galleryBucketReady = false;
+      await ensureGalleryBucket();
+      return uploadGalleryObject(objectPath, bytes, contentType, true);
+    }
+    const err = new Error(msg);
     err.status = response.status;
     err.details = data;
     throw err;
@@ -516,13 +579,49 @@ module.exports = async function handler(req, res) {
           try {
             imagePath = await uploadFlyerFromDataUrl(id, body.flyer_data_url, body.flyer_name);
           } catch (err) {
-            if (String(err.message || '').toLowerCase().includes('bucket') || err.status === 404) {
-              return json(res, 400, {
-                error:
-                  'Flyer storage is not ready. Run migration 017_event_phase_override_and_gallery_storage.sql in Supabase, then try again.'
+            // Still save the event; surface flyer problem as a warning instead of blocking.
+            const flyerWarning =
+              err.message ||
+              'Flyer upload failed. Event can still be saved without the flyer image.';
+            const row = {
+              id,
+              title,
+              summary: String(body.summary || '').trim() || null,
+              location: String(body.location || '').trim() || null,
+              meta: String(body.meta || '').trim() || null,
+              badge: String(body.badge || '').trim() || null,
+              image_path: imagePath,
+              booking_url: String(body.booking_url || '').trim() || null,
+              gallery_url: String(body.gallery_url || '').trim() || null,
+              start_at: startAt,
+              end_at: endAt,
+              featured: Boolean(body.featured),
+              registration_open: Boolean(body.registration_open),
+              is_published: body.is_published !== false,
+              phase_override: requestedPhase
+            };
+            try {
+              const { data } = await sb('events', {
+                method: 'POST',
+                body: JSON.stringify(row)
+              });
+              return json(res, 200, {
+                rows: data || [row],
+                warning: `Event saved without flyer. ${flyerWarning}`
+              });
+            } catch (createErr) {
+              if (!isMissingPhaseOverrideError(createErr)) throw createErr;
+              const { phase_override, ...withoutPhase } = row;
+              applyPhaseViaDates(withoutPhase, requestedPhase || 'auto');
+              const { data } = await sb('events', {
+                method: 'POST',
+                body: JSON.stringify(withoutPhase)
+              });
+              return json(res, 200, {
+                rows: data || [withoutPhase],
+                warning: `Event saved without flyer. ${flyerWarning}`
               });
             }
-            throw err;
           }
         }
 
