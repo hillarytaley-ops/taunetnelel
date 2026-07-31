@@ -664,43 +664,47 @@
   initScrollProgress();
   initRevealOnScroll();
 
-  function initFlatMainNav() {
-    document.querySelectorAll('.main-nav > ul').forEach((ul) => {
-      if (ul.dataset.navFlat === 'true' || !ul.querySelector('.has-dropdown')) return;
+  function initMainNav() {
+    // Keep structured dropdown HTML — do not flatten into a dense 9-link bar.
+    document.querySelectorAll('.main-nav .has-dropdown > a').forEach((trigger) => {
+      trigger.setAttribute('aria-haspopup', 'true');
+      trigger.setAttribute('aria-expanded', 'false');
+    });
 
-      const pathPrefix = (() => {
-        const sample = ul.querySelector('a[href*="about"]')?.getAttribute('href') || 'about.html';
-        return sample.replace(/about\.html.*$/, '');
-      })();
-
-      const flatLinks = [
-        { href: `${pathPrefix}index.html`, label: 'Home', nav: 'home' },
-        { href: `${pathPrefix}about.html`, label: 'About', nav: 'about' },
-        { href: `${pathPrefix}events.html`, label: 'Events', nav: 'events' },
-        { href: `${pathPrefix}gallery.html`, label: 'Gallery', nav: 'gallery' },
-        { href: `${pathPrefix}community.html`, label: 'Community Hub', nav: 'community' },
-        { href: `${pathPrefix}sponsorship.html`, label: 'Sponsorship', nav: 'sponsorship' },
-        { href: `${pathPrefix}welfare.html`, label: 'Welfare', nav: 'welfare' },
-        { href: `${pathPrefix}membership.html`, label: 'Membership', nav: 'membership' },
-        { href: `${pathPrefix}contact.html`, label: 'Contact', nav: 'contact' },
-      ];
-
-      ul.innerHTML = flatLinks
-        .map(
-          ({ href, label, nav }) =>
-            `<li><a href="${href}" data-nav="${nav}">${label}</a></li>`
-        )
-        .join('');
-      ul.dataset.navFlat = 'true';
+    document.querySelectorAll('.main-nav .nav-item.has-dropdown').forEach((item) => {
+      const trigger = item.querySelector(':scope > a');
+      if (!trigger) return;
+      item.addEventListener('mouseenter', () => trigger.setAttribute('aria-expanded', 'true'));
+      item.addEventListener('mouseleave', () => trigger.setAttribute('aria-expanded', 'false'));
+      item.addEventListener('focusin', () => trigger.setAttribute('aria-expanded', 'true'));
+      item.addEventListener('focusout', (event) => {
+        if (!item.contains(event.relatedTarget)) {
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+      });
     });
   }
 
-  initFlatMainNav();
+  initMainNav();
 
   const currentPage = document.body.dataset.page;
   if (currentPage) {
-    document.querySelectorAll('[data-nav]').forEach((el) => {
-      el.classList.toggle('active', el.dataset.nav === currentPage);
+    const parentNav = {
+      gallery: 'events',
+      welfare: 'community',
+      sponsorship: 'about',
+      language: 'community',
+      culture: 'community',
+      wellbeing: 'community',
+      sports: 'community',
+      business: 'community'
+    };
+    const activeNav = parentNav[currentPage] || currentPage;
+    document.querySelectorAll('.main-nav > ul > li > a[data-nav]').forEach((el) => {
+      el.classList.toggle('active', el.dataset.nav === activeNav);
+    });
+    document.querySelectorAll('.mobile-nav a[data-nav]').forEach((el) => {
+      el.classList.toggle('active', el.dataset.nav === currentPage || el.dataset.nav === activeNav);
     });
   }
 
