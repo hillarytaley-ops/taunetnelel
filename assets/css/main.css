@@ -1199,6 +1199,11 @@ body[data-page="welfare"] {
   max-width: 960px;
 }
 
+.page-subnav--cards-three .page-subnav__inner {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 560px;
+}
+
 .page-subnav--cards-four .page-subnav__inner {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 760px;
@@ -1299,6 +1304,7 @@ body[data-page="welfare"] {
     font-size: 0.78rem;
   }
 
+  .page-subnav--cards-three .page-subnav__inner,
   .page-subnav--cards-four .page-subnav__inner {
     max-width: 100%;
     gap: 0.5rem;
@@ -2152,21 +2158,9 @@ body[data-page="welfare"] {
   margin-bottom: 0.5rem;
 }
 
-/* Inner page hero — centered copy with flanking logo rings */
-.page-hero__layout {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(72px, 1fr) minmax(0, 680px) minmax(72px, 1fr);
-  align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.5rem);
-  width: min(100% - 2rem, var(--max-w));
-  margin-inline: auto;
-}
-
+/* Inner page hero — centered copy */
 .page-hero__content {
   text-align: center;
-  justify-self: center;
   width: 100%;
 }
 
@@ -2192,11 +2186,17 @@ body[data-page="welfare"] {
   max-width: 560px;
 }
 
+/* Legacy layout wrapper (logos removed in JS) — keep centered */
+.page-hero__layout {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: min(100% - 2rem, var(--max-w));
+  margin-inline: auto;
+}
+
 .page-hero__logo {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  pointer-events: none;
+  display: none;
 }
 
 .page-hero__logo .hero__logo-ring {

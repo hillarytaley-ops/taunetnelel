@@ -787,32 +787,22 @@
   function initPageHeroLayout() {
     if (document.body.dataset.page === 'home') return;
 
-    const { src: logoSrc } = getLogoAsset();
-
+    // Center hero copy only — no flanking logo orbs (those made pages look off-center).
     document.querySelectorAll('.page-hero').forEach((hero) => {
-      if (hero.querySelector('.page-hero__layout')) return;
+      const layout = hero.querySelector('.page-hero__layout');
+      if (layout) {
+        const content = layout.querySelector('.page-hero__content') || layout.querySelector('.container');
+        layout.querySelectorAll('.page-hero__logo').forEach((logo) => logo.remove());
+        if (content) {
+          content.classList.add('page-hero__content');
+          hero.insertBefore(content, layout);
+        }
+        layout.remove();
+        return;
+      }
 
       const container = hero.querySelector('.container');
-      if (!container) return;
-
-      const layout = document.createElement('div');
-      layout.className = 'page-hero__layout';
-
-      const logoLeft = document.createElement('div');
-      logoLeft.className = 'page-hero__logo page-hero__logo--left';
-      logoLeft.setAttribute('aria-hidden', 'true');
-      logoLeft.innerHTML = createLogoRingMarkup(logoSrc);
-
-      const logoRight = document.createElement('div');
-      logoRight.className = 'page-hero__logo page-hero__logo--right';
-      logoRight.setAttribute('aria-hidden', 'true');
-      logoRight.innerHTML = createLogoRingMarkup(logoSrc);
-
-      container.classList.add('page-hero__content');
-      hero.insertBefore(layout, container);
-      layout.appendChild(logoLeft);
-      layout.appendChild(container);
-      layout.appendChild(logoRight);
+      if (container) container.classList.add('page-hero__content');
     });
   }
 

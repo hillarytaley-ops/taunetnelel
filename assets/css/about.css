@@ -64,7 +64,7 @@ body[data-page="about"] .impact {
 
 .about-block {
   max-width: 46rem;
-  margin-inline: 0;
+  margin-inline: auto;
 }
 
 .about-block--wide {
