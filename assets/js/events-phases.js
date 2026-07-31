@@ -1,6 +1,7 @@
 (function (global) {
   'use strict';
 
+  const RECENT_DELAY_DAYS = 1;
   const RECENT_MONTHS = 2;
 
   let EVENTS = [
@@ -140,8 +141,8 @@
 
   const PHASE_META = {
     upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'Empty until new dates are published', mod: 'upcoming' },
-    present: { label: 'Present Events', icon: '●', hint: 'Live right now', mod: 'present', live: true },
-    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'Ended in the last 2 months', mod: 'recent' },
+    present: { label: 'Present Events', icon: '●', hint: 'Live now or just ended', mod: 'present', live: true },
+    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'From 1 day to 2 months after the event', mod: 'recent' },
     past: { label: 'Past Events', icon: '◷', hint: 'Older than 2 months · photos & memories', mod: 'past' }
   };
 
@@ -222,17 +223,21 @@
     const startMs = start.getTime();
     const endMs = end.getTime();
 
-    // Hard rule: once an event has ended it can never stay in Upcoming (unless overridden above).
-    // 0–2 months after end → Most Recent; after that → Past.
-    if (currentMs > endMs) {
-      const recentUntil = new Date(endMs);
-      recentUntil.setMonth(recentUntil.getMonth() + RECENT_MONTHS);
-      if (currentMs <= recentUntil.getTime()) return 'most-recent';
-      return 'past';
-    }
-
+    // Upcoming until the event starts.
     if (currentMs < startMs) return 'upcoming';
-    return 'present';
+
+    // Live during the event, then stay Present for 1 day after it ends.
+    const mostRecentFrom = new Date(endMs);
+    mostRecentFrom.setDate(mostRecentFrom.getDate() + RECENT_DELAY_DAYS);
+    if (currentMs <= mostRecentFrom.getTime()) return 'present';
+
+    // Most Recent from 1 day after end until 2 months after end.
+    const pastFrom = new Date(endMs);
+    pastFrom.setMonth(pastFrom.getMonth() + RECENT_MONTHS);
+    if (currentMs <= pastFrom.getTime()) return 'most-recent';
+
+    // Past after 2 months.
+    return 'past';
   }
 
   function categorizeEvents(now) {
@@ -294,7 +299,7 @@
     const messages = {
       upcoming: 'No upcoming events yet — this column stays empty until the committee publishes new dates.',
       present: 'No events are running right now.',
-      'most-recent': 'No events have finished in the last 2 months.',
+      'most-recent': 'No events in the 1-day to 2-month window yet.',
       past: 'No past events to display yet.'
     };
     return messages[phase] || 'No events in this category.';
@@ -668,6 +673,7 @@
   }
 
   global.TaunetEventsPhases = {
+    RECENT_DELAY_DAYS,
     RECENT_MONTHS,
     EVENTS,
     getEventPhase,
