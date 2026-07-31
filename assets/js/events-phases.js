@@ -13,7 +13,7 @@
       location: 'Victoria · multiple venues',
       summary: 'A week of language, culture, and community activities across Victoria.',
       meta: '1–5 July 2026 · daily sessions',
-      badge: 'Live now',
+      badge: 'Culture week',
       featured: true,
       galleryUrl: 'gallery.html#agm-2025',
       registrationOpen: false
@@ -139,10 +139,10 @@
   ];
 
   const PHASE_META = {
-    upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'New dates appear when published', mod: 'upcoming' },
+    upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'Empty until new dates are published', mod: 'upcoming' },
     present: { label: 'Present Events', icon: '●', hint: 'Live right now', mod: 'present', live: true },
     'most-recent': { label: 'Most Recent', icon: '✦', hint: 'Ended in the last 2 months', mod: 'recent' },
-    past: { label: 'Past Events', icon: '◷', hint: 'Browse photos & memories', mod: 'past' }
+    past: { label: 'Past Events', icon: '◷', hint: 'Older than 2 months · photos & memories', mod: 'past' }
   };
 
   const PHASE_ORDER = ['upcoming', 'present', 'most-recent', 'past'];
@@ -213,19 +213,25 @@
       return 'past';
     }
 
-    // Ended events never stay in Upcoming — after 2 months they move to Past.
-    if (current > end) {
-      const recentUntil = new Date(end);
+    const currentMs = current.getTime();
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+
+    // Hard rule: once an event has ended it can never stay in Upcoming.
+    // 0–2 months after end → Most Recent; after that → Past.
+    if (currentMs > endMs) {
+      const recentUntil = new Date(endMs);
       recentUntil.setMonth(recentUntil.getMonth() + RECENT_MONTHS);
-      if (current <= recentUntil) return 'most-recent';
+      if (currentMs <= recentUntil.getTime()) return 'most-recent';
       return 'past';
     }
 
-    if (current < start) return 'upcoming';
+    if (currentMs < startMs) return 'upcoming';
     return 'present';
   }
 
   function categorizeEvents(now) {
+    const current = now || new Date();
     const groups = {
       upcoming: [],
       present: [],
@@ -234,12 +240,18 @@
     };
 
     EVENTS.forEach((event) => {
-      const phase = getEventPhase(event, now);
+      const phase = getEventPhase(event, current);
       groups[phase].push(event);
     });
 
+    // Safety net: never leave an ended event in Upcoming (bad/future DB dates aside).
+    groups.upcoming = groups.upcoming.filter((event) => {
+      const end = parseDate(event.end || event.start);
+      return !Number.isNaN(end.getTime()) && end.getTime() >= current.getTime();
+    });
+
     const byStart = (a, b) => parseDate(a.start) - parseDate(b.start);
-    const byEndDesc = (a, b) => parseDate(b.end) - parseDate(a.end);
+    const byEndDesc = (a, b) => parseDate(b.end || b.start) - parseDate(a.end || a.start);
 
     groups.upcoming.sort(byStart);
     groups.present.sort(byStart);
@@ -273,7 +285,7 @@
 
   function emptyMessage(phase) {
     const messages = {
-      upcoming: 'No upcoming events yet — awaiting committee update.',
+      upcoming: 'No upcoming events yet — this column stays empty until the committee publishes new dates.',
       present: 'No events are running right now.',
       'most-recent': 'No events have finished in the last 2 months.',
       past: 'No past events to display yet.'

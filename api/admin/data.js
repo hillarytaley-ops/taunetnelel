@@ -96,7 +96,7 @@ const SEED_EVENTS = [
     summary: 'A week of language, culture, and community activities across Victoria.',
     location: 'Victoria · multiple venues',
     meta: '1–5 July 2026 · daily sessions',
-    badge: 'Live now',
+    badge: 'Culture week',
     image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
     booking_url: null,
     gallery_url: 'gallery.html#agm-2025',

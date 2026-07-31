@@ -853,12 +853,21 @@ body[data-page="events"] .page-subnav--links a {
 }
 
 .events-phase-empty {
-  padding: 1.25rem 0.75rem;
+  padding: 1.5rem 1rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  min-height: 8.5rem;
+  background: rgba(248, 245, 240, 0.85);
+  border: 1px dashed rgba(139, 69, 19, 0.22);
+  border-radius: 12px;
+}
+
+.events-phase-column--upcoming .events-phase-empty {
+  min-height: 11rem;
 }
 
 .events-phase-empty__icon {
@@ -868,9 +877,10 @@ body[data-page="events"] .page-subnav--links a {
 
 .events-phase-empty p {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: 1.55;
+  max-width: 15rem;
 }
 
 .page-subnav__count {

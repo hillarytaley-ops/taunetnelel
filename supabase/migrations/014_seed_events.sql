@@ -12,7 +12,7 @@ values
     'A week of language, culture, and community activities across Victoria.',
     'Victoria · multiple venues',
     '1–5 July 2026 · daily sessions',
-    'Live now',
+    'Culture week',
     'wp-content/uploads/2025/09/Celebration.jpg',
     null,
     'gallery.html#agm-2025',
