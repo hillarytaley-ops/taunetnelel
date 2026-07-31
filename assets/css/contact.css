@@ -128,12 +128,18 @@ body[data-page="contact"] .page-subnav--links a:focus-visible {
 }
 
 body[data-page="contact"] .contact-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
   max-width: 960px;
   margin-inline: auto;
   margin-bottom: 0;
 }
 
 body[data-page="contact"] .contact-card {
+  flex: 1 1 210px;
+  max-width: 240px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -153,7 +159,7 @@ body[data-page="contact"] .contact-card__note {
   font-size: 0.85rem;
   margin-top: 0.5rem;
   color: var(--color-text-muted);
-  max-width: 14rem;
+  max-width: none;
   line-height: 1.45;
 }
 
