@@ -65,6 +65,7 @@ body[data-page="about"] .impact {
 .about-block {
   max-width: 46rem;
   margin-inline: auto;
+  text-align: center;
 }
 
 .about-block--wide {
@@ -85,10 +86,12 @@ body[data-page="about"] .impact {
   margin-bottom: 1.1rem;
   font-size: clamp(1.45rem, 2.8vw, 1.9rem);
   line-height: 1.25;
+  text-align: center;
 }
 
 .about-block__head {
   margin-bottom: 1.35rem;
+  text-align: center;
 }
 
 .about-block__head h2 {
@@ -100,6 +103,8 @@ body[data-page="about"] .impact {
   color: var(--color-text-muted);
   font-size: 0.98rem;
   max-width: 36rem;
+  margin-inline: auto;
+  text-align: center;
 }
 
 .about-block__lead,
@@ -108,6 +113,7 @@ body[data-page="about"] .impact {
   line-height: 1.75;
   color: var(--color-text-muted);
   margin-bottom: 1.05rem;
+  text-align: center;
 }
 
 .about-block__body p:last-child {
@@ -119,6 +125,7 @@ body[data-page="about"] .impact {
   flex-wrap: wrap;
   gap: 0.65rem;
   margin-top: 1.75rem;
+  justify-content: center;
 }
 
 .about-activities {
@@ -129,6 +136,7 @@ body[data-page="about"] .impact {
   margin: 1.75rem 0 0;
   padding-top: 1.35rem;
   border-top: 1px solid rgba(139, 69, 19, 0.1);
+  justify-content: center;
 }
 
 .about-activities li {
@@ -179,6 +187,7 @@ body[data-page="about"] .impact {
   flex-direction: column;
   gap: 0.55rem;
   margin-top: 0.35rem;
+  text-align: left;
 }
 
 .about-faq__item {
