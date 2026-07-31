@@ -26,10 +26,9 @@ LIGHT = (248, 243, 236)
 DARK = (35, 28, 22)
 MUTED = (90, 75, 60)
 WHITE = (255, 255, 255)
-GREEN = (46, 125, 50)
-AMBER = (180, 110, 20)
 
 REPORT_DATE = date(2026, 7, 30)
+REPORT_REVISION = "Rev B — evening update"
 
 
 def safe(text: str) -> str:
@@ -200,20 +199,20 @@ def build() -> None:
         6,
         safe(
             "Prepared for the Taunet Nelel Committee\n"
-            f"Report date: {REPORT_DATE.strftime('%d %B %Y')}\n"
+            f"Report date: {REPORT_DATE.strftime('%d %B %Y')} ({REPORT_REVISION})\n"
             "Organisation: Taunet Nelel Incorporated - Victoria\n"
             "Replaces: Website Migration Status Report (28 July 2026)"
         ),
         align="C",
     )
-    pdf.ln(8)
+    pdf.ln(6)
 
     # Summary box
     pdf.set_fill_color(*WHITE)
     pdf.set_draw_color(*ACCENT)
     pdf.set_line_width(0.6)
     box_y = pdf.get_y()
-    pdf.rect(22, box_y, pdf.w - 44, 68, style="DF")
+    pdf.rect(22, box_y, pdf.w - 44, 78, style="DF")
     pdf.set_xy(28, box_y + 4)
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*BROWN)
@@ -225,11 +224,11 @@ def build() -> None:
         "WordPress public-site migration is complete on Vercel + Supabase",
         "Live preview: https://taunetnelel.vercel.app",
         "540 member records imported (assoc / welfare / both)",
-        "Member sign-in and Join Us page live (Supabase Auth)",
-        "Committee admin portal live (PIN-secured)",
-        "Events and sponsors now load from Supabase (static fallback)",
+        "Members auth, dashboard, announcements, resources, profile save - LIVE",
+        "Events (10) and sponsors (12) loaded from Supabase",
+        "Newsletter signups save to Supabase; Admin can export CSV",
         "DNS cutover NOT done - www.taunetnelel.org still on WordPress",
-        "Next focus: email/SMTP, bulk member access, then go-live",
+        "NEXT: Custom SMTP (Resend) so bulk member invites can proceed",
     ]
     for line in snapshot:
         pdf.set_x(28)
@@ -253,8 +252,8 @@ def build() -> None:
         pdf,
         "The WordPress public website has been rebuilt and connected to the new "
         "platform. The committee can treat the migration itself as finished. "
-        "What remains is go-live readiness (member access at scale, payments, "
-        "and domain cutover).",
+        "What remains is go-live readiness (custom email, member access at scale, "
+        "payments decision, and domain cutover).",
     )
     pdf.ln(1)
 
@@ -263,11 +262,16 @@ def build() -> None:
     bullet(pdf, "Public pages rebuilt as modern HTML from the WordPress public site")
     bullet(pdf, "Gallery curated (Most recent / Past events); leadership photos kept on About")
     bullet(pdf, "Forms (Contact, Membership, Sponsorship, Welfare, Events) save to Supabase")
+    bullet(pdf, "Contact newsletter signup writes to newsletter_subscribers")
     pdf.ln(1)
 
     subsection(pdf, "1.2 Platform foundation (Supabase)")
     bullet(pdf, "Project connected; schema and security migrations applied")
-    bullet(pdf, "form_submissions, profiles, member_imports, events, sponsors, gallery tables")
+    bullet(
+        pdf,
+        "Tables in use: form_submissions, profiles, member_imports, events, sponsors, "
+        "gallery, newsletter_subscribers, announcements, member_resources",
+    )
     bullet(pdf, "Association membership and Welfare membership kept separate in data model")
     pdf.ln(1)
 
@@ -276,22 +280,18 @@ def build() -> None:
     bullet(pdf, "Migration data pack under backups/migration-ready/")
     bullet(pdf, "WordPress kept online as rollback until after domain cutover")
 
-    # ----- Page 3: Delivered since last report -----
+    # ----- Page 3: Delivered -----
     pdf.add_page()
-    section_title(pdf, "2. Delivered since the last committee report")
-
-    body(
-        pdf,
-        "Since the 28 July Migration Status Report, the following go-live "
-        "building blocks have been completed:",
-    )
-    pdf.ln(1)
+    section_title(pdf, "2. Delivered for go-live (current)")
 
     subsection(pdf, "2.1 Members area")
     bullet(pdf, "Unified Members page: Sign in / Join / Committee tabs")
     bullet(pdf, "Supabase Auth wired for member login and registration")
-    bullet(pdf, "Member dashboard, profile, events, welfare, and related pages updated")
+    bullet(pdf, "Dashboard announcements card (committee can publish from Admin)")
+    bullet(pdf, "Member Resources library (handbook, language, culture pages + DB list)")
+    bullet(pdf, "Profile edits save to Supabase profiles when signed in")
     bullet(pdf, "Welfare registration path and welfare gate behaviour fixed")
+    bullet(pdf, "BuddyBoss social features (feed, groups, forums, chat) intentionally deferred")
     pdf.ln(1)
 
     subsection(pdf, "2.2 Member records")
@@ -304,7 +304,7 @@ def build() -> None:
             ["Welfare only", "22"],
             ["Both association + welfare", "313"],
             ["Invite emails (test batch)", "5 sent successfully"],
-            ["Bulk invites", "Paused until custom SMTP is ready"],
+            ["Bulk invites", "Paused - waiting on custom SMTP"],
         ],
         [90, 84],
     )
@@ -312,15 +312,24 @@ def build() -> None:
 
     subsection(pdf, "2.3 Committee admin")
     bullet(pdf, "PIN-secured admin portal at /admin/ (separate from member login)")
-    bullet(pdf, "Live overview: enquiries, members (association / welfare filters), events, sponsors")
-    bullet(pdf, "Committee emails recognised in site_admins for elevated access")
+    bullet(pdf, "Live overview: enquiries, members (association / welfare filters)")
+    bullet(pdf, "Events seed button, sponsors, gallery toggles, newsletter CSV export")
+    bullet(pdf, "Announcements publish form for the members dashboard")
     pdf.ln(1)
 
-    subsection(pdf, "2.4 Public content from database")
-    bullet(pdf, "Events page + member events load from Supabase (static fallback if empty)")
-    bullet(pdf, "Sponsors page loads from Supabase (12 sponsors already seeded)")
-    bullet(pdf, "Gallery can enrich matching albums from Supabase; curated static list remains source of truth")
-    bullet(pdf, "One SQL seed still needed for events table (014_seed_events.sql) if not yet run")
+    subsection(pdf, "2.4 Public / member content from database")
+    draw_table(
+        pdf,
+        ["Item", "Status"],
+        [
+            ["Published events in Supabase", "Done - 10 events seeded"],
+            ["Published sponsors in Supabase", "Done - 12 sponsors"],
+            ["Newsletter capture + Admin CSV export", "Done (campaign tool still separate)"],
+            ["Announcements + member resources", "Done - seeded and wired on site"],
+            ["Gallery", "Curated static albums; Supabase enrich available"],
+        ],
+        [95, 79],
+    )
 
     # ----- Page 4: Systems + remaining -----
     pdf.add_page()
@@ -336,7 +345,7 @@ def build() -> None:
             ["Committee admin", "taunetnelel.vercel.app/admin/  - LIVE (PIN)"],
             ["BuddyBoss portal (old)", "https://portal.taunetnelel.org  - not the new primary"],
             ["ClientClub / GHL portal", "https://members.taunetnelel.org  - legacy broadcasts"],
-            ["Supabase", "Connected - forms, auth, members, events, sponsors"],
+            ["Supabase", "Connected - forms, auth, members, events, sponsors, newsletter"],
         ],
         [62, 112],
     )
@@ -357,13 +366,13 @@ def build() -> None:
         [
             [
                 "Custom email / SMTP",
-                "Not done",
-                "Needed before bulk member invites or mass confirmations",
+                "NEXT",
+                "Resend + Supabase SMTP guide ready; needed before bulk invites",
             ],
             [
                 "Bulk member access (~540)",
                 "Paused",
-                "5 test invites done; bulk last step before/after go-live",
+                "5 test invites done; batch after SMTP is verified",
             ],
             [
                 "Online payments",
@@ -371,19 +380,14 @@ def build() -> None:
                 "Membership / welfare / event fees still offline or external",
             ],
             [
-                "Portal feature parity",
-                "Partial",
-                "Core auth + dashboard live; BuddyBoss social features not rebuilt 1:1",
+                "BuddyBoss social rebuild",
+                "Deferred",
+                "Not required for go-live; core portal features already live",
             ],
             [
-                "Newsletter tool",
-                "Pending",
-                "Table ready; recommend Brevo / MailerLite / Resend post-cutover",
-            ],
-            [
-                "Events SQL seed (014)",
-                "Action needed",
-                "Run once in Supabase so live events come from the database",
+                "Marketing newsletter sends",
+                "Optional",
+                "Signups captured; export CSV to Brevo / MailerLite / Resend when ready",
             ],
             [
                 "DNS cutover",
@@ -398,6 +402,14 @@ def build() -> None:
         ],
         [48, 28, 98],
     )
+    pdf.ln(3)
+    body(
+        pdf,
+        "SMTP setup guide for the technical lead: docs/supabase/CUSTOM-SMTP-SETUP.md "
+        "(Resend recommended: verify taunetnelel.org DNS, enable Supabase custom SMTP, "
+        "raise rate limits, send 1 test invite).",
+        size=9,
+    )
 
     # ----- Page 5: Next steps + decision -----
     pdf.add_page()
@@ -405,18 +417,19 @@ def build() -> None:
 
     steps = [
         (
-            "Step 1 - Email readiness",
+            "Step 1 - Custom SMTP (NOW)",
             [
-                "Configure custom SMTP in Supabase (e.g. Resend, SendGrid, Brevo)",
-                "Confirm invite and password-reset emails land reliably",
+                "Create Resend account and verify taunetnelel.org (DNS records)",
+                "Enable Custom SMTP in Supabase Auth (smtp.resend.com:465)",
+                "Raise Auth email rate limits; send 1 test invite to a committee inbox",
             ],
         ),
         (
             "Step 2 - Member access at scale",
             [
-                "Either self-register with list emails, or batch invites after SMTP",
+                "Batch invites (e.g. 50 at a time) or self-register with list emails",
                 "Keep association and welfare membership flags correct",
-                "Committee smoke-test: sign in, dashboard, welfare gate",
+                "Committee smoke-test: sign in, dashboard, announcements, resources, welfare",
             ],
         ),
         (
@@ -469,7 +482,7 @@ def build() -> None:
     pdf.set_fill_color(*LIGHT)
     pdf.set_draw_color(*BROWN)
     y = pdf.get_y()
-    pdf.rect(18, y, pdf.epw, 36, style="DF")
+    pdf.rect(18, y, pdf.epw, 40, style="DF")
     pdf.set_xy(22, y + 3)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*BROWN)
@@ -481,8 +494,9 @@ def build() -> None:
         pdf.epw - 8,
         4.5,
         safe(
-            "1) Note that the WordPress public-site migration is complete.\n"
-            "2) Approve proceeding to email/SMTP setup and member access at scale.\n"
+            "1) Note that migration and core portal go-live features are complete.\n"
+            "2) Approve proceeding immediately to custom SMTP (Resend) and then "
+            "bulk member access.\n"
             "3) Confirm DNS cutover only after committee UAT sign-off "
             "(www.taunetnelel.org remains on WordPress until then)."
         ),

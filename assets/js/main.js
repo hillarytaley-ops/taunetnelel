@@ -828,17 +828,8 @@
   initFooterSocial();
 
   function initFloatingSocial() {
-    if (document.querySelector('.floating-social-folder')) return;
-    if (!document.querySelector('.site-header')) return;
-
-    const base =
-      document.querySelector('link[href*="assets/css/main.css"]')?.getAttribute('href')?.replace(/assets\/css\/main\.css.*$/, '') ||
-      '';
-
-    const script = document.createElement('script');
-    script.src = `${base}assets/floating-social/floating-social.js?v=7`;
-    script.defer = true;
-    document.body.appendChild(script);
+    // Footer already carries social + WhatsApp — skip floating clutter.
+    return;
   }
 
   initFloatingSocial();

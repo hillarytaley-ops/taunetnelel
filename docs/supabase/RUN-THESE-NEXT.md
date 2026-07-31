@@ -37,15 +37,24 @@ Imports are complete (**540**). Do **not** re-run `import_members.sql` (it delet
 
 ---
 
-## 4. 540 member access — NOT STARTED (rate limits)
+## 4. Custom SMTP — DO THIS BEFORE BULK INVITES
 
-All **540** still `pending_invite`. Options:
+Guide: `docs/supabase/CUSTOM-SMTP-SETUP.md` (Resend recommended).
 
-### A — Self-register (safest without SMTP)
-Members use https://taunetnelel.vercel.app/members/register.html with their **list email**.
+1. Verify `taunetnelel.org` in Resend (DNS records)  
+2. Enable Custom SMTP in Supabase Auth  
+3. Raise email rate limits  
+4. Send 1 test invite  
 
-### B — Test invites (5), then pause
-Built-in Auth email ≈ **2/hour**. Add custom SMTP before bulk.
+## 4b. 540 member access — AFTER SMTP
+
+Most rows still `pending_invite`. Options:
+
+### A — Self-register (works with or without SMTP; confirmations need SMTP at scale)
+Members use https://taunetnelel.vercel.app/members/auth.html?tab=join with their **list email**.
+
+### B — Invites in batches (needs SMTP)
+Built-in Auth email ≈ **2/hour**. Use custom SMTP before bulk.
 
 ```powershell
 cd C:\Users\hilla\Desktop\Taunet

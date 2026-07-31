@@ -1,6 +1,7 @@
 # Member access — do this next
 
-Two paths. Prefer **A** until custom SMTP is set.
+**SMTP first for scale:** follow [CUSTOM-SMTP-SETUP.md](./CUSTOM-SMTP-SETUP.md) before bulk invites.  
+Two paths below. Prefer **A** until custom SMTP is set.
 
 ---
 
@@ -38,9 +39,9 @@ python docs/invite_members.py --limit 5
 
 ---
 
-## After the test works
+## After SMTP works (see CUSTOM-SMTP-SETUP.md)
 
-1. Add custom SMTP in Supabase (SendGrid / Resend / etc.).
-2. Either keep self-register, or run bulk invites in batches:  
+1. Confirm 1 test invite arrives from `noreply@taunetnelel.org` (or your chosen sender).
+2. Run bulk invites in batches:  
    `python docs/invite_members.py --limit 50` (repeat carefully).
-3. Reply with: 5 invites ok? / self-register only? / SMTP ready?
+3. Or keep self-register at `/members/auth.html?tab=join` with list emails.
