@@ -131,10 +131,21 @@ body[data-page="contact"] .contact-cards {
   max-width: 960px;
   margin-inline: auto;
   margin-bottom: 0;
-  text-align: center;
 }
 
 body[data-page="contact"] .contact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+body[data-page="contact"] .contact-card h3,
+body[data-page="contact"] .contact-card p {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
   text-align: center;
 }
 
@@ -142,6 +153,8 @@ body[data-page="contact"] .contact-card__note {
   font-size: 0.85rem;
   margin-top: 0.5rem;
   color: var(--color-text-muted);
+  max-width: 14rem;
+  line-height: 1.45;
 }
 
 .contact-enquiry .site-form-panel {
