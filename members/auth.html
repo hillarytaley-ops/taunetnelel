@@ -277,7 +277,12 @@
           if (adminStatus) {
             adminStatus.hidden = false;
             adminStatus.classList.add('is-error');
-            adminStatus.textContent = err.message || 'Could not sign in.';
+            var msg = err.message || 'Could not sign in.';
+            if (/invalid login credentials/i.test(msg)) {
+              msg =
+                'Invalid email or password. Copy the password exactly from the reset script (no extra spaces), or run: python docs/supabase/reset_admin_password.py your@email.com';
+            }
+            adminStatus.textContent = msg;
           }
           if (btn) btn.disabled = false;
         }

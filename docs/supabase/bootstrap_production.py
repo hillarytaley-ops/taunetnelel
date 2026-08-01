@@ -69,8 +69,9 @@ def api(method: str, path: str, body: dict | list | None = None, prefer: str = "
 
 
 def gen_password(length: int = 16) -> str:
-    alphabet = string.ascii_letters + string.digits + "!@#$%&*"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+    # Alphanumeric only — special chars often break copy/paste in the login form
+    alphabet = string.ascii_letters + string.digits
+    return "Tn" + "".join(secrets.choice(alphabet) for _ in range(max(8, length - 2)))
 
 
 def upsert_site_admins() -> None:
@@ -109,9 +110,19 @@ def ensure_committee_auth(reset_passwords: bool) -> list[tuple[str, str]]:
                     {
                         "password": password,
                         "email_confirm": True,
+                        "ban_duration": "none",
                         "user_metadata": {"full_name": full_name},
                     },
                 )
+                # Verify password grant actually works before printing it
+                try:
+                    api(
+                        "POST",
+                        "/auth/v1/token?grant_type=password",
+                        {"email": email, "password": password},
+                    )
+                except RuntimeError as exc:
+                    print(f"WARN could not verify login for {email}: {exc}")
                 created.append((email, password))
                 print(f"OK  reset password for {email}")
             else:
