@@ -9,14 +9,18 @@
  *   SUPABASE_SERVICE_ROLE_KEY
  *   RESEND_API_KEY
  * Optional:
- *   RESEND_FROM  (default: Taunet Nelel <noreply@taunetnelel.org>)
+ *   RESEND_FROM  (default: Taunet Nelel <members@taunetnelel.org>)
+ *   RESEND_REPLY_TO (default: info@taunetnelel.org)
  *   PUBLIC_SITE_URL  (fallback origin for recovery redirect)
  */
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
+// Prefer a real mailbox name — "noreply@" often lands in spam (Resend guidance).
 const RESEND_FROM =
-  (process.env.RESEND_FROM || 'Taunet Nelel <noreply@taunetnelel.org>').trim();
+  (process.env.RESEND_FROM || 'Taunet Nelel <members@taunetnelel.org>').trim();
+const RESEND_REPLY_TO =
+  (process.env.RESEND_REPLY_TO || 'info@taunetnelel.org').trim();
 const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL || '').replace(/\/$/, '');
 
 const rateBuckets = new Map();
@@ -126,19 +130,23 @@ async function generateRecoveryLink(email, redirectTo) {
 }
 
 async function sendResendEmail({ to, subject, html, text }) {
+  const payloadBody = {
+    from: RESEND_FROM,
+    to: [to],
+    subject,
+    html,
+    text,
+  };
+  if (RESEND_REPLY_TO) {
+    payloadBody.reply_to = RESEND_REPLY_TO;
+  }
   const resp = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      from: RESEND_FROM,
-      to: [to],
-      subject,
-      html,
-      text,
-    }),
+    body: JSON.stringify(payloadBody),
   });
   const payload = await resp.json().catch(() => ({}));
   if (!resp.ok) {
@@ -150,25 +158,32 @@ async function sendResendEmail({ to, subject, html, text }) {
 }
 
 function buildEmail(actionLink) {
-  const subject = 'Reset your Taunet Nelel password';
+  const subject = 'Your Taunet Nelel member password';
   const text =
-    `Reset your Taunet Nelel member password:\n\n${actionLink}\n\n` +
-    'This link expires soon. If you did not request a reset, you can ignore this email.\n' +
-    '— Taunet Nelel IT team';
+    `Hello,\n\n` +
+    `Please use this link to choose a password for your Taunet Nelel member account:\n\n` +
+    `${actionLink}\n\n` +
+    `This link expires soon. If you did not request this, you can ignore this email.\n\n` +
+    `Questions: info@taunetnelel.org\n` +
+    `Taunet Nelel — Victoria, Australia\n` +
+    `https://taunetnelel.vercel.app\n`;
   const html = `<!DOCTYPE html>
-<html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#222;max-width:560px;margin:0 auto;padding:24px;">
-  <p>Kia ora,</p>
-  <p>We received a request to reset your <strong>Taunet Nelel</strong> member password.</p>
+<html><body style="font-family:Arial,Helvetica,sans-serif;line-height:1.55;color:#222;max-width:560px;margin:0 auto;padding:24px;background:#fff;">
+  <p style="margin:0 0 12px;font-size:16px;">Hello,</p>
+  <p style="margin:0 0 16px;">Please use the button below to choose a password for your <strong>Taunet Nelel</strong> member account.</p>
   <p style="margin:28px 0;">
     <a href="${escapeHtml(actionLink)}"
-       style="background:#8B1E1E;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;display:inline-block;">
-      Choose a new password
+       style="background:#8B4513;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;display:inline-block;font-weight:600;">
+      Choose your password
     </a>
   </p>
-  <p>Or copy this link into your browser:</p>
-  <p style="word-break:break-all;font-size:13px;color:#444;">${escapeHtml(actionLink)}</p>
-  <p style="color:#666;font-size:13px;">If you did not request this, you can ignore this email.</p>
-  <p>— Taunet Nelel IT team</p>
+  <p style="margin:0 0 8px;font-size:13px;color:#444;">Or copy this link into your browser:</p>
+  <p style="word-break:break-all;font-size:13px;color:#555;margin:0 0 20px;">${escapeHtml(actionLink)}</p>
+  <p style="color:#666;font-size:13px;margin:0 0 20px;">If you did not request this, you can ignore this email.</p>
+  <p style="margin:0;font-size:13px;color:#444;">
+    Taunet Nelel · Victoria, Australia<br>
+    <a href="mailto:info@taunetnelel.org" style="color:#8B4513;">info@taunetnelel.org</a>
+  </p>
 </body></html>`;
   return { subject, html, text };
 }
@@ -177,7 +192,7 @@ function buildEmail(actionLink) {
 const CLIENT_OK = {
   ok: true,
   message:
-    'If that email has a member account, a reset link was sent. Check inbox and spam (from noreply@taunetnelel.org).',
+    'If that email has a member account, a reset link was sent. Check inbox and spam (from members@taunetnelel.org).',
 };
 
 module.exports = async function handler(req, res) {

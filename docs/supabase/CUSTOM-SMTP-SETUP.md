@@ -7,8 +7,9 @@ Custom SMTP is required before **bulk member invites** or **mass email confirmat
 **Alternative:** Brevo (if you want one vendor for Auth SMTP + later newsletters).
 
 Project: `wgecdsdeeirzdvshdfwo`  
-Suggested sender: `noreply@taunetnelel.org` (or `members@taunetnelel.org`)  
-Sender name: `Taunet Nelel`
+Suggested sender: `members@taunetnelel.org` (**not** `noreply@` — noreply often lands in spam)  
+Sender name: `Taunet Nelel`  
+Deliverability guide: **`EMAIL-DELIVERABILITY.md`**
 
 ---
 
@@ -41,7 +42,7 @@ https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo/auth/smtp
 
 | Field | Value |
 |-------|--------|
-| Sender email | `noreply@taunetnelel.org` (must be on the verified domain) |
+| Sender email | `members@taunetnelel.org` (must be on the verified domain; avoid noreply@) |
 | Sender name | `Taunet Nelel` |
 | Host | `smtp.resend.com` |
 | Port | `465` |
@@ -81,7 +82,7 @@ python docs/invite_members.py --limit 1
 
 Or: create a throwaway Auth user / password reset for a committee email and confirm delivery + From address.
 
-**Pass when:** email arrives from `Taunet Nelel <noreply@taunetnelel.org>`, link opens the members auth page, password can be set.
+**Pass when:** email arrives from `Taunet Nelel <members@taunetnelel.org>`, link opens the members auth page, password can be set.
 
 ### 7) Only then — bulk invites
 

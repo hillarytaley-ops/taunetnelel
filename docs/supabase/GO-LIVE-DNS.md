@@ -82,11 +82,13 @@ You already have a basic DMARC record:
 v=DMARC1; p=none;
 ```
 
-That is safe (monitoring only). To improve reporting and inbox placement, in **Cloudflare → DNS → Records** edit `_dmarc` TXT to:
+That is safe (monitoring only) but too thin for good inbox placement. In **Cloudflare → DNS → Records** edit `_dmarc` TXT to:
 
 ```text
 v=DMARC1; p=none; rua=mailto:info@taunetnelel.org; fo=1; aspf=r; adkim=r
 ```
+
+Also set Supabase SMTP + Vercel `RESEND_FROM` to `members@taunetnelel.org` (see `EMAIL-DELIVERABILITY.md`).
 
 | Field | Value |
 |--------|--------|

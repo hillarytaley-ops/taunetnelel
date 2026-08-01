@@ -19,14 +19,15 @@ Sign in at `/members/auth.html?tab=admin`.
 | `SUPABASE_URL` | your project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret |
 | `RESEND_API_KEY` | Resend API key (`re_...`) — required for member **Forgot password** emails |
-| `RESEND_FROM` | optional, default `Taunet Nelel <noreply@taunetnelel.org>` |
+| `RESEND_FROM` | `Taunet Nelel <members@taunetnelel.org>` (avoid `noreply@` — spam risk) |
+| `RESEND_REPLY_TO` | `info@taunetnelel.org` |
 
 **Never** put `service_role` in frontend JS. You can remove unused `ADMIN_BOOTSTRAP_PIN` / `ADMIN_PIN` from Vercel.
 
 ### Member Forgot password
 
 Ordinary members use **Forgot password?** on `/members/auth.html`.  
-That hits `/api/auth/request-password-reset`, which creates a Supabase recovery link and emails it through **Resend** (same domain as invites: `noreply@taunetnelel.org`).
+That hits `/api/auth/request-password-reset`, which creates a Supabase recovery link and emails it through **Resend** (`members@taunetnelel.org`). See `EMAIL-DELIVERABILITY.md`.
 
 Without `RESEND_API_KEY` on Vercel, the button cannot send mail.
 

@@ -41,7 +41,7 @@ python docs/invite_members.py --limit 5
 
 ## After SMTP works (see CUSTOM-SMTP-SETUP.md)
 
-1. Confirm 1 test invite arrives from `noreply@taunetnelel.org` (or your chosen sender).
+1. Confirm 1 test invite arrives from `members@taunetnelel.org` (avoid noreply@).
 2. Run bulk invites in batches:  
    `python docs/invite_members.py --limit 50` (repeat carefully).
 3. Or keep self-register at `/members/auth.html?tab=join` with list emails.
