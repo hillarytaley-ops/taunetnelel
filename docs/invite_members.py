@@ -152,13 +152,83 @@ def invite(row: dict, redirect_to: str) -> str:
         detail = str(exc)
         if "email_exists" not in detail and "already been registered" not in detail.lower():
             raise
-        # Existing Auth user (e.g. committee bootstrap) — send password reset email
+        # Existing Auth user — prefer generate_link + Resend (same path as site Forgot password)
+        redirect = redirect_to or (
+            "https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery"
+        )
+        if _env("RESEND_API_KEY"):
+            link_payload = api(
+                "POST",
+                "/auth/v1/admin/generate_link",
+                {
+                    "type": "recovery",
+                    "email": email,
+                    "options": {"redirect_to": redirect},
+                },
+            )
+            action_link = (
+                (link_payload or {}).get("action_link")
+                or (link_payload or {}).get("properties", {}).get("action_link")
+                or ""
+            )
+            if not action_link:
+                raise RuntimeError("generate_link returned no action_link")
+            send_resend_recovery(email, action_link, row.get("full_name") or "")
+            return "recovery_sent"
+
+        # Fallback: Supabase SMTP recover (redirect must be allowlisted)
         api(
             "POST",
             "/auth/v1/recover",
-            {"email": email},
+            {"email": email, "gotrue_meta_security": {}},
         )
         return "recovery_sent"
+
+
+def send_resend_recovery(email: str, action_link: str, full_name: str) -> None:
+    key = _env("RESEND_API_KEY")
+    from_addr = _env("RESEND_FROM") or "Taunet Nelel <members@taunetnelel.org>"
+    reply_to = _env("RESEND_REPLY_TO") or "info@taunetnelel.org"
+    name = (full_name or "").strip() or "there"
+    subject = "Your Taunet Nelel member password"
+    text = (
+        f"Hello {name},\n\n"
+        f"Choose a password for your Taunet Nelel member account:\n\n"
+        f"{action_link}\n\n"
+        f"If you did not request this, ignore this email.\n"
+        f"Taunet Nelel — Victoria, Australia\n"
+    )
+    html = (
+        f"<p>Hello {name},</p>"
+        f"<p>Please choose a password for your <strong>Taunet Nelel</strong> member account.</p>"
+        f'<p><a href="{action_link}" style="background:#8B4513;color:#fff;padding:12px 20px;'
+        f'text-decoration:none;border-radius:6px;display:inline-block;">Choose your password</a></p>'
+        f"<p style='font-size:13px;color:#555;word-break:break-all'>{action_link}</p>"
+        f"<p>Taunet Nelel · Victoria, Australia · info@taunetnelel.org</p>"
+    )
+    body = {
+        "from": from_addr,
+        "to": [email],
+        "subject": subject,
+        "html": html,
+        "text": text,
+        "reply_to": reply_to,
+    }
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=json.dumps(body).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Resend {exc.code}: {detail}") from exc
 
 
 def main() -> None:

@@ -307,8 +307,18 @@
           }
         }
       } catch (error) {
+        const raw = String(error?.message || '');
+        const expired =
+          /invalid|expired|otp_expired|flow_state/i.test(raw) ||
+          /email link is invalid/i.test(raw);
         if (loginForm) {
-          showAuthMessage(loginForm, authErrorMessage(error), true);
+          showAuthMessage(
+            loginForm,
+            expired
+              ? 'That reset link is no longer valid (often used once by email scanners). Enter your email and click Forgot password for a fresh link — open it from Inbox, not Spam.'
+              : authErrorMessage(error),
+            true
+          );
         } else {
           console.warn('Auth callback failed:', error);
         }

@@ -70,19 +70,45 @@
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const code = search.get('code');
     const type = search.get('type') || hash.get('type');
+    const errorCode = search.get('error_code') || hash.get('error_code');
     const errorDescription = search.get('error_description') || hash.get('error_description');
 
-    if (errorDescription) {
-      throw new Error(decodeURIComponent(errorDescription.replace(/\+/g, ' ')));
+    if (errorDescription || errorCode) {
+      const msg = errorDescription
+        ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
+        : String(errorCode);
+      // Clear bad tokens from the address bar so refresh doesn't re-show the error
+      const clean = `${window.location.pathname}?tab=signin`;
+      window.history.replaceState({}, document.title, clean);
+      throw new Error(msg);
     }
 
     if (code) {
       const { data, error } = await client.auth.exchangeCodeForSession(window.location.href);
       if (error) throw error;
-      // Drop one-time code from the address bar
-      const clean = `${window.location.pathname}${window.location.hash || ''}`;
-      window.history.replaceState({}, document.title, clean);
-      return { type: type || 'email', session: data?.session || null };
+      const resolvedType = type || 'email';
+      // Keep type=recovery in the URL so the reset form can detect it after reload
+      const keep =
+        resolvedType === 'recovery'
+          ? `${window.location.pathname}?tab=signin&type=recovery`
+          : `${window.location.pathname}?tab=signin`;
+      window.history.replaceState({}, document.title, keep);
+      return { type: resolvedType, session: data?.session || null };
+    }
+
+    // Implicit / hash recovery links (#access_token=...&type=recovery)
+    if (hash.get('access_token') && client.auth.getSession) {
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      if (data?.session) {
+        const resolvedType = type || 'email';
+        const keep =
+          resolvedType === 'recovery'
+            ? `${window.location.pathname}?tab=signin&type=recovery`
+            : `${window.location.pathname}?tab=signin`;
+        window.history.replaceState({}, document.title, keep);
+        return { type: resolvedType, session: data.session };
+      }
     }
 
     const { data, error } = await client.auth.getSession();
