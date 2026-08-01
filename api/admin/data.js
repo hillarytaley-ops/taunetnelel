@@ -686,11 +686,174 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { rows: data || [] });
       }
 
+      if (resource === 'business-content') {
+        const [biz, news, blog] = await Promise.all([
+          sb('businesses?select=*&order=name.asc'),
+          sb('business_news?select=*&order=published_date.desc.nullslast'),
+          sb('business_blog?select=*&order=published_date.desc.nullslast').catch(() => ({ data: [] }))
+        ]);
+        return json(res, 200, {
+          updatedAt: new Date().toISOString(),
+          businesses: (biz.data || []).map((row) => ({
+            id: row.id,
+            name: row.name,
+            category: row.category || '',
+            description: row.description || '',
+            contactName: row.contact_name || '',
+            phone: row.phone || '',
+            email: row.email || '',
+            website: row.website || '',
+            location: row.location || '',
+            is_published: row.is_published !== false
+          })),
+          news: (news.data || []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            date: row.published_date || '',
+            summary: row.summary || '',
+            body: row.body || '',
+            is_published: row.is_published !== false
+          })),
+          blog: (blog.data || []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            date: row.published_date || '',
+            author: row.author || 'Taunet Nelel Team',
+            summary: row.summary || '',
+            body: row.body || '',
+            is_published: row.is_published !== false
+          }))
+        });
+      }
+
       return json(res, 400, { error: 'Unknown resource' });
     }
 
     if (req.method === 'POST') {
       const body = await readBody(req);
+
+      if (resource === 'business-content-save') {
+        const businesses = Array.isArray(body.businesses) ? body.businesses : [];
+        const news = Array.isArray(body.news) ? body.news : [];
+        const blog = Array.isArray(body.blog) ? body.blog : [];
+
+        const bizRows = businesses
+          .map((item) => {
+            const id = String(item.id || '').trim();
+            const name = String(item.name || item.title || '').trim();
+            if (!id || !name) return null;
+            return {
+              id,
+              name,
+              category: String(item.category || '').trim() || null,
+              description: String(item.description || item.summary || '').trim() || null,
+              contact_name: String(item.contactName || '').trim() || null,
+              phone: String(item.phone || '').trim() || null,
+              email: String(item.email || '').trim() || null,
+              website: safeHttpUrl(item.website),
+              location: String(item.location || '').trim() || null,
+              is_published: item.is_published !== false
+            };
+          })
+          .filter(Boolean);
+
+        const newsRows = news
+          .map((item) => {
+            const id = String(item.id || '').trim();
+            const title = String(item.title || '').trim();
+            if (!id || !title) return null;
+            return {
+              id,
+              title,
+              published_date: String(item.date || '').trim() || null,
+              summary: String(item.summary || '').trim() || null,
+              body: String(item.body || '').trim() || null,
+              is_published: item.is_published !== false
+            };
+          })
+          .filter(Boolean);
+
+        const blogRows = blog
+          .map((item) => {
+            const id = String(item.id || '').trim();
+            const title = String(item.title || '').trim();
+            if (!id || !title) return null;
+            return {
+              id,
+              title,
+              published_date: String(item.date || '').trim() || null,
+              author: String(item.author || 'Taunet Nelel Team').trim() || null,
+              summary: String(item.summary || '').trim() || null,
+              body: String(item.body || '').trim() || null,
+              is_published: item.is_published !== false
+            };
+          })
+          .filter(Boolean);
+
+        const existingBiz = await sb('businesses?select=id');
+        const existingNews = await sb('business_news?select=id');
+        let existingBlog = { data: [] };
+        try {
+          existingBlog = await sb('business_blog?select=id');
+        } catch (_) {
+          existingBlog = { data: [] };
+        }
+
+        const keepBiz = new Set(bizRows.map((r) => r.id));
+        const keepNews = new Set(newsRows.map((r) => r.id));
+        const keepBlog = new Set(blogRows.map((r) => r.id));
+
+        for (const row of existingBiz.data || []) {
+          if (!keepBiz.has(row.id)) {
+            await sb(`businesses?id=eq.${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+          }
+        }
+        for (const row of existingNews.data || []) {
+          if (!keepNews.has(row.id)) {
+            await sb(`business_news?id=eq.${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+          }
+        }
+        for (const row of existingBlog.data || []) {
+          if (!keepBlog.has(row.id)) {
+            await sb(`business_blog?id=eq.${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+          }
+        }
+
+        if (bizRows.length) {
+          await sb('businesses?on_conflict=id', {
+            method: 'POST',
+            prefer: 'resolution=merge-duplicates,return=minimal',
+            body: JSON.stringify(bizRows)
+          });
+        }
+        if (newsRows.length) {
+          await sb('business_news?on_conflict=id', {
+            method: 'POST',
+            prefer: 'resolution=merge-duplicates,return=minimal',
+            body: JSON.stringify(newsRows)
+          });
+        }
+        if (blogRows.length) {
+          try {
+            await sb('business_blog?on_conflict=id', {
+              method: 'POST',
+              prefer: 'resolution=merge-duplicates,return=minimal',
+              body: JSON.stringify(blogRows)
+            });
+          } catch (err) {
+            return json(res, 400, {
+              error:
+                err.message ||
+                'business_blog table missing. Run migration 019_business_hub_cms.sql (or APPLY-REMAINING.sql).'
+            });
+          }
+        }
+
+        return json(res, 200, {
+          ok: true,
+          counts: { businesses: bizRows.length, news: newsRows.length, blog: blogRows.length }
+        });
+      }
 
       if (resource === 'seed-events') {
         const { data } = await sb('events?on_conflict=id', {

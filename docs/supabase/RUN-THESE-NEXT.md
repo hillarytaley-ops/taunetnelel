@@ -1,99 +1,55 @@
-# Migration steps — current status (2026-07-30)
+# What to run next (production finish)
 
-## 1. Vercel env + redeploy — DONE
+## A. One paste in Supabase SQL Editor (required)
 
-Already set on Production/Preview: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.  
-Remove obsolete `ADMIN_PIN` if still present. Redeployed with `.vercelignore` (excludes `backups/` ~620MB).
+Open: Supabase → SQL Editor → New query  
+Paste the full file: **`docs/supabase/APPLY-REMAINING.sql`** → Run  
 
-Admin uses Supabase Auth + `site_admins` (not a shared PIN).  
-Also run `018_security_hardening.sql` in the SQL Editor.
+That applies:
 
-Admin: https://taunetnelel.vercel.app/admin/
+- `013` — enquiry `status` + `site_admins`
+- `018` — security hardening (membership locks, newsletter RPC, form RLS)
+- `019` — Business Hub blog table + admin write policies
 
----
+## B. Bootstrap committee Auth + seed Business Hub
 
-## 2. Confirm SQL — PARTIAL
-
-| Check | Result |
-|-------|--------|
-| `member_imports` | **540** rows |
-| Stats | assoc-only 205, welfare-only 22, both 313 |
-| `profiles` | 1 registered so far |
-| `form_submissions.status` | **Missing** → migration **009** not fully applied |
-| `site_admins` / `011` | Confirm in SQL Editor (API can’t list without service_role) |
-
-**You:** In Supabase → SQL Editor, run:
-
-`supabase/migrations/013_ensure_009_status_and_admins.sql`
-
-Then optionally `012_verify_migration_status.sql`.
-
-If you prefer full re-runs instead of 013: `008` → `009` → `011` → `010`.
-
----
-
-## 3. Re-load `import_members.sql` — SKIP
-
-Imports are complete (**540**). Do **not** re-run `import_members.sql` (it deletes then re-inserts).
-
----
-
-## 4. Custom SMTP — DO THIS BEFORE BULK INVITES
-
-Guide: `docs/supabase/CUSTOM-SMTP-SETUP.md` (Resend recommended).
-
-1. Verify `taunetnelel.org` in Resend (DNS records)  
-2. Enable Custom SMTP in Supabase Auth  
-3. Raise email rate limits  
-4. Send 1 test invite  
-
-## 4b. 540 member access — AFTER SMTP
-
-Most rows still `pending_invite`. Options:
-
-### A — Self-register (works with or without SMTP; confirmations need SMTP at scale)
-Members use https://taunetnelel.vercel.app/members/auth.html?tab=join with their **list email**.
-
-### B — Invites in batches (needs SMTP)
-Built-in Auth email ≈ **2/hour**. Use custom SMTP before bulk.
+In PowerShell (use your **service_role** key — never commit it):
 
 ```powershell
 cd C:\Users\hilla\Desktop\Taunet
 $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"
 $env:SUPABASE_SERVICE_ROLE_KEY = "paste-service-role-here"
+python docs/supabase/bootstrap_production.py --reset-passwords
+```
+
+It will print one-time passwords for committee emails.  
+Sign in at `/members/auth.html?tab=admin` with email + that password (preferred over bootstrap PIN).
+
+## C. Seed Events + Gallery (Admin UI)
+
+1. Open `/admin/` as committee  
+2. Events → **Seed events from site list** (if empty)  
+3. Gallery → **Sync site albums to DB** (if empty)
+
+Public pages already prefer Supabase when data exists; static JS remains fallback.
+
+## D. Custom SMTP before inviting ~540 members
+
+Follow **`docs/supabase/CUSTOM-SMTP-SETUP.md`** (Resend + DNS).  
+Then:
+
+```powershell
 python docs/invite_members.py --limit 5
 ```
 
-Only remove `--limit` after SMTP is configured.
+Members can also self-join at `/members/auth.html?tab=join` with their list email.
 
----
+## E. Vercel env
 
-## After 013
+| Name | Notes |
+|------|--------|
+| `SUPABASE_URL` | required |
+| `SUPABASE_SERVICE_ROLE_KEY` | required |
+| `ADMIN_BOOTSTRAP_PIN` | optional emergency PIN (server only) |
 
-1. Admin Overview + Enquiries should show `status` without fallbacks  
-2. Reply with `site_admins` emails from the 013 result set  
-3. Say whether you want a 5-invite test or self-serve only  
-
----
-
-## 5. Seed public events — RUN ONCE (or use Admin button)
-
-Public Events/Sponsors/Gallery now read from Supabase (static HTML/JS as fallback).
-
-**Option A:** In Supabase → SQL Editor, run `supabase/migrations/014_seed_events.sql`
-
-**Option B (after deploy):** Admin → Events (DB) → **Seed events from site list**
-
-Sponsors were already seeded in `001`. Gallery enrich already uses `gallery_albums` / `gallery_photos`.
-
----
-
-## 6. Portal extras — RUN ONCE
-
-In Supabase → SQL Editor, run:
-
-`supabase/migrations/015_announcements_and_resources.sql`
-
-This adds announcements + member resources, and allows newsletter re-subscribe updates.
-
-Newsletter: Contact page → `newsletter_subscribers`. Admin → Newsletter → Export CSV for Brevo / MailerLite / Resend.
+Remove reliance on the bootstrap PIN once committee Auth logins work.

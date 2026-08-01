@@ -1,7 +1,7 @@
 /**
  * Load gallery albums/photos from Supabase.
- * Curated static gallery-data.js stays the public source of truth —
- * Supabase may enrich matching album IDs but must not add dump/extra albums.
+ * When DB albums have photos, those win; static gallery-data.js fills gaps
+ * and remains the fallback when Supabase is empty.
  */
 (function (global) {
   'use strict';
@@ -78,10 +78,10 @@
       remoteAlbums.filter((a) => curatedIds.has(a.id)).map((a) => [a.id, a])
     );
 
-    // Prefer curated static albums; take remote when it has more photos.
+    // Prefer DB albums that already have photos; keep static when DB album empty.
     const mergedCurated = current.map((album) => {
       const remote = remoteById.get(album.id);
-      if (remote && remote.photos.length > album.photos.length) return remote;
+      if (remote && remote.photos.length) return remote;
       return album;
     });
 

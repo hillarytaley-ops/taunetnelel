@@ -17,6 +17,57 @@
     return [...items].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   }
 
+  async function loadFromSupabase() {
+    const api = global.taunetSupabaseApi;
+    if (!api?.isConfigured()) return null;
+    const client = await api.ensureClient();
+    if (!client) return null;
+
+    const [bizRes, newsRes, blogRes] = await Promise.all([
+      client.from('businesses').select('*').eq('is_published', true).order('name'),
+      client.from('business_news').select('*').eq('is_published', true).order('published_date', { ascending: false }),
+      client.from('business_blog').select('*').eq('is_published', true).order('published_date', { ascending: false })
+    ]);
+
+    if (bizRes.error && newsRes.error) return null;
+
+    const businesses = (bizRes.data || []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category || '',
+      description: row.description || '',
+      contactName: row.contact_name || '',
+      phone: row.phone || '',
+      email: row.email || '',
+      website: row.website || '',
+      location: row.location || ''
+    }));
+    const news = (newsRes.data || []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      date: row.published_date || '',
+      summary: row.summary || '',
+      body: row.body || ''
+    }));
+    const blog = (blogRes.error ? [] : blogRes.data || []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      date: row.published_date || '',
+      author: row.author || 'Taunet Nelel Team',
+      summary: row.summary || '',
+      body: row.body || ''
+    }));
+
+    if (!businesses.length && !news.length && !blog.length) return null;
+
+    return normalizeContent({
+      updatedAt: new Date().toISOString(),
+      businesses,
+      news,
+      blog
+    });
+  }
+
   async function loadBusinessContent(options) {
     const preferStorage = options?.preferStorage === true;
     const basePath = options?.basePath || '';
@@ -26,14 +77,20 @@
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) return normalizeContent(JSON.parse(stored));
       } catch {
-        /* fall through to fetch */
+        /* fall through */
       }
+    }
+
+    try {
+      const remote = await loadFromSupabase();
+      if (remote) return remote;
+    } catch (err) {
+      console.warn('Business Hub Supabase load skipped:', err);
     }
 
     const response = await fetch(`${basePath}${DATA_URL}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Could not load business content.');
-    const data = normalizeContent(await response.json());
-    return data;
+    return normalizeContent(await response.json());
   }
 
   function saveBusinessContent(data) {
@@ -79,6 +136,7 @@
     normalizeContent,
     sortByDateDesc,
     loadBusinessContent,
+    loadFromSupabase,
     saveBusinessContent,
     clearStoredBusinessContent,
     downloadBusinessContent,

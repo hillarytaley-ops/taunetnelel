@@ -9,6 +9,12 @@ _gotabgaa.*
 _gh-tree.json
 .cursor/
 
+# Local backups / member PII (never commit)
+backups/
+docs/*.csv
+docs/General Member list*
+docs/WELFARE ADDRESS*
+
 # OS
 .DS_Store
 Thumbs.db

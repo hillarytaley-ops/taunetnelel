@@ -1,0 +1,259 @@
+"""
+One-shot production bootstrap for Taunet Nelel.
+
+Does (via Supabase service role API — no SQL runner needed for these steps):
+  1) Upsert site_admins committee emails
+  2) Create Auth accounts for committee emails (or reset if --reset-passwords)
+  3) Seed businesses / news / blog from assets/data/business-content.json
+  4) Report schema readiness (status column, business_blog, etc.)
+
+You still must paste docs/supabase/APPLY-REMAINING.sql in the SQL Editor once
+(for RLS / triggers that the REST API cannot create).
+
+NEVER commit the service_role key.
+
+Usage (PowerShell):
+  $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"
+  $env:SUPABASE_SERVICE_ROLE_KEY = "paste-service-role-here"
+  python docs/supabase/bootstrap_production.py
+  python docs/supabase/bootstrap_production.py --reset-passwords
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import secrets
+import string
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+COMMITTEE = [
+    ("hillarytaley@gmail.com", "Hillary Taley"),
+    ("hillarykaptingei@gmail.com", "Hillary Kaptingei"),
+    ("psowey@gmail.com", "Ruto Mangusho"),
+    ("alexissams71@gmail.com", "Brian Ngetich"),
+    ("rutopsowey@gmail.com", "Ruto Mangusho"),
+    ("briankip57@gmail.com", "Webmaster"),
+]
+
+
+def api(method: str, path: str, body: dict | list | None = None, prefer: str = "return=representation"):
+    if not URL or not SERVICE_KEY:
+        raise SystemExit("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.")
+    req = urllib.request.Request(
+        f"{URL}{path}",
+        data=None if body is None else json.dumps(body).encode("utf-8"),
+        method=method,
+        headers={
+            "apikey": SERVICE_KEY,
+            "Authorization": f"Bearer {SERVICE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": prefer,
+        },
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"{exc.code} {path}: {detail}") from exc
+
+
+def gen_password(length: int = 16) -> str:
+    alphabet = string.ascii_letters + string.digits + "!@#$%&*"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def upsert_site_admins() -> None:
+    rows = [{"email": e.lower(), "full_name": name} for e, name in COMMITTEE]
+    api(
+        "POST",
+        "/rest/v1/site_admins?on_conflict=email",
+        rows,
+        prefer="resolution=merge-duplicates,return=minimal",
+    )
+    print(f"OK  site_admins upserted ({len(rows)})")
+
+
+def list_auth_users() -> dict[str, dict]:
+    # Admin API paginates; first page is enough for committee setup
+    data = api("GET", "/auth/v1/admin/users?page=1&per_page=200")
+    users = data.get("users") if isinstance(data, dict) else data
+    out: dict[str, dict] = {}
+    for user in users or []:
+        email = (user.get("email") or "").lower()
+        if email:
+            out[email] = user
+    return out
+
+
+def ensure_committee_auth(reset_passwords: bool) -> list[tuple[str, str]]:
+    existing = list_auth_users()
+    created: list[tuple[str, str]] = []
+    for email, full_name in COMMITTEE:
+        password = gen_password()
+        if email in existing:
+            if reset_passwords:
+                api(
+                    "PUT",
+                    f"/auth/v1/admin/users/{existing[email]['id']}",
+                    {
+                        "password": password,
+                        "email_confirm": True,
+                        "user_metadata": {"full_name": full_name},
+                    },
+                )
+                created.append((email, password))
+                print(f"OK  reset password for {email}")
+            else:
+                print(f"--  Auth user already exists: {email} (pass --reset-passwords to set a new one)")
+            continue
+        api(
+            "POST",
+            "/auth/v1/admin/users",
+            {
+                "email": email,
+                "password": password,
+                "email_confirm": True,
+                "user_metadata": {"full_name": full_name, "plan": "basic"},
+            },
+        )
+        created.append((email, password))
+        print(f"OK  created Auth user {email}")
+    return created
+
+
+def seed_business_content() -> None:
+    path = ROOT / "assets" / "data" / "business-content.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    businesses = [
+        {
+            "id": b["id"],
+            "name": b["name"],
+            "category": b.get("category"),
+            "description": b.get("description"),
+            "contact_name": b.get("contactName"),
+            "phone": b.get("phone"),
+            "email": b.get("email"),
+            "website": b.get("website") or None,
+            "location": b.get("location"),
+            "is_published": True,
+        }
+        for b in data.get("businesses") or []
+    ]
+    news = [
+        {
+            "id": n["id"],
+            "title": n["title"],
+            "published_date": n.get("date"),
+            "summary": n.get("summary"),
+            "body": n.get("body"),
+            "is_published": True,
+        }
+        for n in data.get("news") or []
+    ]
+    blog = [
+        {
+            "id": b["id"],
+            "title": b["title"],
+            "published_date": b.get("date"),
+            "author": b.get("author") or "Taunet Nelel Team",
+            "summary": b.get("summary"),
+            "body": b.get("body"),
+            "is_published": True,
+        }
+        for b in data.get("blog") or []
+    ]
+    if businesses:
+        api(
+            "POST",
+            "/rest/v1/businesses?on_conflict=id",
+            businesses,
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+    if news:
+        api(
+            "POST",
+            "/rest/v1/business_news?on_conflict=id",
+            news,
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
+    try:
+        if blog:
+            api(
+                "POST",
+                "/rest/v1/business_blog?on_conflict=id",
+                blog,
+                prefer="resolution=merge-duplicates,return=minimal",
+            )
+        print(f"OK  business content seeded (biz={len(businesses)} news={len(news)} blog={len(blog)})")
+    except RuntimeError as exc:
+        print(f"WARN business_blog missing — run APPLY-REMAINING.sql first ({exc})")
+        print(f"OK  businesses/news seeded (biz={len(businesses)} news={len(news)})")
+
+
+def schema_report() -> None:
+    print("\nSchema checks:")
+    probes = [
+        ("form_submissions.status", "/rest/v1/form_submissions?select=status&limit=1"),
+        ("site_admins", "/rest/v1/site_admins?select=email&limit=20"),
+        ("business_blog", "/rest/v1/business_blog?select=id&limit=1"),
+        ("events", "/rest/v1/events?select=id&limit=1"),
+        ("gallery_albums", "/rest/v1/gallery_albums?select=id&limit=1"),
+        ("announcements", "/rest/v1/announcements?select=id&limit=1"),
+    ]
+    for label, path in probes:
+        try:
+            data = api("GET", path)
+            n = len(data) if isinstance(data, list) else "?"
+            print(f"  OK  {label} (sample rows: {n})")
+            if label == "site_admins" and isinstance(data, list):
+                for row in data:
+                    print(f"      - {row.get('email')}")
+        except RuntimeError as exc:
+            print(f"  MISSING/FAIL  {label}: {exc}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--reset-passwords",
+        action="store_true",
+        help="Set new passwords for existing committee Auth users and print them.",
+    )
+    args = parser.parse_args()
+
+    print("Taunet production bootstrap\n")
+    upsert_site_admins()
+    passwords = ensure_committee_auth(args.reset_passwords)
+    seed_business_content()
+    schema_report()
+
+    print("\nNext (required once in Supabase SQL Editor):")
+    print("  Paste and run: docs/supabase/APPLY-REMAINING.sql")
+    print("Then in Admin → Events/Gallery use Seed buttons if those tables are empty.")
+    print("SMTP for ~540 invites: docs/supabase/CUSTOM-SMTP-SETUP.md")
+
+    if passwords:
+        print("\n*** SAVE THESE COMMITTEE PASSWORDS NOW (shown once) ***")
+        for email, password in passwords:
+            print(f"  {email}  →  {password}")
+        print("Sign in at /members/auth.html?tab=admin with email + password above.")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as exc:  # noqa: BLE001
+        print(f"ERROR: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc

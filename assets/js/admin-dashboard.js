@@ -991,7 +991,12 @@
       state.businessEditor.reload?.();
       return;
     }
-    state.businessEditor = window.TaunetBusinessAdmin.mount(root, { basePath: '../' });
+    state.businessEditor = window.TaunetBusinessAdmin.mount(root, {
+      basePath: '../',
+      loadRemote: async () => adminApi('business-content'),
+      saveRemote: async (content) =>
+        adminApi('business-content-save', { method: 'POST', body: content })
+    });
   }
 
   async function refreshPanel(id) {
@@ -1000,7 +1005,7 @@
       return;
     }
 
-    if (!(state.pinOk || state.isAdmin)) {
+    if (!state.isAdmin) {
       return;
     }
 

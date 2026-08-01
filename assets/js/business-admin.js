@@ -21,6 +21,8 @@
     } = api;
 
     const basePath = options?.basePath || '../';
+    const loadRemote = typeof options?.loadRemote === 'function' ? options.loadRemote : null;
+    const saveRemote = typeof options?.saveRemote === 'function' ? options.saveRemote : null;
     const statusEl = root.querySelector('[data-biz-status]');
     const updatedEl = root.querySelector('[data-biz-updated]');
     const importInput = root.querySelector('[data-biz-import]');
@@ -228,21 +230,42 @@
     }
 
     async function loadEditorData() {
+      if (loadRemote) {
+        try {
+          content = normalizeContent(await loadRemote());
+          expandedKey = null;
+          renderAll();
+          return;
+        } catch (err) {
+          console.warn('Business Hub remote load failed, using local fallback:', err);
+        }
+      }
       content = await loadBusinessContent({ preferStorage: true, basePath });
       expandedKey = null;
       renderAll();
     }
 
-    root.querySelector('[data-biz-save]')?.addEventListener('click', () => {
+    root.querySelector('[data-biz-save]')?.addEventListener('click', async () => {
       content = collectFormData();
       saveBusinessContent(content);
-      setStatus('Draft saved in this browser. Export JSON and push to GitHub to publish site-wide.');
+      if (!saveRemote) {
+        setStatus('Draft saved in this browser only (no remote save wired).');
+        return;
+      }
+      setStatus('Publishing to Supabase…');
+      try {
+        await saveRemote(content);
+        clearStoredBusinessContent();
+        setStatus('Published to the live Business Hub (Supabase).');
+      } catch (err) {
+        setStatus(err.message || 'Could not publish to Supabase.', true);
+      }
     });
 
     root.querySelector('[data-biz-export]')?.addEventListener('click', () => {
       content = collectFormData();
       downloadBusinessContent(content);
-      setStatus('Downloaded business-content.json — replace assets/data/business-content.json in the repo and push to GitHub.');
+      setStatus('Downloaded JSON backup. Live site uses Supabase after Publish.');
     });
 
     root.querySelector('[data-biz-reset]')?.addEventListener('click', () => {
@@ -259,7 +282,7 @@
         content = normalizeContent(JSON.parse(text));
         expandedKey = null;
         renderAll();
-        setStatus('Imported JSON. Review changes, then export and push to GitHub.');
+        setStatus('Imported JSON. Review, then click Publish to site.');
       } catch {
         setStatus('Could not read that JSON file.', true);
       }

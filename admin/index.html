@@ -204,11 +204,11 @@
               <p class="admin-muted" style="margin:0">Last saved: <strong data-biz-updated>&mdash;</strong></p>
             </div>
             <p class="admin-help" style="margin-top:0">
-              Edit one section at a time. Export JSON, replace <code>assets/data/business-content.json</code>, then push to publish.
+              Edit one section at a time. <strong>Publish to site</strong> saves to Supabase for the live Business Hub.
             </p>
             <div class="business-admin__actions">
-              <button type="button" class="btn btn--primary" data-biz-export>Export JSON</button>
-              <button type="button" class="btn btn--outline" data-biz-save>Save draft</button>
+              <button type="button" class="btn btn--primary" data-biz-save>Publish to site</button>
+              <button type="button" class="btn btn--outline" data-biz-export>Export JSON backup</button>
               <label class="btn btn--ghost" for="admin-biz-import-file">Import JSON</label>
               <input type="file" id="admin-biz-import-file" data-biz-import accept="application/json,.json" hidden>
               <button type="button" class="btn btn--ghost" data-biz-reset>Reset draft</button>
@@ -447,9 +447,9 @@
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/events-phases.js?v=18"></script>
-  <script src="../assets/js/business-content.js?v=2"></script>
-  <script src="../assets/js/business-admin.js?v=3"></script>
+  <script src="../assets/js/business-content.js?v=3"></script>
+  <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=17"></script>
+  <script src="../assets/js/admin-dashboard.js?v=18"></script>
 </body>
 </html>
