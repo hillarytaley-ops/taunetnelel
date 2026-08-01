@@ -7,7 +7,7 @@
   <meta name="description" content="Privacy policy for Taunet Nelel — how we collect, use, and protect your personal information.">
   <link rel="icon" href="wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/main.css?v=13">
+  <link rel="stylesheet" href="assets/css/main.css?v=14">
 </head>
 <body data-page="privacy">
 <header class="site-header">
@@ -58,15 +58,35 @@
   <div class="mobile-nav" id="mobile-nav" aria-hidden="true">
     <div class="mobile-nav__panel" id="mobile-nav-panel">
       <button class="mobile-nav__close" type="button" aria-label="Close menu">&times;</button>
-      <ul>
+      <ul class="mobile-nav__list">
         <li><a href="index.html" data-nav="home">Home</a></li>
-        <li><a href="about.html" data-nav="about">About</a></li>
-        <li><a href="events.html" data-nav="events">Events</a></li>
-        <li><a href="gallery.html" data-nav="gallery">Gallery</a></li>
-        <li><a href="community.html" data-nav="community">Community</a></li>
-        <li><a href="welfare.html" data-nav="welfare">Welfare</a></li>
+        <li class="mobile-nav__group">
+          <a href="about.html" data-nav="about">About</a>
+          <ul>
+            <li><a href="about.html" data-nav="about">About Taunet Nelel</a></li>
+            <li><a href="about.html#team" data-nav="about">Meet Our Team</a></li>
+            <li><a href="sponsorship.html" data-nav="sponsorship">Sponsorship</a></li>
+          </ul>
+        </li>
+        <li class="mobile-nav__group">
+          <a href="events.html" data-nav="events">Events</a>
+          <ul>
+            <li><a href="events.html" data-nav="events">Taunet Events</a></li>
+            <li><a href="gallery.html" data-nav="gallery">Gallery</a></li>
+          </ul>
+        </li>
+        <li class="mobile-nav__group">
+          <a href="community.html" data-nav="community">Community</a>
+          <ul>
+            <li><a href="community.html#language" data-nav="community">Language School</a></li>
+            <li><a href="community.html#culture" data-nav="community">Culture</a></li>
+            <li><a href="community.html#wellbeing" data-nav="community">People &amp; Wellbeing</a></li>
+            <li><a href="welfare.html" data-nav="welfare">Welfare</a></li>
+            <li><a href="community.html#sports" data-nav="community">Sports</a></li>
+            <li><a href="community.html#business" data-nav="community">Business Hub</a></li>
+          </ul>
+        </li>
         <li><a href="membership.html" data-nav="membership">Membership</a></li>
-        <li><a href="sponsorship.html" data-nav="sponsorship">Sponsorship</a></li>
         <li><a href="contact.html" data-nav="contact">Contact</a></li>
       </ul>
       <a href="members/auth.html" class="btn btn--primary">Members</a>
