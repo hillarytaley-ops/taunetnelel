@@ -12,7 +12,15 @@ Usage (PowerShell):
   $env:RESEND_API_KEY = "re_..."
   $env:RESEND_FROM = "Taunet Nelel <members@taunetnelel.org>"   # optional
   $env:RESEND_REPLY_TO = "info@taunetnelel.org"                 # optional
+
+  # First / pending invites only:
   python docs/invite_members.py --limit 5
+
+  # Second broadcast — fresh password links for ALL imported members
+  # (use after the reset form was fixed; share MEMBER-PORTAL-INVITE-NOTICE.pdf):
+  python docs/invite_members.py --resend-all --limit 20   # test batch first
+  python docs/invite_members.py --resend-all              # full list (slow on purpose)
+
   python docs/invite_members.py --email someone@example.com
 """
 
@@ -91,6 +99,22 @@ def fetch_pending(limit: int | None) -> list[dict]:
     if limit:
         query += f"&limit={limit}"
     return api("GET", query)  # type: ignore[return-value]
+
+
+def fetch_all_with_email(limit: int | None) -> list[dict]:
+    """All imported members with an email — for second-wave password reset broadcast."""
+    query = (
+        "/rest/v1/member_imports"
+        "?email=not.is.null"
+        "&select=id,email,full_name,plan,association_member,welfare_member,member_number,status"
+        "&order=member_number.asc"
+    )
+    if limit:
+        query += f"&limit={limit}"
+    rows = api("GET", query)
+    if not isinstance(rows, list):
+        return []
+    return [r for r in rows if str(r.get("email") or "").strip()]
 
 
 def fetch_by_email(email: str) -> dict | None:
@@ -256,7 +280,7 @@ def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[st
     return subject, text, html
 
 
-def invite(row: dict, redirect_to: str) -> str:
+def invite(row: dict, redirect_to: str, *, force_recovery: bool = False) -> str:
     """
     Create/invite via generate_link (no Supabase-sent email), then Resend.
     Returns: 'invited' | 'recovery_sent'
@@ -271,22 +295,53 @@ def invite(row: dict, redirect_to: str) -> str:
         "https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery"
     )
 
-    try:
-        link = generate_link("invite", email, redirect, meta)
-        kind = "set"
-        result = "invited"
-    except RuntimeError as exc:
-        detail = str(exc).lower()
-        if "email_exists" not in detail and "already been registered" not in detail:
-            # Some projects return invite conflict differently — try recovery
-            if "already" not in detail and "exists" not in detail:
-                raise
+    if force_recovery:
         link = generate_link("recovery", email, redirect)
         kind = "reset"
         result = "recovery_sent"
+    else:
+        try:
+            link = generate_link("invite", email, redirect, meta)
+            kind = "set"
+            result = "invited"
+        except RuntimeError as exc:
+            detail = str(exc).lower()
+            if "email_exists" not in detail and "already been registered" not in detail:
+                # Some projects return invite conflict differently — try recovery
+                if "already" not in detail and "exists" not in detail:
+                    raise
+            link = generate_link("recovery", email, redirect)
+            kind = "reset"
+            result = "recovery_sent"
 
     subject, text, html = build_password_mail(link, row.get("full_name") or "", kind)
-    tag = "member_invite" if kind == "set" else "password_reset"
+    if force_recovery:
+        # Second-wave subject so members can tell it apart from the first invite
+        subject = "New link: set your Taunet Nelel member password"
+        name = (row.get("full_name") or "").strip() or "there"
+        text = (
+            f"Hello {name},\n\n"
+            f"Sorry if the first portal invite did not work. Please use this NEW link "
+            f"to choose your password (you should see the Choose a new password form):\n\n"
+            f"{link}\n\n"
+            f"Ignore the old invite email. Questions: info@taunetnelel.org\n"
+            f"Taunet Nelel — Victoria, Australia\n"
+        )
+        html = (
+            "<p>Hello "
+            + name
+            + ",</p>"
+            "<p><strong>Sorry if the first portal invite did not work.</strong> "
+            "Please use this <strong>new</strong> link to choose your password. "
+            "You should see the <em>Choose a new password</em> form.</p>"
+            f'<p style="margin:28px 0;"><a href="{link}" style="background:#8B4513;'
+            'color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;'
+            'display:inline-block;font-weight:700;">Choose a new password</a></p>'
+            f"<p style='font-size:13px;color:#555;word-break:break-all;'>{link}</p>"
+            "<p style='font-size:13px;'>Ignore the old invite. "
+            "Taunet Nelel · info@taunetnelel.org</p>"
+        )
+    tag = "member_invite" if kind == "set" else "password_reset_rebroadcast"
     send_resend(email, subject, text, html, tag)
     return result
 
@@ -315,6 +370,11 @@ def main() -> None:
         default=1.0,
         help="Seconds between sends (default 1.0 — slower = better reputation)",
     )
+    parser.add_argument(
+        "--resend-all",
+        action="store_true",
+        help="Second broadcast: email a fresh recovery link to all member_imports rows",
+    )
     args = parser.parse_args()
 
     if not RESEND_KEY:
@@ -323,10 +383,16 @@ def main() -> None:
             "We no longer send via Supabase default invite mail (spam risk)."
         )
 
+    force_recovery = bool(args.resend_all)
+
     if args.email:
         row = ensure_member_row(args.email.strip(), args.name.strip())
         rows = [row]
         print(f"Single invite for: {row.get('email')} (status={row.get('status')})")
+    elif args.resend_all:
+        rows = fetch_all_with_email(args.limit)
+        print(f"Second-wave password resets to send: {len(rows)}")
+        print("Share docs/TAUNET-NELEL-MEMBER-PORTAL-INVITE-NOTICE.pdf on WhatsApp.")
     else:
         rows = fetch_pending(args.limit)
         print(f"Pending invites to send: {len(rows)}")
@@ -336,10 +402,10 @@ def main() -> None:
     for row in rows:
         email = row.get("email")
         try:
-            result = invite(row, args.redirect)
+            result = invite(row, args.redirect, force_recovery=force_recovery)
             ok += 1
             if result == "recovery_sent":
-                print(f"OK  {email}  (already registered — Resend reset email)")
+                print(f"OK  {email}  (Resend reset / rebroadcast)")
             else:
                 print(f"OK  {email}  (Resend invite email)")
         except Exception as exc:  # noqa: BLE001
@@ -348,10 +414,10 @@ def main() -> None:
         time.sleep(args.delay)
 
     print(f"Done. ok={ok} failed={failed}")
-    if args.email and ok:
+    if (args.email or args.resend_all) and ok:
         print("Expect From: Taunet Nelel <members@taunetnelel.org>")
         print("Check Inbox first, then Spam — mark Not spam if needed.")
-        print("Open the link, set a password, then sign in at members/auth.html?tab=signin")
+        print("Open the link → Choose a new password form → then sign in.")
 
 
 if __name__ == "__main__":

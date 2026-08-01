@@ -1,4 +1,4 @@
-"""Generate Taunet Nelel member portal invite notice PDF."""
+"""Generate Taunet Nelel member portal invite / password-reset notice PDF."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
+
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = Path(__file__).resolve().parent
@@ -17,6 +18,7 @@ ACCENT = (196, 98, 28)
 CREAM = (252, 247, 240)
 MUTED = (90, 75, 60)
 BOX = (245, 236, 224)
+APOLOGY_BG = (255, 243, 230)
 
 
 class FlyerPDF(FPDF):
@@ -58,6 +60,44 @@ def body(pdf: FlyerPDF, text: str, h: float = 5.2) -> None:
     pdf.multi_cell(pdf.epw, h, safe(text), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
+def apology_box(pdf: FlyerPDF) -> None:
+    x0 = pdf.l_margin
+    title = "Our apology"
+    text = (
+        "We are sorry. Many members who opened the first portal invite hit a dead end: "
+        "the link opened the sign-in page instead of a clear \"Choose a new password\" form. "
+        "That was our mistake, not yours. The password-reset form is now fixed on the website. "
+        "Please ignore the first invite email and use only the NEW password email we are sending."
+    )
+
+    # Measure
+    start = pdf.get_y()
+    pdf.set_font("Helvetica", "B", 10)
+    title_h = 5
+    pdf.set_font("Helvetica", "", 9.5)
+    # rough height via multi_cell dry-run into a temp y
+    y_probe = start + 3 + title_h
+    pdf.set_xy(x0 + 3, y_probe)
+    pdf.multi_cell(pdf.epw - 6, 4.8, safe(text), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    end = pdf.get_y() + 3
+    box_h = end - start
+
+    pdf.set_y(start)
+    pdf.set_fill_color(*APOLOGY_BG)
+    pdf.set_draw_color(*ACCENT)
+    pdf.set_line_width(0.35)
+    pdf.rect(x0, start, pdf.epw, box_h, style="FD")
+    pdf.set_xy(x0 + 3, start + 3)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_text_color(*BROWN)
+    pdf.cell(pdf.epw - 6, title_h, safe(title), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_x(x0 + 3)
+    pdf.set_font("Helvetica", "", 9.5)
+    pdf.set_text_color(*MUTED)
+    pdf.multi_cell(pdf.epw - 6, 4.8, safe(text), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_y(start + box_h + 3)
+
+
 def build() -> None:
     pdf = FlyerPDF(format="A4")
     pdf.set_auto_page_break(auto=True, margin=22)
@@ -84,38 +124,38 @@ def build() -> None:
     pdf.set_y(y)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*ACCENT)
-    centered(pdf, "MEMBER NOTICE", 5)
+    centered(pdf, "MEMBER NOTICE  |  SECOND INVITE", 5)
     pdf.ln(1.5)
 
-    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(*BROWN)
-    centered(pdf, "New Members Portal", 7)
-    centered(pdf, "Invite Emails Have Been Sent", 7)
-    pdf.ln(3)
+    centered(pdf, "Members Portal - Fresh Password Links", 7)
+    pdf.ln(2)
 
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*MUTED)
-    body(
-        pdf,
-        "Dear members,",
-    )
+    body(pdf, "Dear members,")
     pdf.ln(1)
     body(
         pdf,
-        "Taunet Nelel has upgraded our website and members area. If you are already an Association or Welfare member, you should have received an email invitation to activate your login on the new portal.",
+        "Taunet Nelel has moved membership login to our new website. We are sending a second "
+        "password email so every member can finish setting up their login on the new portal.",
     )
     pdf.ln(2)
 
+    apology_box(pdf)
+
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*BROWN)
-    body(pdf, "What to do")
+    body(pdf, "What to do now")
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*MUTED)
     for line in (
-        "1. Check your email inbox (and Spam / Junk folder).",
-        "2. Open the invitation from Taunet Nelel.",
-        "3. Set a new password when prompted.",
-        "4. Sign in at the members portal using that password.",
+        "1. Check your inbox for a NEW email from members@taunetnelel.org (also check Spam / Junk).",
+        "2. Use that NEW email only - do not reuse the first invite link.",
+        "3. Tap \"Choose a new password\" or \"Set your password\".",
+        "4. You should see the Choose a new password form - enter and confirm your password.",
+        "5. Sign in at the members portal with that new password.",
     ):
         body(pdf, line)
     pdf.ln(2)
@@ -123,18 +163,19 @@ def build() -> None:
     pdf.set_fill_color(*BOX)
     x0 = pdf.l_margin
     y0 = pdf.get_y()
-    pdf.set_font("Helvetica", "", 9.5)
     box_lines = [
+        "From:  Taunet Nelel <members@taunetnelel.org>",
         "Sign in:  https://taunetnelel.vercel.app/members/auth.html?tab=signin",
-        "Join / activate:  https://taunetnelel.vercel.app/members/auth.html?tab=join",
+        "If the link expired: use Forgot password? on that page for a fresh link.",
     ]
-    pdf.rect(x0, y0, pdf.epw, 16, style="F")
-    pdf.set_xy(x0 + 3, y0 + 3)
+    pdf.rect(x0, y0, pdf.epw, 20, style="F")
+    pdf.set_xy(x0 + 3, y0 + 2.5)
     pdf.set_text_color(*BROWN)
-    for i, line in enumerate(box_lines):
+    pdf.set_font("Helvetica", "", 9)
+    for line in box_lines:
         pdf.set_x(x0 + 3)
         pdf.cell(pdf.epw - 6, 5, safe(line), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_y(y0 + 18)
+    pdf.set_y(y0 + 22)
 
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*BROWN)
@@ -143,28 +184,34 @@ def build() -> None:
     pdf.set_text_color(*MUTED)
     body(
         pdf,
-        "This does not change your membership status. The email only creates your login for the new website. Old website passwords will not work - please use the invite link to set a new password.",
+        "This does not change your membership status. Old website passwords will not work. "
+        "If mail lands in Spam, mark it Not spam and add members@taunetnelel.org to Contacts. "
+        "That helps future Taunet emails reach your Inbox.",
     )
     pdf.ln(2)
 
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*BROWN)
-    body(pdf, "Did not receive the email?")
+    body(pdf, "Still stuck?")
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(*MUTED)
     body(
         pdf,
-        "Confirm the committee has your current email address, or use Join with the same email we have on your membership record. For help, contact info@taunetnelel.org.",
+        "Confirm the committee has your current email, or write to info@taunetnelel.org "
+        "and we will help you activate your login.",
     )
     pdf.ln(3)
 
     pdf.set_font("Helvetica", "I", 10)
     pdf.set_text_color(*MUTED)
-    body(pdf, "Thank you for your patience as we improve our systems.")
+    body(
+        pdf,
+        "Thank you for your patience - and again, we apologise for the dead end with the first invite.",
+    )
     pdf.ln(1)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*BROWN)
-    body(pdf, "- Taunet Nelel IT team")
+    body(pdf, "- Taunet Nelel Committee & IT")
 
     pdf.output(str(OUTPUT_FILE))
     print(f"Wrote {OUTPUT_FILE}")
