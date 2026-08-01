@@ -1,66 +1,66 @@
 # Member Auth setup (Supabase)
 
-## 1. Run SQL
+## 1. SQL (already applied for production)
 
-In Supabase SQL Editor, run:
+Ensure these were run in the SQL Editor:
 
-`supabase/migrations/008_profiles_membership_auth.sql`
+- `008_profiles_membership_auth.sql` (and later membership migrations)
+- `docs/supabase/APPLY-REMAINING.sql` (013 + 018 + 019 + `is_site_admin`)
 
-This updates `profiles` for association/welfare/`both` and links new Auth users to `member_imports` by email.
+## 2. Auth URL configuration (required for go-live)
 
-## 2. Auth settings (Supabase Dashboard)
+**Authentication → URL Configuration**  
+https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo/auth/url-configuration
 
-**Authentication → URL configuration**
+Full checklist (Vercel + `.org` + DMARC + DNS):  
+**`docs/supabase/GO-LIVE-DNS.md`**
 
-- Site URL (for now): `https://taunetnelel.vercel.app`
-- Redirect URLs — add:
-  - `https://taunetnelel.vercel.app/members/login.html`
-  - `https://taunetnelel.vercel.app/members/dashboard.html`
-  - `http://localhost:8080/members/**` (local testing)
+### Site URL
+- Now: `https://taunetnelel.vercel.app`
+- After DNS cutover: `https://www.taunetnelel.org`
 
-After someone clicks **Confirm email address** in the mail:
+### Redirect URLs (add all)
 
-1. Supabase verifies the email
-2. Browser is sent to your site (`dashboard.html` or `login.html`)
-3. That is expected — it is **not** the Supabase dashboard “Auth” settings page
-4. If they land on **Sign in**, use the same email + password they registered with
+```text
+https://taunetnelel.vercel.app/members/auth.html
+https://taunetnelel.vercel.app/members/auth.html?tab=signin
+https://taunetnelel.vercel.app/members/auth.html?tab=join
+https://taunetnelel.vercel.app/members/dashboard.html
+https://www.taunetnelel.org/members/auth.html
+https://www.taunetnelel.org/members/auth.html?tab=signin
+https://www.taunetnelel.org/members/auth.html?tab=join
+https://www.taunetnelel.org/members/dashboard.html
+https://taunetnelel.org/members/auth.html
+https://taunetnelel.org/members/auth.html?tab=signin
+https://taunetnelel.org/members/auth.html?tab=join
+https://taunetnelel.org/members/dashboard.html
+http://localhost:8080/members/**
+```
 
-If the link opens localhost or the wrong page, check Site URL + Redirect URLs above.
+Primary members entry page is **`members/auth.html`** (not the older `login.html` / `register.html` paths).
 
-**Authentication → Providers → Email**
+### Email provider
 
 - Enable Email
-- For testing you may turn **off** “Confirm email” temporarily so signup works immediately
-- For production, turn confirm email **on**
+- Production: **Confirm email** ON (SMTP via Resend already configured)
+- Custom SMTP: Authentication → Emails (Resend)
 
 ## 3. How members get in
 
-### Option A — Self-serve (ready now)
+### A — Invite (done for imported list)
 
-1. Member opens `/members/register.html`
-2. Uses the **same email** as in the imported list
-3. Sets a password
-4. Trigger applies association / welfare / both from `member_imports`
-5. They sign in at `/members/login.html`
+`python docs/invite_members.py` created Auth users for `pending_invite` rows.
 
-### Option B — Bulk invite emails (optional)
+### B — Self-serve
 
-Use the service-role script (never put service_role in the website):
+1. `/members/auth.html?tab=join` with the **same email** as on the membership list  
+2. Set a password  
+3. Sign in at `/members/auth.html?tab=signin`
 
-```powershell
-$env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"
-$env:SUPABASE_SERVICE_ROLE_KEY = "paste-service-role-key-here"
-python docs/invite_members.py --limit 5
-```
+## 4. Committee admin
 
-Test with `--limit 5` first, then run without limit.
+`/members/auth.html?tab=admin` — email/password for an address in `public.site_admins`.
 
-## 4. Test with your own email
+## 5. Same login after DNS cutover
 
-1. Pick your email from `member_imports` (or register fresh)
-2. Register or invite
-3. Sign in → dashboard should show correct plan label
-
-## 5. Deploy
-
-Push to `main` so Vercel picks up `members-auth.js` and updated login/register pages.
+Yes. Auth accounts are in Supabase. Once `.org` redirect URLs are listed and Site URL is updated, the same email/password works on the live domain.
