@@ -77,15 +77,28 @@
       const msg = errorDescription
         ? decodeURIComponent(errorDescription.replace(/\+/g, ' '))
         : String(errorCode);
-      // Clear bad tokens from the address bar so refresh doesn't re-show the error
-      const clean = `${window.location.pathname}?tab=signin`;
+      const wasRecovery =
+        String(type || '').toLowerCase() === 'recovery' ||
+        /otp_expired|expired|invalid/i.test(msg);
+      // Keep type=recovery so the UI shows the reset panel (not only Sign in).
+      const clean = wasRecovery
+        ? `${window.location.pathname}?tab=signin&type=recovery`
+        : `${window.location.pathname}?tab=signin`;
       window.history.replaceState({}, document.title, clean);
-      throw new Error(msg);
+      const err = new Error(msg);
+      err.authType = wasRecovery ? 'recovery' : type;
+      err.expired = /invalid|expired|otp_expired/i.test(msg);
+      throw err;
     }
 
     if (code) {
       const { data, error } = await client.auth.exchangeCodeForSession(window.location.href);
-      if (error) throw error;
+      if (error) {
+        const err = new Error(error.message || 'Auth link failed');
+        err.authType = type || 'recovery';
+        err.expired = /invalid|expired|otp_expired|flow_state/i.test(String(error.message || ''));
+        throw err;
+      }
       const resolvedType = type || 'email';
       // Keep type=recovery in the URL so the reset form can detect it after reload
       const keep =
@@ -96,12 +109,34 @@
       return { type: resolvedType, session: data?.session || null };
     }
 
-    // Implicit / hash recovery links (#access_token=...&type=recovery)
-    if (hash.get('access_token') && client.auth.getSession) {
+    // Implicit / hash recovery links (#access_token=...&refresh_token=...&type=recovery)
+    const accessToken = hash.get('access_token');
+    const refreshToken = hash.get('refresh_token');
+    if (accessToken && refreshToken) {
+      const { data, error } = await client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      if (error) {
+        const err = new Error(error.message || 'Could not open reset session');
+        err.authType = type || 'recovery';
+        err.expired = true;
+        throw err;
+      }
+      const resolvedType = type || 'recovery';
+      const keep =
+        resolvedType === 'recovery'
+          ? `${window.location.pathname}?tab=signin&type=recovery`
+          : `${window.location.pathname}?tab=signin`;
+      window.history.replaceState({}, document.title, keep);
+      return { type: resolvedType, session: data?.session || null };
+    }
+
+    if (accessToken) {
       const { data, error } = await client.auth.getSession();
       if (error) throw error;
       if (data?.session) {
-        const resolvedType = type || 'email';
+        const resolvedType = type || 'recovery';
         const keep =
           resolvedType === 'recovery'
             ? `${window.location.pathname}?tab=signin&type=recovery`

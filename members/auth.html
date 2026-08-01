@@ -63,10 +63,12 @@
       <!-- Set new password after Forgot password email link -->
       <div class="auth-panel" data-auth-panel="reset" id="reset-password-panel" role="tabpanel" hidden>
         <div class="login-card__header">
-          <h1>Choose a new password</h1>
-          <p>Enter a new password for your member account, then continue to the dashboard.</p>
+          <h1 id="reset-panel-title">Choose a new password</h1>
+          <p id="reset-panel-lead">Enter a new password for your member account, then continue to the dashboard.</p>
         </div>
-        <form class="login-form" id="reset-password-form" novalidate>
+
+        <!-- Shown when the email link opened a valid recovery session -->
+        <form class="login-form" id="reset-password-form" novalidate hidden>
           <p class="auth-form__message" role="status" hidden></p>
           <div class="form-group">
             <label for="reset-password">New password</label>
@@ -89,6 +91,19 @@
             </div>
           </div>
           <button type="submit" class="btn btn--primary login-submit">Save new password</button>
+        </form>
+
+        <!-- Shown when the email link expired / was used by a scanner -->
+        <form class="login-form" id="reset-request-form" novalidate hidden>
+          <p class="auth-form__message" role="status" hidden></p>
+          <div class="form-group">
+            <label for="reset-request-email">Email address</label>
+            <input type="email" id="reset-request-email" name="email" placeholder="you@example.com" autocomplete="email" required>
+          </div>
+          <button type="submit" class="btn btn--primary login-submit">Email me a fresh reset link</button>
+          <p class="login-footer" style="margin-top:1rem;">
+            <a href="auth.html?tab=signin">Back to sign in</a>
+          </p>
         </form>
       </div>
 
@@ -166,8 +181,8 @@
   <script src="../assets/js/taunet-security.js?v=1"></script>
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=9"></script>
-  <script src="../assets/js/members.js?v=25"></script>
+  <script src="../assets/js/members-auth.js?v=10"></script>
+  <script src="../assets/js/members.js?v=26"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');
