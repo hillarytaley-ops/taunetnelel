@@ -4,37 +4,34 @@
 
 **Admin portal:** https://taunetnelel.vercel.app/admin/
 
-Sign in at `/members/auth.html?tab=admin` with a Supabase Auth account whose email is listed in `public.site_admins` (migration 011).
+Sign in at `/members/auth.html?tab=admin`.
 
-The old shared PIN is removed. Do not put admin secrets in frontend JS.
+## First-time access (no Auth admin yet)
 
-## How it works
+1. In Vercel → Environment Variables, set **`ADMIN_BOOTSTRAP_PIN`** (or keep existing **`ADMIN_PIN`**) to a long random secret. Redeploy.
+2. Open Committee tab → enter that PIN under **Emergency bootstrap PIN**.
+3. Then create lasting admin accounts:
+   - Open **Join** and register with an email listed in `public.site_admins` (migration 011), **or**
+   - In Supabase → Authentication → Users → Add user, then ensure the email is in `site_admins`.
 
-1. Committee member signs in with email/password (Supabase Auth).
-2. Client checks `is_site_admin()`; server API verifies the Bearer access token and `site_admins` before using the service role.
-3. Live data loads through `/api/admin/data`.
+The PIN is checked only on the server. It is **not** stored in frontend JS.
 
-## Vercel env (required for live data)
+## Ongoing access (preferred)
 
-In Vercel → Project → Settings → Environment Variables:
+1. Sign in with email/password for an account in `site_admins`.
+2. API verifies the Bearer token + `site_admins` before using the service role.
+
+## Vercel env
 
 | Name | Value |
 |------|--------|
 | `SUPABASE_URL` | your project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Settings → API → `service_role` (secret) |
+| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret |
+| `ADMIN_BOOTSTRAP_PIN` | optional emergency PIN (server only) |
 
-You can remove any old `ADMIN_PIN` variable. Redeploy after changing env vars.
-
-**Never** put `service_role` in frontend JS.
+**Never** put `service_role` or the bootstrap PIN in frontend JS.
 
 ## Supabase SQL
 
-Run `supabase/migrations/018_security_hardening.sql` after this deploy (membership locks, form/newsletter RLS, member-only announcements).
-
-## Sections
-
-| Tab | Notes |
-|-----|--------|
-| Business Hub | Local JSON export workflow |
-| Enquiries / Members / Imports / Newsletter | Auth + API + Supabase data |
-| Events / Sponsors / Gallery | DB-backed; public gallery may also use static files |
+- `011_fix_site_admin_recognition.sql` — `site_admins` + `is_site_admin()`
+- `018_security_hardening.sql` — membership / form / newsletter locks

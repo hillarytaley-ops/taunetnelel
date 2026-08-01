@@ -3,11 +3,18 @@
  * Vercel env required:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
+ * Optional bootstrap (server-only, never ship to frontend JS):
+ *   ADMIN_BOOTSTRAP_PIN  (preferred) or ADMIN_PIN
  *
- * Client sends: Authorization: Bearer <supabase access_token>
+ * Client sends either:
+ *   Authorization: Bearer <supabase access_token>
+ *   or x-admin-bootstrap-pin: <env PIN>
  */
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const ADMIN_BOOTSTRAP_PIN = String(
+  process.env.ADMIN_BOOTSTRAP_PIN || process.env.ADMIN_PIN || ''
+).trim();
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const ENQUIRY_STATUSES = new Set(['new', 'reviewed', 'actioned', 'archived']);
 const rateBuckets = new Map();
@@ -55,17 +62,41 @@ function safeHttpUrl(value) {
   return null;
 }
 
-async function requireSiteAdmin(req) {
-  const auth = String(req.headers.authorization || '');
-  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
-  if (!token) {
-    const err = new Error('Sign in required');
-    err.status = 401;
-    throw err;
-  }
+function timingSafeEqualString(a, b) {
+  const left = Buffer.from(String(a || ''), 'utf8');
+  const right = Buffer.from(String(b || ''), 'utf8');
+  if (left.length !== right.length || left.length === 0) return false;
+  return require('crypto').timingSafeEqual(left, right);
+}
+
+async function requireAdminAccess(req) {
   if (!SUPABASE_URL || !SERVICE_KEY) {
     const err = new Error('Server missing Supabase credentials');
     err.status = 500;
+    throw err;
+  }
+
+  const bootstrapPin = String(req.headers['x-admin-bootstrap-pin'] || '').trim();
+  if (bootstrapPin) {
+    rateLimit(req, 20, 60_000);
+    if (!ADMIN_BOOTSTRAP_PIN || !timingSafeEqualString(bootstrapPin, ADMIN_BOOTSTRAP_PIN)) {
+      const err = new Error('Invalid bootstrap PIN');
+      err.status = 401;
+      throw err;
+    }
+    return {
+      mode: 'bootstrap',
+      email: 'bootstrap@local',
+      admin: { email: 'bootstrap@local', full_name: 'Bootstrap PIN' },
+      user: null
+    };
+  }
+
+  const auth = String(req.headers.authorization || '');
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token) {
+    const err = new Error('Sign in required (Auth account or bootstrap PIN)');
+    err.status = 401;
     throw err;
   }
 
@@ -98,7 +129,7 @@ async function requireSiteAdmin(req) {
     err.status = 403;
     throw err;
   }
-  return { user, email, admin: data[0] };
+  return { mode: 'auth', user, email, admin: data[0] };
 }
 
 function readBody(req, maxBytes = 4.5e6) {
@@ -520,14 +551,16 @@ module.exports = async function handler(req, res) {
 
   try {
     rateLimit(req);
-    const adminSession = await requireSiteAdmin(req);
+    const adminSession = await requireAdminAccess(req);
 
     if (req.method === 'GET') {
       if (resource === 'session') {
         return json(res, 200, {
           ok: true,
+          mode: adminSession.mode,
           email: adminSession.email,
-          full_name: adminSession.admin.full_name || null
+          full_name: adminSession.admin.full_name || null,
+          bootstrap_configured: Boolean(ADMIN_BOOTSTRAP_PIN)
         });
       }
 
