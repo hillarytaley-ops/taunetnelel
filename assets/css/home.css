@@ -364,12 +364,32 @@ body[data-page="home"] .hero__visual.animate-on-load {
   min-width: 0;
 }
 
-.home-path img {
+.home-path__media {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-path img,
+.home-path__media img {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   display: block;
   border-radius: 0;
+}
+
+.home-path__date {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(61, 35, 20, 0.88);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 
 .home-path__body {
@@ -427,7 +447,8 @@ body[data-page="home"] .hero__visual.animate-on-load {
     max-width: 420px;
   }
 
-  .home-path img {
+  .home-path img,
+  .home-path__media img {
     aspect-ratio: 16 / 10;
   }
 }

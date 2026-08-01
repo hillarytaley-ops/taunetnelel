@@ -674,10 +674,73 @@
     });
   }
 
+  function pickHomeFeaturedEvent() {
+    const groups = categorizeEvents(new Date());
+    if (groups.present.length) {
+      return { event: groups.present[0], phase: 'present' };
+    }
+    if (groups.upcoming.length) {
+      const featured = groups.upcoming.find((item) => item.featured) || groups.upcoming[0];
+      return { event: featured, phase: 'upcoming' };
+    }
+    if (groups['most-recent'].length) {
+      const featured =
+        groups['most-recent'].find((item) => item.featured) || groups['most-recent'][0];
+      return { event: featured, phase: 'most-recent' };
+    }
+    return null;
+  }
+
+  function renderHomeTeaser() {
+    const root = document.querySelector('[data-home-events-teaser]');
+    if (!root) return;
+
+    const picked = pickHomeFeaturedEvent();
+    if (!picked?.event) return;
+
+    const { event, phase } = picked;
+    const img = document.getElementById('home-events-image');
+    const dateEl = document.getElementById('home-events-date');
+    const heading = document.getElementById('home-events-heading');
+    const blurb = document.getElementById('home-events-blurb');
+    const cta = document.getElementById('home-events-cta');
+    const badge = dateBadge(event);
+    const imageSrc = safeUrl(assetPath(event.image, ''));
+
+    if (img && imageSrc) {
+      img.src = imageSrc;
+      img.alt = event.title || 'Upcoming event';
+    }
+    if (dateEl) {
+      dateEl.hidden = false;
+      dateEl.textContent = `${badge.day} ${badge.month}`;
+    }
+    if (heading) {
+      heading.textContent = phase === 'present' ? 'Happening now' : phase === 'upcoming' ? 'Upcoming event' : 'Recent event';
+    }
+    if (blurb) {
+      const detail = event.meta || event.summary || event.location || '';
+      blurb.textContent = detail
+        ? `${event.title} — ${detail}`
+        : event.title || 'See what is on for the Taunet Nelel community.';
+    }
+    if (cta) {
+      cta.textContent =
+        phase === 'present'
+          ? 'View live event'
+          : phase === 'upcoming'
+            ? 'See upcoming events'
+            : 'Browse events';
+    }
+    root.setAttribute('href', 'events.html');
+    root.dataset.eventId = event.id || '';
+  }
+
   function init() {
     if (document.body.dataset.page === 'events') {
       renderPublicPage();
     }
+    renderHomeTeaser();
     renderMemberDashboard();
   }
 
@@ -700,6 +763,7 @@
     if (document.body.dataset.page === 'events') {
       renderPublicPage();
     }
+    renderHomeTeaser();
     renderMemberDashboard();
     if (document.querySelector('[data-events-member-page]')) {
       renderMemberEventsPage(lastMember);
@@ -717,6 +781,8 @@
     init,
     initMemberEvents,
     renderPublicPage,
+    renderHomeTeaser,
+    pickHomeFeaturedEvent,
     renderMemberDashboard,
     renderMemberEventsPage
   };
