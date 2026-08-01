@@ -181,17 +181,31 @@
     return member;
   }
 
-  function authErrorMessage(error) {
+  function authErrorMessage(error, context) {
     const raw = (error && (error.message || error.error_description || error.msg)) || '';
     const status = error?.status || error?.code;
     const lowered = String(raw).toLowerCase();
-    if (
+    const isRateLimited =
       status === 429 ||
       lowered.includes('rate limit') ||
       lowered.includes('too many requests') ||
-      lowered.includes('over_email')
-    ) {
-      return 'Supabase is temporarily blocking signups (rate limit). With the built-in email service this is often only 2 auth emails per hour for the whole project — wait a while, or turn off “Confirm email” for testing, or add custom SMTP.';
+      lowered.includes('over_email') ||
+      lowered.includes('too many reset');
+
+    if (isRateLimited) {
+      if (context === 'password-reset') {
+        return (
+          'Too many password-reset attempts right now. Wait about an hour, then try again. ' +
+          'If this keeps happening, ask Taunet Nelel IT to reset your password.'
+        );
+      }
+      if (context === 'signup') {
+        return (
+          'Sign-up email is temporarily rate-limited. Wait a while and try again, ' +
+          'or ask IT if custom SMTP / Resend is configured in Supabase.'
+        );
+      }
+      return 'Too many requests right now. Please wait a short while and try again.';
     }
     return raw || 'Request failed.';
   }
@@ -226,23 +240,64 @@
     window.location.href = safe;
   }
 
+  function showResetPasswordPanel() {
+    const tabs = document.querySelector('.auth-tabs');
+    if (tabs) tabs.hidden = true;
+    document.querySelectorAll('[data-auth-panel]').forEach((panel) => {
+      const on = panel.getAttribute('data-auth-panel') === 'reset';
+      panel.classList.toggle('is-active', on);
+      panel.hidden = !on;
+    });
+    document.title = 'Reset password | Taunet Nelel';
+  }
+
+  function isPasswordRecoveryContext(callbackType) {
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const type = String(callbackType || params.get('type') || hash.get('type') || '').toLowerCase();
+    return type === 'recovery';
+  }
+
   async function initAuth() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
+    const resetForm = document.getElementById('reset-password-form');
     const authApi = window.taunetMembersAuth;
     let authBusy = false;
+    let recoveryMode = isPasswordRecoveryContext();
+
+    if (authApi?.getClient) {
+      try {
+        const client = await authApi.getClient();
+        client?.auth?.onAuthStateChange?.((event) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            recoveryMode = true;
+            showResetPasswordPanel();
+          }
+        });
+      } catch (_) { /* ignore */ }
+    }
 
     // Finish email-confirm / recovery redirects, then prefer live session
     if (authApi) {
       try {
         const callback = await authApi.handleAuthCallback();
+        if (isPasswordRecoveryContext(callback?.type)) {
+          recoveryMode = true;
+        }
         const sessionMember = await authApi.getSessionMember();
-        if (sessionMember) {
+        if (sessionMember && recoveryMode) {
+          setMember(sessionMember);
+          showResetPasswordPanel();
+          if (resetForm) {
+            showAuthMessage(resetForm, 'Choose a new password to finish resetting your account.', false);
+          }
+          // Do not send them to the dashboard until the new password is saved.
+        } else if (sessionMember) {
           setMember(sessionMember);
           redirectAfterAuth();
           return;
-        }
-        if (callback?.type === 'signup' || callback?.type === 'email') {
+        } else if (callback?.type === 'signup' || callback?.type === 'email') {
           if (loginForm) {
             showAuthMessage(
               loginForm,
@@ -258,6 +313,38 @@
           console.warn('Auth callback failed:', error);
         }
       }
+    }
+
+    if (resetForm && authApi) {
+      resetForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (authBusy) return;
+        const password = resetForm.querySelector('[name="password"]')?.value || '';
+        const confirm = resetForm.querySelector('[name="password_confirm"]')?.value || '';
+        if (password.length < 8) {
+          showAuthMessage(resetForm, 'Password must be at least 8 characters.', true);
+          return;
+        }
+        if (password !== confirm) {
+          showAuthMessage(resetForm, 'Passwords do not match.', true);
+          return;
+        }
+        authBusy = true;
+        setSubmitBusy(resetForm, true);
+        showAuthMessage(resetForm, '');
+        try {
+          await authApi.updatePassword(password);
+          const member = await authApi.getSessionMember();
+          if (member) setMember(member);
+          showAuthMessage(resetForm, 'Password updated. Opening your dashboard…', false);
+          window.setTimeout(() => redirectAfterAuth(), 600);
+        } catch (error) {
+          showAuthMessage(resetForm, authErrorMessage(error), true);
+        } finally {
+          authBusy = false;
+          setSubmitBusy(resetForm, false);
+        }
+      });
     }
 
     if (loginForm) {
@@ -300,9 +387,13 @@
         authBusy = true;
         try {
           await authApi.requestPasswordReset(email);
-          showAuthMessage(loginForm, 'Password reset email sent. Check your inbox.', false);
+          showAuthMessage(
+            loginForm,
+            'If that email has an account, a reset link was sent. Check inbox and spam (from noreply@taunetnelel.org).',
+            false
+          );
         } catch (error) {
-          showAuthMessage(loginForm, authErrorMessage(error), true);
+          showAuthMessage(loginForm, authErrorMessage(error, 'password-reset'), true);
         } finally {
           authBusy = false;
         }
@@ -342,7 +433,7 @@
           setMember(result.member);
           redirectAfterAuth();
         } catch (error) {
-          showAuthMessage(registerForm, authErrorMessage(error), true);
+          showAuthMessage(registerForm, authErrorMessage(error, 'signup'), true);
         } finally {
           authBusy = false;
           setSubmitBusy(registerForm, false);

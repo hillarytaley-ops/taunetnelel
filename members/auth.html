@@ -60,6 +60,38 @@
         </form>
       </div>
 
+      <!-- Set new password after Forgot password email link -->
+      <div class="auth-panel" data-auth-panel="reset" id="reset-password-panel" role="tabpanel" hidden>
+        <div class="login-card__header">
+          <h1>Choose a new password</h1>
+          <p>Enter a new password for your member account, then continue to the dashboard.</p>
+        </div>
+        <form class="login-form" id="reset-password-form" novalidate>
+          <p class="auth-form__message" role="status" hidden></p>
+          <div class="form-group">
+            <label for="reset-password">New password</label>
+            <div class="input-password">
+              <input type="password" id="reset-password" name="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+              <button type="button" class="input-password__toggle input-password__toggle--dark" aria-label="Show password" data-password-toggle="reset-password">
+                <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="reset-password-confirm">Confirm password</label>
+            <div class="input-password">
+              <input type="password" id="reset-password-confirm" name="password_confirm" placeholder="Re-enter new password" autocomplete="new-password" minlength="8" required>
+              <button type="button" class="input-password__toggle input-password__toggle--dark" aria-label="Show password" data-password-toggle="reset-password-confirm">
+                <svg class="icon-eye" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="btn btn--primary login-submit">Save new password</button>
+        </form>
+      </div>
+
       <!-- Join / register -->
       <div class="auth-panel" data-auth-panel="join" role="tabpanel" aria-labelledby="tab-join" hidden>
         <div class="login-card__header">
@@ -131,8 +163,8 @@
   <script src="../assets/js/taunet-security.js?v=1"></script>
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=6"></script>
-  <script src="../assets/js/members.js?v=20"></script>
+  <script src="../assets/js/members-auth.js?v=8"></script>
+  <script src="../assets/js/members.js?v=23"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');
@@ -148,6 +180,10 @@
       function setTab(tab) {
         var allowed = { signin: 1, join: 1, admin: 1 };
         if (!allowed[tab]) tab = 'signin';
+        // Don't overwrite the dedicated "choose new password" panel from a recovery link.
+        if (document.getElementById('reset-password-panel')?.classList.contains('is-active')) {
+          return;
+        }
         document.querySelectorAll('.auth-tabs [data-auth-tab]').forEach(function (btn) {
           var on = btn.getAttribute('data-auth-tab') === tab;
           btn.classList.toggle('is-active', on);

@@ -150,14 +150,46 @@
     await client.auth.signOut();
   }
 
+  /**
+   * Ask the server to email a recovery link via Resend.
+   * (Browser-only Supabase reset often shows "sent" even when mail never arrives.)
+   */
   async function requestPasswordReset(email) {
+    const trimmed = String(email || '').trim();
+    if (!trimmed) throw new Error('Enter your email first, then click Forgot password.');
+
+    const resp = await fetch('/api/auth/request-password-reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: trimmed })
+    });
+
+    let payload = {};
+    try {
+      payload = await resp.json();
+    } catch (_) {
+      payload = {};
+    }
+
+    if (!resp.ok) {
+      throw new Error(
+        payload.error ||
+          'Could not send a reset email. Please try again later or contact Taunet Nelel IT.'
+      );
+    }
+    return payload;
+  }
+
+  async function updatePassword(newPassword) {
     const client = await getClient();
     if (!client) throw new Error('Supabase is not configured.');
-
-    const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/members/auth.html?tab=signin`
-    });
+    const password = String(newPassword || '');
+    if (password.length < 8) {
+      throw new Error('Password must be at least 8 characters.');
+    }
+    const { data, error } = await client.auth.updateUser({ password });
     if (error) throw error;
+    return data?.user || null;
   }
 
   async function updateProfile({ fullName, phone }) {
@@ -192,6 +224,7 @@
     signUp,
     signOut,
     requestPasswordReset,
+    updatePassword,
     updateProfile,
     profileToMember,
     planLabel

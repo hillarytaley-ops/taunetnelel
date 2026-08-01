@@ -21,21 +21,43 @@ Full checklist (Vercel + `.org` + DMARC + DNS):
 
 ### Redirect URLs (add all)
 
+Prefer wildcards so password-reset links with `?tab=signin&type=recovery` are allowed:
+
+```text
+https://taunetnelel.vercel.app/members/**
+https://www.taunetnelel.org/members/**
+https://taunetnelel.org/members/**
+http://localhost:8080/members/**
+```
+
+If the dashboard does not accept `**`, add these explicitly (including recovery):
+
 ```text
 https://taunetnelel.vercel.app/members/auth.html
 https://taunetnelel.vercel.app/members/auth.html?tab=signin
+https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery
 https://taunetnelel.vercel.app/members/auth.html?tab=join
 https://taunetnelel.vercel.app/members/dashboard.html
 https://www.taunetnelel.org/members/auth.html
 https://www.taunetnelel.org/members/auth.html?tab=signin
+https://www.taunetnelel.org/members/auth.html?tab=signin&type=recovery
 https://www.taunetnelel.org/members/auth.html?tab=join
 https://www.taunetnelel.org/members/dashboard.html
 https://taunetnelel.org/members/auth.html
 https://taunetnelel.org/members/auth.html?tab=signin
+https://taunetnelel.org/members/auth.html?tab=signin&type=recovery
 https://taunetnelel.org/members/auth.html?tab=join
 https://taunetnelel.org/members/dashboard.html
 http://localhost:8080/members/**
 ```
+
+### Forgot password (ordinary members)
+
+1. Member clicks **Forgot password?** on Sign in (email filled in).
+2. Site API `/api/auth/request-password-reset` emails a real reset link via **Resend**.
+3. Member opens the link → **Choose a new password** → dashboard.
+
+Vercel must have `RESEND_API_KEY` (see `ADMIN-DASHBOARD.md`). Check Resend → Emails if a test reset does not arrive.
 
 Primary members entry page is **`members/auth.html`** (not the older `login.html` / `register.html` paths).
 
