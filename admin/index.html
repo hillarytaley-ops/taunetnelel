@@ -7,12 +7,29 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=13">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=12">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=13">
 </head>
 <body data-page="site-admin">
 
   <div class="site-admin" id="admin-shell" hidden>
-    <aside class="site-admin__nav">
+    <header class="site-admin__mobile-bar">
+      <button
+        type="button"
+        class="site-admin__menu-toggle"
+        id="admin-menu-toggle"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="admin-nav"
+      >
+        <span></span><span></span><span></span>
+      </button>
+      <div class="site-admin__mobile-bar-brand">
+        <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="">
+        <strong>Committee admin</strong>
+      </div>
+    </header>
+    <div class="site-admin__nav-backdrop" id="admin-nav-backdrop" hidden></div>
+    <aside class="site-admin__nav" id="admin-nav">
       <div class="site-admin__nav-brand">
         <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="">
         <strong>Committee admin</strong>
@@ -450,6 +467,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=18"></script>
+  <script src="../assets/js/admin-dashboard.js?v=19"></script>
 </body>
 </html>

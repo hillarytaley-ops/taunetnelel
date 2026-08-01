@@ -73,6 +73,20 @@
     });
   }
 
+  function setAdminNavOpen(open) {
+    const shell = document.getElementById('admin-shell');
+    const toggle = document.getElementById('admin-menu-toggle');
+    const backdrop = document.getElementById('admin-nav-backdrop');
+    const isOpen = Boolean(open);
+    shell?.classList.toggle('is-nav-open', isOpen);
+    document.body.classList.toggle('is-admin-nav-open', isOpen);
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      toggle.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+    }
+    if (backdrop) backdrop.hidden = !isOpen;
+  }
+
   function setPanel(id) {
     const next = PANELS.includes(id) ? id : 'overview';
     els.nav.forEach((btn) => {
@@ -113,6 +127,7 @@
     if (blurb) blurb.textContent = blurbs[next] || '';
     history.replaceState(null, '', `#${next}`);
     if (next === 'enquiries') renderEnquiries();
+    setAdminNavOpen(false);
   }
 
   function jumpToPanel(id) {
@@ -1045,6 +1060,21 @@
   }
 
   function bindNav() {
+    const toggle = document.getElementById('admin-menu-toggle');
+    const backdrop = document.getElementById('admin-nav-backdrop');
+
+    toggle?.addEventListener('click', () => {
+      const shell = document.getElementById('admin-shell');
+      setAdminNavOpen(!shell?.classList.contains('is-nav-open'));
+    });
+    backdrop?.addEventListener('click', () => setAdminNavOpen(false));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setAdminNavOpen(false);
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 860) setAdminNavOpen(false);
+    });
+
     els.nav.forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.adminNav;
@@ -1055,6 +1085,7 @@
     document.getElementById('admin-refresh')?.addEventListener('click', () => {
       const active = document.querySelector('[data-admin-nav].is-active');
       refreshPanel(active?.dataset.adminNav || 'overview');
+      setAdminNavOpen(false);
     });
 
     document.addEventListener('click', (e) => {
