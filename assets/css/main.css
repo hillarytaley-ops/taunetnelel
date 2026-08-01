@@ -3871,43 +3871,93 @@ body.nav-open { overflow: hidden; }
 
 .mobile-nav ul { list-style: none; margin: 0; padding: 0; }
 
+.mobile-nav__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.mobile-nav__list > li {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
 .mobile-nav__list > li > a {
   display: block;
-  padding: 0.75rem 0;
-  color: rgba(255, 255, 255, 0.92);
+  padding: 0.9rem 0.15rem;
+  color: rgba(255, 255, 255, 0.95);
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 1rem;
+  border: none;
+  line-height: 1.3;
 }
 
-.mobile-nav__group > a {
+.mobile-nav__toggle {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.9rem 0.15rem;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.3;
+}
+
+.mobile-nav__chevron {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid rgba(255, 255, 255, 0.85);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.85);
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 0.2rem;
+}
+
+.mobile-nav__group.is-open .mobile-nav__chevron {
+  transform: rotate(-135deg);
+  margin-top: 0.2rem;
+}
+
+.mobile-nav__submenu {
+  display: none;
+  padding: 0 0 0.65rem 0.85rem;
+  margin: 0;
+}
+
+.mobile-nav__group.is-open .mobile-nav__submenu {
   display: block;
-  padding: 0.75rem 0 0.35rem;
-  color: rgba(255, 255, 255, 0.92);
-  font-weight: 700;
-  border-bottom: none;
 }
 
-.mobile-nav__group > ul {
-  margin: 0 0 0.35rem;
-  padding: 0 0 0.45rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.mobile-nav__group > ul a {
+.mobile-nav__submenu a {
   display: block;
-  padding: 0.4rem 0;
+  padding: 0.55rem 0.15rem;
   color: rgba(255, 255, 255, 0.82);
   font-weight: 500;
-  font-size: 0.95rem;
-  border-bottom: none;
+  font-size: 0.92rem;
+  border: none;
+  line-height: 1.35;
 }
 
 .mobile-nav a:hover,
-.mobile-nav a.active {
+.mobile-nav a.active,
+.mobile-nav__toggle:hover {
   color: var(--color-white);
 }
 
-.mobile-nav .btn { width: 100%; margin-top: 1rem; }
+.mobile-nav .btn {
+  width: 100%;
+  margin-top: 1.25rem;
+}
 
 .mobile-nav .btn--ghost {
   color: var(--color-white);

@@ -219,6 +219,10 @@
     mobileNav.setAttribute('aria-hidden', 'true');
     menuToggle?.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('nav-open');
+    mobileNav.querySelectorAll('.mobile-nav__group.is-open').forEach((group) => {
+      group.classList.remove('is-open');
+      group.querySelector('.mobile-nav__toggle')?.setAttribute('aria-expanded', 'false');
+    });
     menuToggle?.focus();
   }
 
@@ -233,6 +237,23 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && mobileNav.classList.contains('open')) closeMobileNav();
+    });
+
+    // Accordion groups: keep the drawer tidy (one section open at a time)
+    mobileNav.querySelectorAll('.mobile-nav__toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const group = btn.closest('.mobile-nav__group');
+        if (!group) return;
+        const willOpen = !group.classList.contains('is-open');
+        mobileNav.querySelectorAll('.mobile-nav__group.is-open').forEach((openGroup) => {
+          if (openGroup !== group) {
+            openGroup.classList.remove('is-open');
+            openGroup.querySelector('.mobile-nav__toggle')?.setAttribute('aria-expanded', 'false');
+          }
+        });
+        group.classList.toggle('is-open', willOpen);
+        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
     });
   }
 
