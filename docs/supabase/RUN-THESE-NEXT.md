@@ -2,10 +2,11 @@
 
 ## 1. Vercel env + redeploy — DONE
 
-Already set on Production/Preview: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_PIN`.  
-Redeployed with `.vercelignore` (excludes `backups/` ~620MB).
+Already set on Production/Preview: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.  
+Remove obsolete `ADMIN_PIN` if still present. Redeployed with `.vercelignore` (excludes `backups/` ~620MB).
 
-Live check: PIN `TaunetAdmin2026` → `/api/admin/data?resource=overview` returns counts.
+Admin uses Supabase Auth + `site_admins` (not a shared PIN).  
+Also run `018_security_hardening.sql` in the SQL Editor.
 
 Admin: https://taunetnelel.vercel.app/admin/
 

@@ -1,21 +1,104 @@
 /**
- * Committee admin data API (PIN-gated).
+ * Committee admin data API (Supabase Auth + site_admins).
  * Vercel env required:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   ADMIN_PIN  (optional; default TaunetAdmin2026)
  *
- * Client sends header: x-admin-pin
+ * Client sends: Authorization: Bearer <supabase access_token>
  */
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const ADMIN_PIN = process.env.ADMIN_PIN || 'TaunetAdmin2026';
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const ENQUIRY_STATUSES = new Set(['new', 'reviewed', 'actioned', 'archived']);
+const rateBuckets = new Map();
 
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.end(JSON.stringify(body));
+}
+
+function clientIp(req) {
+  const fwd = String(req.headers['x-forwarded-for'] || '')
+    .split(',')[0]
+    .trim();
+  return fwd || req.socket?.remoteAddress || 'unknown';
+}
+
+function rateLimit(req, limit = 120, windowMs = 60_000) {
+  const ip = clientIp(req);
+  const now = Date.now();
+  let bucket = rateBuckets.get(ip);
+  if (!bucket || now > bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + windowMs };
+    rateBuckets.set(ip, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > limit) {
+    const err = new Error('Too many requests. Try again shortly.');
+    err.status = 429;
+    throw err;
+  }
+}
+
+function isAllowedImageType(contentType) {
+  return ALLOWED_IMAGE_TYPES.has(String(contentType || '').toLowerCase().split(';')[0].trim());
+}
+
+function safeHttpUrl(value) {
+  const s = String(value || '').trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith('/') || s.startsWith('./') || s.startsWith('../') || s.startsWith('#')) return s;
+  return null;
+}
+
+async function requireSiteAdmin(req) {
+  const auth = String(req.headers.authorization || '');
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token) {
+    const err = new Error('Sign in required');
+    err.status = 401;
+    throw err;
+  }
+  if (!SUPABASE_URL || !SERVICE_KEY) {
+    const err = new Error('Server missing Supabase credentials');
+    err.status = 500;
+    throw err;
+  }
+
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      apikey: SERVICE_KEY,
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!userRes.ok) {
+    const err = new Error('Invalid or expired session');
+    err.status = 401;
+    throw err;
+  }
+  const user = await userRes.json();
+  const email = String(user.email || '')
+    .toLowerCase()
+    .trim();
+  if (!email) {
+    const err = new Error('Account has no email');
+    err.status = 403;
+    throw err;
+  }
+
+  const { data } = await sb(
+    `site_admins?email=eq.${encodeURIComponent(email)}&select=email,full_name&limit=1`
+  );
+  if (!Array.isArray(data) || !data.length) {
+    const err = new Error('Not authorized for committee admin');
+    err.status = 403;
+    throw err;
+  }
+  return { user, email, admin: data[0] };
 }
 
 function readBody(req, maxBytes = 4.5e6) {
@@ -192,8 +275,8 @@ function applyPhaseViaDates(row, phase) {
 async function uploadFlyerFromDataUrl(eventId, dataUrl, fileName) {
   const decoded = decodeDataUrl(dataUrl);
   if (!decoded) throw Object.assign(new Error('Invalid flyer image data'), { status: 400 });
-  if (!String(decoded.contentType || '').startsWith('image/')) {
-    throw Object.assign(new Error('Flyer must be an image file'), { status: 400 });
+  if (!isAllowedImageType(decoded.contentType)) {
+    throw Object.assign(new Error('Flyer must be jpeg, png, webp, or gif'), { status: 400 });
   }
   if (decoded.bytes.length > 3.5e6) {
     throw Object.assign(new Error('Flyer must be under about 3.5 MB'), { status: 400 });
@@ -432,16 +515,22 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const pin = String(req.headers['x-admin-pin'] || '');
-  if (pin !== ADMIN_PIN) {
-    return json(res, 401, { error: 'Invalid admin PIN' });
-  }
-
   const url = new URL(req.url, 'http://localhost');
   const resource = url.searchParams.get('resource') || '';
 
   try {
+    rateLimit(req);
+    const adminSession = await requireSiteAdmin(req);
+
     if (req.method === 'GET') {
+      if (resource === 'session') {
+        return json(res, 200, {
+          ok: true,
+          email: adminSession.email,
+          full_name: adminSession.admin.full_name || null
+        });
+      }
+
       if (resource === 'overview') {
         const [enquiries, profiles, imports, newsletter] = await Promise.all([
           countRows('form_submissions'),
@@ -674,8 +763,8 @@ module.exports = async function handler(req, res) {
               meta: String(body.meta || '').trim() || null,
               badge: String(body.badge || '').trim() || null,
               image_path: imagePath,
-              booking_url: String(body.booking_url || '').trim() || null,
-              gallery_url: String(body.gallery_url || '').trim() || null,
+              booking_url: safeHttpUrl(body.booking_url),
+              gallery_url: safeHttpUrl(body.gallery_url),
               start_at: startAt,
               end_at: endAt,
               featured: Boolean(body.featured),
@@ -716,8 +805,8 @@ module.exports = async function handler(req, res) {
           meta: String(body.meta || '').trim() || null,
           badge: String(body.badge || '').trim() || null,
           image_path: imagePath,
-          booking_url: String(body.booking_url || '').trim() || null,
-          gallery_url: String(body.gallery_url || '').trim() || null,
+          booking_url: safeHttpUrl(body.booking_url),
+          gallery_url: safeHttpUrl(body.gallery_url),
           start_at: startAt,
           end_at: endAt,
           featured: Boolean(body.featured),
@@ -785,8 +874,8 @@ module.exports = async function handler(req, res) {
           const photo = photos[i] || {};
           const decoded = decodeDataUrl(photo.dataUrl);
           if (!decoded) continue;
-          if (!String(decoded.contentType || '').startsWith('image/')) {
-            return json(res, 400, { error: 'Only image uploads are allowed' });
+          if (!isAllowedImageType(decoded.contentType)) {
+            return json(res, 400, { error: 'Only jpeg, png, webp, or gif uploads are allowed' });
           }
           if (decoded.bytes.length > 3.5e6) {
             return json(res, 400, { error: 'Each photo must be under about 3.5 MB' });
@@ -872,9 +961,13 @@ module.exports = async function handler(req, res) {
       const body = await readBody(req);
 
       if (resource === 'enquiry-status') {
+        const status = String(body.status || '').trim();
+        if (!ENQUIRY_STATUSES.has(status)) {
+          return json(res, 400, { error: 'Invalid enquiry status' });
+        }
         const { data } = await sb(`form_submissions?id=eq.${encodeURIComponent(body.id)}`, {
           method: 'PATCH',
-          body: JSON.stringify({ status: body.status })
+          body: JSON.stringify({ status })
         });
         return json(res, 200, { rows: data || [] });
       }
@@ -916,8 +1009,8 @@ module.exports = async function handler(req, res) {
         if (body.meta != null) patch.meta = String(body.meta).trim() || null;
         if (body.badge != null) patch.badge = String(body.badge).trim() || null;
         if (body.image_path != null) patch.image_path = String(body.image_path).trim() || null;
-        if (body.booking_url != null) patch.booking_url = String(body.booking_url).trim() || null;
-        if (body.gallery_url != null) patch.gallery_url = String(body.gallery_url).trim() || null;
+        if (body.booking_url != null) patch.booking_url = safeHttpUrl(body.booking_url);
+        if (body.gallery_url != null) patch.gallery_url = safeHttpUrl(body.gallery_url);
         if (body.start_at != null) patch.start_at = String(body.start_at).trim();
         if (body.end_at != null) patch.end_at = String(body.end_at).trim() || null;
         if (body.featured != null) patch.featured = Boolean(body.featured);
@@ -975,9 +1068,9 @@ module.exports = async function handler(req, res) {
 
     return json(res, 405, { error: 'Method not allowed' });
   } catch (err) {
-    return json(res, err.status || 500, {
-      error: err.message || 'Server error',
-      details: err.details || null
+    const status = err.status || 500;
+    return json(res, status, {
+      error: err.message || 'Server error'
     });
   }
 };

@@ -1,6 +1,6 @@
 /**
  * Taunet Nelel — site-wide committee admin dashboard.
- * Access: committee admin PIN (session) → /api/admin/data
+ * Access: Supabase Auth + site_admins → /api/admin/data
  */
 (function () {
   'use strict';
@@ -19,14 +19,14 @@
     'pages'
   ];
 
-  const ADMIN_PIN_KEY = 'taunet_site_admin_pin';
-  const ADMIN_PIN_VALUE_KEY = 'taunet_site_admin_pin_value';
+  const LEGACY_PIN_KEY = 'taunet_site_admin_pin';
+  const LEGACY_PIN_VALUE_KEY = 'taunet_site_admin_pin_value';
 
   const state = {
     client: null,
     user: null,
     isAdmin: false,
-    pinOk: false,
+    accessToken: '',
     enquiries: [],
     enquiryFilter: 'all',
     enquirySearch: '',
@@ -129,24 +129,32 @@
     return state.client;
   }
 
-  function hasPinSession() {
-    return sessionStorage.getItem(ADMIN_PIN_KEY) === '1' && Boolean(sessionStorage.getItem(ADMIN_PIN_VALUE_KEY));
+  function clearLegacyPin() {
+    sessionStorage.removeItem(LEGACY_PIN_KEY);
+    sessionStorage.removeItem(LEGACY_PIN_VALUE_KEY);
   }
 
-  function getStoredPin() {
-    return sessionStorage.getItem(ADMIN_PIN_VALUE_KEY) || '';
+  async function getAccessToken() {
+    if (state.accessToken) return state.accessToken;
+    const client = await getClient();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const token = data?.session?.access_token || '';
+    if (!token) throw new Error('Admin session missing. Sign in again.');
+    state.accessToken = token;
+    state.user = data.session.user || null;
+    return token;
   }
 
   async function adminApi(resource, options = {}) {
-    const pin = getStoredPin();
-    if (!pin) throw new Error('Admin PIN session missing. Sign in again.');
+    const token = await getAccessToken();
     const params = new URLSearchParams({ resource });
     if (options.filter) params.set('filter', options.filter);
     const res = await fetch(`/api/admin/data?${params.toString()}`, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-pin': pin
+        Authorization: `Bearer ${token}`
       },
       body: options.body ? JSON.stringify(options.body) : undefined
     });
@@ -156,16 +164,21 @@
     } catch (_) {
       data = {};
     }
+    if (res.status === 401 || res.status === 403) {
+      clearLegacyPin();
+      state.accessToken = '';
+      state.isAdmin = false;
+      throw new Error(data.error || 'Not authorized for committee admin');
+    }
     if (!res.ok) {
       throw new Error(data.error || `Admin API error (${res.status})`);
     }
     return data;
   }
 
-  function enterPinPortal() {
-    state.pinOk = true;
+  function enterAdminPortal(label) {
     state.isAdmin = true;
-    if (els.userLabel) els.userLabel.textContent = 'PIN session (committee portal)';
+    if (els.userLabel) els.userLabel.textContent = label || 'Committee admin';
     showShell(true);
     const hash = (location.hash || '#overview').replace('#', '');
     setPanel(hash);
@@ -1075,13 +1088,13 @@
 
   async function init() {
     bindNav();
+    clearLegacyPin();
 
     els.logoutBtn?.addEventListener('click', async () => {
-      sessionStorage.removeItem(ADMIN_PIN_KEY);
-      sessionStorage.removeItem(ADMIN_PIN_VALUE_KEY);
-      state.pinOk = false;
+      clearLegacyPin();
       state.isAdmin = false;
       state.user = null;
+      state.accessToken = '';
       try {
         if (window.taunetSupabaseApi?.isConfigured()) {
           const client = await getClient();
@@ -1091,12 +1104,28 @@
       window.location.href = authEntryUrl();
     });
 
-    // PIN session only — never auto-open admin from a members Auth session alone
-    if (hasPinSession()) {
-      enterPinPortal();
-      return;
+    try {
+      if (!window.taunetSupabaseApi?.isConfigured()) {
+        window.location.replace(authEntryUrl());
+        return;
+      }
+      const client = await getClient();
+      const { data: sessionData } = await client.auth.getSession();
+      if (!sessionData?.session?.access_token) {
+        window.location.replace(authEntryUrl());
+        return;
+      }
+      state.accessToken = sessionData.session.access_token;
+      state.user = sessionData.session.user;
+      const sessionInfo = await adminApi('session');
+      enterAdminPortal(sessionInfo.email || state.user?.email || 'Committee admin');
+    } catch (_) {
+      try {
+        const client = await getClient();
+        await client.auth.signOut();
+      } catch (__) { /* ignore */ }
+      window.location.replace(authEntryUrl());
     }
-    window.location.replace(authEntryUrl());
   }
 
   if (document.readyState === 'loading') {

@@ -126,7 +126,8 @@
         data: {
           full_name: name,
           phone: phone || '',
-          plan: plan || 'basic'
+          // Server handle_new_user ignores client plan for non-imported emails
+          plan: 'basic'
         },
         // After confirm, land on dashboard (session tokens / code are handled there)
         emailRedirectTo: `${window.location.origin}/members/dashboard.html`

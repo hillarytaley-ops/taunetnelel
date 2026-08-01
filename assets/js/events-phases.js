@@ -4,6 +4,22 @@
   const RECENT_DELAY_DAYS = 1;
   const RECENT_MONTHS = 2;
 
+  function escapeHtml(value) {
+    return global.TaunetSecurity?.escapeHtml
+      ? global.TaunetSecurity.escapeHtml(value)
+      : String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+  }
+
+  function safeUrl(value) {
+    return global.TaunetSecurity?.safeUrl
+      ? global.TaunetSecurity.safeUrl(value)
+      : String(value ?? '').replace(/^(javascript|data|vbscript):/i, '');
+  }
+
   let EVENTS = [
     {
       id: 'cultural-week-2026',
@@ -309,30 +325,33 @@
     const badge = dateBadge(event);
     const cls = featured ? 'upcoming-event upcoming-event--featured' : 'upcoming-event upcoming-event--secondary';
     const mediaCls = featured ? 'upcoming-event__poster' : 'upcoming-event__thumb';
-    const img = assetPath(event.image, prefix);
+    const img = escapeHtml(safeUrl(assetPath(event.image, prefix)));
+    const title = escapeHtml(event.title);
+    const booking = safeUrl(event.bookingUrl);
+    const calendar = safeUrl(assetPath(event.calendarUrl, prefix));
 
     let actions = '';
-    if (event.bookingUrl) {
-      actions += `<a href="${event.bookingUrl}" class="btn btn--accent"${event.bookingUrl.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>Booking</a>`;
+    if (booking) {
+      actions += `<a href="${escapeHtml(booking)}" class="btn btn--accent"${booking.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>Booking</a>`;
     }
-    if (event.calendarUrl) {
-      actions += `<a href="${assetPath(event.calendarUrl, prefix)}" class="btn btn--outline" download>Add to calendar</a>`;
+    if (calendar) {
+      actions += `<a href="${escapeHtml(calendar)}" class="btn btn--outline" download>Add to calendar</a>`;
     }
 
     return `
       <article class="${cls}">
         <figure class="${mediaCls}">
-          <img src="${img}" alt="${event.title}" width="480" height="320" loading="lazy">
+          <img src="${img}" alt="${title}" width="480" height="320" loading="lazy">
           <div class="upcoming-event__date-badge">
-            <span class="day">${badge.day}</span>
-            <span class="month">${badge.month}</span>
+            <span class="day">${escapeHtml(badge.day)}</span>
+            <span class="month">${escapeHtml(badge.month)}</span>
           </div>
         </figure>
         <div class="upcoming-event__details">
-          ${event.badge ? `<div class="upcoming-event__badges"><span class="event-card__badge">${event.badge}</span></div>` : ''}
-          <h3>${event.title}</h3>
-          <p class="upcoming-event__meta">${event.meta || event.location}</p>
-          ${event.summary ? `<p class="upcoming-event__desc">${event.summary}</p>` : ''}
+          ${event.badge ? `<div class="upcoming-event__badges"><span class="event-card__badge">${escapeHtml(event.badge)}</span></div>` : ''}
+          <h3>${title}</h3>
+          <p class="upcoming-event__meta">${escapeHtml(event.meta || event.location)}</p>
+          ${event.summary ? `<p class="upcoming-event__desc">${escapeHtml(event.summary)}</p>` : ''}
           ${actions ? `<div class="upcoming-event__actions">${actions}</div>` : ''}
         </div>
       </article>
@@ -341,24 +360,25 @@
 
   function renderPresentCard(event, prefix) {
     const badge = dateBadge(event);
-    const img = assetPath(event.image, prefix);
+    const img = escapeHtml(safeUrl(assetPath(event.image, prefix)));
+    const title = escapeHtml(event.title);
 
     return `
       <article class="upcoming-event upcoming-event--featured upcoming-event--present">
         <figure class="upcoming-event__poster">
-          <img src="${img}" alt="${event.title}" width="480" height="320" loading="lazy">
+          <img src="${img}" alt="${title}" width="480" height="320" loading="lazy">
           <div class="upcoming-event__date-badge">
-            <span class="day">${badge.day}</span>
-            <span class="month">${badge.month}</span>
+            <span class="day">${escapeHtml(badge.day)}</span>
+            <span class="month">${escapeHtml(badge.month)}</span>
           </div>
         </figure>
         <div class="upcoming-event__details">
           <div class="upcoming-event__badges">
             <span class="event-card__badge event-card__badge--live">Live now</span>
           </div>
-          <h3>${event.title}</h3>
-          <p class="upcoming-event__meta">${event.meta || event.location}</p>
-          ${event.summary ? `<p class="upcoming-event__desc">${event.summary}</p>` : ''}
+          <h3>${title}</h3>
+          <p class="upcoming-event__meta">${escapeHtml(event.meta || event.location)}</p>
+          ${event.summary ? `<p class="upcoming-event__desc">${escapeHtml(event.summary)}</p>` : ''}
         </div>
       </article>
     `;
@@ -366,20 +386,21 @@
 
   function renderGridCard(event, prefix, phase) {
     const badge = dateBadge(event);
-    const img = assetPath(event.image, prefix);
-    const href = event.galleryUrl ? assetPath(event.galleryUrl, prefix) : '#';
+    const img = escapeHtml(safeUrl(assetPath(event.image, prefix)));
+    const href = escapeHtml(safeUrl(event.galleryUrl ? assetPath(event.galleryUrl, prefix) : '#') || '#');
     const phaseBadgeText = phaseBadge(event, phase);
+    const title = escapeHtml(event.title);
 
     return `
-      <article class="past-event-card past-event-card--${phase}">
+      <article class="past-event-card past-event-card--${escapeHtml(phase)}">
         <a href="${href}" class="past-event-card__media">
-          <img src="${img}" alt="${event.title}" width="320" height="200" loading="lazy">
-          <div class="past-event-card__date"><span class="day">${badge.day}</span><span class="month">${badge.monthLong}</span></div>
+          <img src="${img}" alt="${title}" width="320" height="200" loading="lazy">
+          <div class="past-event-card__date"><span class="day">${escapeHtml(badge.day)}</span><span class="month">${escapeHtml(badge.monthLong)}</span></div>
         </a>
         <div class="past-event-card__body">
-          ${phaseBadgeText ? `<span class="event-card__badge event-card__badge--phase">${phaseBadgeText}</span>` : ''}
-          <h3>${event.title}</h3>
-          <p>${event.meta || event.location}</p>
+          ${phaseBadgeText ? `<span class="event-card__badge event-card__badge--phase">${escapeHtml(phaseBadgeText)}</span>` : ''}
+          <h3>${title}</h3>
+          <p>${escapeHtml(event.meta || event.location)}</p>
         </div>
       </article>
     `;
@@ -387,15 +408,22 @@
 
   function renderCompactEventItem(event, prefix, phase) {
     const badge = dateBadge(event);
-    const img = assetPath(event.image, prefix);
-    const href = event.galleryUrl ? assetPath(event.galleryUrl, prefix) : (event.bookingUrl || '#');
-    const linkAttrs = event.bookingUrl?.startsWith('http') ? ' target="_blank" rel="noopener"' : '';
+    const img = escapeHtml(safeUrl(assetPath(event.image, prefix)));
+    const rawHref = event.galleryUrl
+      ? assetPath(event.galleryUrl, prefix)
+      : event.bookingUrl || '#';
+    const href = escapeHtml(safeUrl(rawHref) || '#');
+    const booking = safeUrl(
+      event.bookingUrl?.startsWith('http') ? event.bookingUrl : assetPath(event.bookingUrl, prefix)
+    );
+    const linkAttrs = booking?.startsWith('http') ? ' target="_blank" rel="noopener"' : '';
     const meta = PHASE_META[phase];
     const phaseLabelText = phase === 'present' ? 'Live now' : phase === 'most-recent' ? 'Recent' : phase === 'upcoming' ? 'Upcoming' : '';
+    const title = escapeHtml(event.title);
 
     let action = '';
-    if (phase === 'upcoming' && event.bookingUrl) {
-      action = `<a href="${event.bookingUrl.startsWith('http') ? event.bookingUrl : assetPath(event.bookingUrl, prefix)}" class="events-phase-item__action events-phase-item__action--book"${linkAttrs}>Booking →</a>`;
+    if (phase === 'upcoming' && booking) {
+      action = `<a href="${escapeHtml(booking)}" class="events-phase-item__action events-phase-item__action--book"${linkAttrs}>Booking →</a>`;
     } else if ((phase === 'past' || phase === 'most-recent') && event.galleryUrl) {
       action = `<a href="${href}" class="events-phase-item__action events-phase-item__action--gallery">Gallery →</a>`;
     } else if (phase === 'present') {
@@ -405,14 +433,14 @@
     return `
       <article class="events-phase-item events-phase-item--${meta.mod}">
         <a href="${href}" class="events-phase-item__media"${event.galleryUrl ? '' : linkAttrs}>
-          <img src="${img}" alt="${event.title}" width="120" height="80" loading="lazy">
+          <img src="${img}" alt="${title}" width="120" height="80" loading="lazy">
           <span class="events-phase-item__overlay"></span>
-          <span class="events-phase-item__date">${badge.day} ${badge.month}</span>
+          <span class="events-phase-item__date">${escapeHtml(badge.day)} ${escapeHtml(badge.month)}</span>
         </a>
         <div class="events-phase-item__body">
           ${phaseLabelText ? `<span class="events-phase-item__badge events-phase-item__badge--${meta.mod}">${phaseLabelText}</span>` : ''}
-          <h4>${event.title}</h4>
-          <p>${event.meta || event.location}</p>
+          <h4>${title}</h4>
+          <p>${escapeHtml(event.meta || event.location)}</p>
           ${action}
         </div>
       </article>
@@ -508,7 +536,7 @@
         : phase === 'most-recent'
           ? '<span class="status-chip status-chip--pending">Recent</span>'
           : `<span class="meta">${formatShortDate(event)}</span>`;
-      return `<li><span>${event.title}</span>${chip}</li>`;
+      return `<li><span>${escapeHtml(event.title)}</span>${chip}</li>`;
     }).join('');
   }
 
@@ -544,32 +572,38 @@
 
   function renderMemberEventCard(event, prefix, phase, registered) {
     const badge = dateBadge(event);
-    const img = assetPath(event.image, prefix);
+    const img = escapeHtml(safeUrl(assetPath(event.image, prefix)));
+    const title = escapeHtml(event.title);
     const phaseLabel = phase === 'present' ? 'Live now' : phase === 'most-recent' ? 'Recent' : phase === 'upcoming' ? 'Upcoming' : 'Past';
+    const booking = safeUrl(
+      event.bookingUrl?.startsWith('http') ? event.bookingUrl : assetPath(event.bookingUrl, prefix)
+    );
+    const gallery = safeUrl(assetPath(event.galleryUrl, prefix));
+    const eventId = escapeHtml(event.id);
 
     let action = '';
-    if (registered && event.bookingUrl?.startsWith('http')) {
-      action = `<a href="${event.bookingUrl}" class="btn btn--accent" target="_blank" rel="noopener">View Ticket</a>`;
+    if (registered && booking?.startsWith('http')) {
+      action = `<a href="${escapeHtml(booking)}" class="btn btn--accent" target="_blank" rel="noopener">View Ticket</a>`;
     } else if (phase === 'upcoming' && event.registrationOpen) {
-      action = event.bookingUrl
-        ? `<a href="${assetPath(event.bookingUrl, prefix)}" class="btn btn--primary">Booking</a>`
-        : `<button type="button" class="btn btn--primary" data-register-interest="${event.id}">Register Interest</button>`;
-    } else if (event.galleryUrl && (phase === 'past' || phase === 'most-recent')) {
-      action = `<a href="${assetPath(event.galleryUrl, prefix)}" class="btn btn--ghost">View gallery</a>`;
+      action = booking
+        ? `<a href="${escapeHtml(booking)}" class="btn btn--primary">Booking</a>`
+        : `<button type="button" class="btn btn--primary" data-register-interest="${eventId}">Register Interest</button>`;
+    } else if (gallery && (phase === 'past' || phase === 'most-recent')) {
+      action = `<a href="${escapeHtml(gallery)}" class="btn btn--ghost">View gallery</a>`;
     }
 
     return `
       <article class="event-card">
-        <div class="event-card__date"><span class="day">${badge.day}</span><span class="month">${badge.month}</span></div>
+        <div class="event-card__date"><span class="day">${escapeHtml(badge.day)}</span><span class="month">${escapeHtml(badge.month)}</span></div>
         <div class="event-card__inner">
-          <img class="event-card__thumb" src="${img}" alt="${event.title}">
+          <img class="event-card__thumb" src="${img}" alt="${title}">
           <div class="event-card__info">
             <div class="event-card__badges">
               ${registered ? '<span class="event-card__badge event-card__badge--member">Registered</span>' : ''}
               <span class="event-card__badge event-card__badge--phase">${phaseLabel}</span>
             </div>
-            <h3>${event.title}</h3>
-            <div class="event-card__meta"><span>${event.meta || event.location}</span></div>
+            <h3>${title}</h3>
+            <div class="event-card__meta"><span>${escapeHtml(event.meta || event.location)}</span></div>
             ${action}
           </div>
         </div>

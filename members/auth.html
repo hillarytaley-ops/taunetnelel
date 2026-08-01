@@ -103,17 +103,21 @@
         </form>
       </div>
 
-      <!-- Committee admin PIN (separate from members Auth) -->
+      <!-- Committee admin (Supabase Auth + site_admins) -->
       <div class="auth-panel" data-auth-panel="admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
         <div class="login-card__header">
           <h1>Committee admin</h1>
-          <p>Separate from the members area. Enter the committee PIN to open the site dashboard.</p>
+          <p>Sign in with your committee email. Access requires your account in the site_admins list.</p>
         </div>
-        <form class="login-form" id="admin-pin-form" novalidate>
-          <p class="auth-form__message" id="admin-pin-status" role="status" hidden></p>
+        <form class="login-form" id="admin-auth-form" novalidate>
+          <p class="auth-form__message" id="admin-auth-status" role="status" hidden></p>
           <div class="form-group">
-            <label for="admin-pin">Admin PIN</label>
-            <input type="password" id="admin-pin" name="pin" placeholder="Committee admin PIN" autocomplete="current-password" required>
+            <label for="admin-email">Email</label>
+            <input type="email" id="admin-email" name="email" placeholder="committee@example.com" autocomplete="username" required>
+          </div>
+          <div class="form-group">
+            <label for="admin-password">Password</label>
+            <input type="password" id="admin-password" name="password" placeholder="Your account password" autocomplete="current-password" required>
           </div>
           <button type="submit" class="btn btn--primary login-submit">Enter admin portal</button>
           <p class="login-form__footer">
@@ -124,14 +128,16 @@
     </div>
   </main>
 
-  <script src="../assets/js/supabase-config.js?v=2"></script>
-  <script src="../assets/js/supabase-init.js?v=3"></script>
-  <script src="../assets/js/members-auth.js?v=5"></script>
-  <script src="../assets/js/members.js?v=19"></script>
+  <script src="../assets/js/taunet-security.js?v=1"></script>
+  <script src="../assets/js/supabase-config.js?v=3"></script>
+  <script src="../assets/js/supabase-init.js?v=4"></script>
+  <script src="../assets/js/members-auth.js?v=6"></script>
+  <script src="../assets/js/members.js?v=20"></script>
   <script>
     (function () {
-      var ADMIN_PIN_KEY = 'taunet_site_admin_pin';
-      var ADMIN_PIN_VALUE_KEY = 'taunet_site_admin_pin_value';
+      sessionStorage.removeItem('taunet_site_admin_pin');
+      sessionStorage.removeItem('taunet_site_admin_pin_value');
+
       var params = new URLSearchParams(window.location.search);
       var tabParam = (params.get('tab') || params.get('mode') || 'signin').toLowerCase();
       if (tabParam === 'register' || tabParam === 'signup') tabParam = 'join';
@@ -179,24 +185,47 @@
         });
       });
 
-      var adminForm = document.getElementById('admin-pin-form');
-      var adminStatus = document.getElementById('admin-pin-status');
-      adminForm?.addEventListener('submit', function (e) {
+      function safeNext() {
+        var sec = window.TaunetSecurity;
+        var fallback = '../admin/';
+        return sec && sec.safeRedirectPath
+          ? sec.safeRedirectPath(params.get('next'), fallback)
+          : fallback;
+      }
+
+      var adminForm = document.getElementById('admin-auth-form');
+      var adminStatus = document.getElementById('admin-auth-status');
+      adminForm?.addEventListener('submit', async function (e) {
         e.preventDefault();
-        var pin = adminForm.querySelector('[name="pin"]')?.value?.trim() || '';
-        var expected = window.TAUNET_SUPABASE?.adminPin || 'TaunetAdmin2026';
-        if (pin !== expected) {
+        var email = adminForm.querySelector('[name="email"]')?.value?.trim() || '';
+        var password = adminForm.querySelector('[name="password"]')?.value || '';
+        var btn = adminForm.querySelector('button[type="submit"]');
+        if (adminStatus) {
+          adminStatus.hidden = false;
+          adminStatus.classList.remove('is-error');
+          adminStatus.textContent = 'Signing in…';
+        }
+        if (btn) btn.disabled = true;
+        try {
+          var authApi = window.taunetMembersAuth;
+          if (!authApi) throw new Error('Auth is not ready. Refresh and try again.');
+          await authApi.signIn(email, password);
+          var client = await authApi.getClient();
+          var rpc = await client.rpc('is_site_admin');
+          if (rpc.error) throw rpc.error;
+          if (!rpc.data) {
+            await authApi.signOut();
+            throw new Error('This account is not on the committee admin list.');
+          }
+          window.location.href = safeNext();
+        } catch (err) {
           if (adminStatus) {
             adminStatus.hidden = false;
             adminStatus.classList.add('is-error');
-            adminStatus.textContent = 'Incorrect admin PIN.';
+            adminStatus.textContent = err.message || 'Could not sign in.';
           }
-          return;
+          if (btn) btn.disabled = false;
         }
-        sessionStorage.setItem(ADMIN_PIN_KEY, '1');
-        sessionStorage.setItem(ADMIN_PIN_VALUE_KEY, pin);
-        var next = params.get('next') || '../admin/';
-        window.location.href = next;
       });
     })();
   </script>

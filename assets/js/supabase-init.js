@@ -208,9 +208,18 @@
         if (!email) return;
 
         const listKey = form.dataset.supabaseNewsletter || 'default';
-        const { error } = await supabase
-          .from('newsletter_subscribers')
-          .upsert({ email, list_key: listKey }, { onConflict: 'email' });
+        let error = null;
+        const rpc = await supabase.rpc('subscribe_newsletter', {
+          p_email: email,
+          p_list_key: listKey
+        });
+        if (rpc.error) {
+          // Fallback if migration 018 not applied yet
+          const upsert = await supabase
+            .from('newsletter_subscribers')
+            .upsert({ email, list_key: listKey }, { onConflict: 'email' });
+          error = upsert.error;
+        }
 
         const message =
           form.querySelector('.newsletter-form__message') ||

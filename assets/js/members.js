@@ -220,7 +220,10 @@
   function redirectAfterAuth() {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get('redirect');
-    window.location.href = redirect || 'dashboard.html';
+    const fallback = 'dashboard.html';
+    const safe =
+      window.TaunetSecurity?.safeRedirectPath?.(redirect, fallback) || fallback;
+    window.location.href = safe;
   }
 
   async function initAuth() {

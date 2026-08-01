@@ -9,6 +9,28 @@
     { id: 'past', label: 'Past events' }
   ];
 
+  function escapeHtml(value) {
+    return window.TaunetSecurity?.escapeHtml
+      ? window.TaunetSecurity.escapeHtml(value)
+      : String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+  }
+
+  function safeUrl(value) {
+    return window.TaunetSecurity?.safeUrl
+      ? window.TaunetSecurity.safeUrl(value)
+      : String(value ?? '').replace(/^(javascript|data|vbscript):/i, '');
+  }
+
+  function safeDomId(value) {
+    return window.TaunetSecurity?.safeDomId
+      ? window.TaunetSecurity.safeDomId(value)
+      : String(value ?? '').replace(/[^a-zA-Z0-9_-]/g, '');
+  }
+
   function sortedAlbums(filterId) {
     return events
       .filter((event) => event.group === filterId)
@@ -26,10 +48,12 @@
   }
 
   function renderPhotoFigure(photo, hidden) {
+    const src = escapeHtml(safeUrl(photo.src));
+    const alt = escapeHtml(photo.alt || '');
     return `
       <figure class="gallery-photo${hidden ? ' gallery-photo--hidden' : ''}">
-        <button type="button" class="gallery-photo__thumb" data-view="${photo.src}" data-caption="${photo.alt}" aria-label="View ${photo.alt}">
-          <img src="${photo.src}" alt="${photo.alt}" width="400" height="300" loading="lazy">
+        <button type="button" class="gallery-photo__thumb" data-view="${src}" data-caption="${alt}" aria-label="View ${alt}">
+          <img src="${src}" alt="${alt}" width="400" height="300" loading="lazy">
         </button>
       </figure>`;
   }
@@ -37,16 +61,19 @@
   function renderAlbumCard(event) {
     const previewLimit = Math.min(event.previewLimit || 4, 8);
     const hasMore = event.photos.length > previewLimit;
-    const cover = event.photos[0]?.src || '';
+    const albumId = safeDomId(event.id);
+    const cover = escapeHtml(safeUrl(event.photos[0]?.src || ''));
     const photosHtml = event.photos
       .map((photo, index) => renderPhotoFigure(photo, index >= previewLimit))
       .join('');
 
     const albumLinks = (event.externalAlbums || [])
-      .map(
-        (album) =>
-          `<a class="gallery-event__album-link" href="${album.url}" target="_blank" rel="noopener">${album.label} →</a>`
-      )
+      .map((album) => {
+        const href = escapeHtml(safeUrl(album.url));
+        if (!href) return '';
+        return `<a class="gallery-event__album-link" href="${href}" target="_blank" rel="noopener">${escapeHtml(album.label)} →</a>`;
+      })
+      .filter(Boolean)
       .join('');
 
     const badge =
@@ -55,23 +82,23 @@
         : '<span class="gallery-album-card__badge">Past event</span>';
 
     return `
-      <article class="gallery-album-card" id="${event.id}" data-group="${event.group}">
-        <a href="#${event.id}" class="gallery-album-card__hero" aria-hidden="true" tabindex="-1">
+      <article class="gallery-album-card" id="${albumId}" data-group="${escapeHtml(event.group || '')}">
+        <a href="#${albumId}" class="gallery-album-card__hero" aria-hidden="true" tabindex="-1">
           <img src="${cover}" alt="" width="960" height="360" loading="lazy">
           <span class="gallery-album-card__overlay"></span>
           <span class="gallery-album-card__count">${event.photos.length} photos</span>
         </a>
         <header class="gallery-album-card__head">
           <div class="gallery-album-card__meta">
-            <p class="gallery-album-card__date">${event.date}</p>
+            <p class="gallery-album-card__date">${escapeHtml(event.date)}</p>
             ${badge}
           </div>
-          <h2>${event.title}</h2>
-          <p class="gallery-album-card__desc">${event.description}</p>
+          <h2>${escapeHtml(event.title)}</h2>
+          <p class="gallery-album-card__desc">${escapeHtml(event.description)}</p>
           ${albumLinks ? `<div class="gallery-event__albums">${albumLinks}</div>` : ''}
         </header>
-        <div class="gallery-grid gallery-grid--photos gallery-grid--compact" data-album-grid="${event.id}">${photosHtml}</div>
-        ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${event.id}">Show all ${event.photos.length} photos</button>` : ''}
+        <div class="gallery-grid gallery-grid--photos gallery-grid--compact" data-album-grid="${albumId}">${photosHtml}</div>
+        ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${albumId}">Show all ${event.photos.length} photos</button>` : ''}
       </article>`;
   }
 
