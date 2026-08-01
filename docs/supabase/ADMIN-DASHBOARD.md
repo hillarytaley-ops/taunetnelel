@@ -6,20 +6,11 @@
 
 Sign in at `/members/auth.html?tab=admin`.
 
-## First-time access (no Auth admin yet)
+## Access
 
-1. In Vercel → Environment Variables, set **`ADMIN_BOOTSTRAP_PIN`** (or keep existing **`ADMIN_PIN`**) to a long random secret. Redeploy.
-2. Open Committee tab → enter that PIN under **Emergency bootstrap PIN**.
-3. Then create lasting admin accounts:
-   - Open **Join** and register with an email listed in `public.site_admins` (migration 011), **or**
-   - In Supabase → Authentication → Users → Add user, then ensure the email is in `site_admins`.
-
-The PIN is checked only on the server. It is **not** stored in frontend JS.
-
-## Ongoing access (preferred)
-
-1. Sign in with email/password for an account in `site_admins`.
+1. Sign in at `/members/auth.html?tab=admin` with email/password for an account in `site_admins`.
 2. API verifies the Bearer token + `site_admins` before using the service role.
+3. To add an admin: put their email in `public.site_admins`, then create/reset Auth with `docs/supabase/reset_admin_password.py` or bootstrap script.
 
 ## Vercel env
 
@@ -27,9 +18,8 @@ The PIN is checked only on the server. It is **not** stored in frontend JS.
 |------|--------|
 | `SUPABASE_URL` | your project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` secret |
-| `ADMIN_BOOTSTRAP_PIN` | optional emergency PIN (server only) |
 
-**Never** put `service_role` or the bootstrap PIN in frontend JS.
+**Never** put `service_role` in frontend JS. You can remove unused `ADMIN_BOOTSTRAP_PIN` / `ADMIN_PIN` from Vercel.
 
 ## Supabase SQL
 

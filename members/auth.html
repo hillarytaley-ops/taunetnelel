@@ -103,21 +103,12 @@
         </form>
       </div>
 
-      <!-- Committee admin (Auth account or server bootstrap PIN) -->
+      <!-- Committee admin (Supabase Auth + site_admins) -->
       <div class="auth-panel" data-auth-panel="admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
         <div class="login-card__header">
           <h1>Committee admin</h1>
-          <p>First time: use the emergency PIN below (set in Vercel), or create a members account with your committee email, then sign in here.</p>
+          <p>Sign in with your committee email and password. Your account must be on the admin list.</p>
         </div>
-        <form class="login-form" id="admin-bootstrap-form" novalidate>
-          <p class="auth-form__message" id="admin-bootstrap-status" role="status" hidden></p>
-          <div class="form-group">
-            <label for="admin-bootstrap-pin">Emergency bootstrap PIN</label>
-            <input type="password" id="admin-bootstrap-pin" name="pin" placeholder="Server PIN from Vercel env" autocomplete="current-password" required>
-          </div>
-          <button type="submit" class="btn btn--primary login-submit">Enter with PIN</button>
-        </form>
-        <p class="login-form__footer" style="margin:1.25rem 0 0.75rem;text-align:center;">or sign in with a registered committee account</p>
         <form class="login-form" id="admin-auth-form" novalidate>
           <p class="auth-form__message" id="admin-auth-status" role="status" hidden></p>
           <div class="form-group">
@@ -128,10 +119,8 @@
             <label for="admin-password">Password</label>
             <input type="password" id="admin-password" name="password" placeholder="Your account password" autocomplete="current-password" required>
           </div>
-          <button type="submit" class="btn btn--primary login-submit">Enter with account</button>
+          <button type="submit" class="btn btn--primary login-submit">Enter admin portal</button>
           <p class="login-form__footer">
-            <a href="?tab=join" class="login-form__footer-link">Create account first</a>
-            <span class="login-form__footer-sep" aria-hidden="true">·</span>
             <a href="../index.html" class="login-form__footer-link">Back to website</a>
           </p>
         </form>
@@ -146,7 +135,7 @@
   <script src="../assets/js/members.js?v=20"></script>
   <script>
     (function () {
-      var BOOTSTRAP_PIN_KEY = 'taunet_admin_bootstrap_pin';
+      sessionStorage.removeItem('taunet_admin_bootstrap_pin');
       sessionStorage.removeItem('taunet_site_admin_pin');
       sessionStorage.removeItem('taunet_site_admin_pin_value');
 
@@ -205,41 +194,6 @@
           : fallback;
       }
 
-      var bootstrapForm = document.getElementById('admin-bootstrap-form');
-      var bootstrapStatus = document.getElementById('admin-bootstrap-status');
-      bootstrapForm?.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        var pin = bootstrapForm.querySelector('[name="pin"]')?.value?.trim() || '';
-        var btn = bootstrapForm.querySelector('button[type="submit"]');
-        if (bootstrapStatus) {
-          bootstrapStatus.hidden = false;
-          bootstrapStatus.classList.remove('is-error');
-          bootstrapStatus.textContent = 'Checking PIN…';
-        }
-        if (btn) btn.disabled = true;
-        try {
-          if (!pin) throw new Error('Enter the bootstrap PIN.');
-          var res = await fetch('/api/admin/data?resource=session', {
-            headers: {
-              'Content-Type': 'application/json',
-              'x-admin-bootstrap-pin': pin
-            }
-          });
-          var data = {};
-          try { data = await res.json(); } catch (_) {}
-          if (!res.ok) throw new Error(data.error || 'Invalid bootstrap PIN');
-          sessionStorage.setItem(BOOTSTRAP_PIN_KEY, pin);
-          window.location.href = safeNext();
-        } catch (err) {
-          if (bootstrapStatus) {
-            bootstrapStatus.hidden = false;
-            bootstrapStatus.classList.add('is-error');
-            bootstrapStatus.textContent = err.message || 'Could not enter with PIN.';
-          }
-          if (btn) btn.disabled = false;
-        }
-      });
-
       var adminForm = document.getElementById('admin-auth-form');
       var adminStatus = document.getElementById('admin-auth-status');
       adminForm?.addEventListener('submit', async function (e) {
@@ -262,16 +216,15 @@
           if (rpc.error) {
             throw new Error(
               rpc.error.message ||
-              'Could not verify admin list. Run migration 011 in Supabase, then try again.'
+              'Could not verify admin list. Ask IT to confirm site_admins in Supabase.'
             );
           }
           if (!rpc.data) {
             await authApi.signOut();
             throw new Error(
-              'Signed in, but this email is not in site_admins. Use Join with a committee email, or ask an existing admin to add you.'
+              'Signed in, but this email is not on the committee admin list.'
             );
           }
-          sessionStorage.removeItem(BOOTSTRAP_PIN_KEY);
           window.location.href = safeNext();
         } catch (err) {
           if (adminStatus) {
@@ -279,8 +232,7 @@
             adminStatus.classList.add('is-error');
             var msg = err.message || 'Could not sign in.';
             if (/invalid login credentials/i.test(msg)) {
-              msg =
-                'Invalid email or password. Copy the password exactly from the reset script (no extra spaces), or run: python docs/supabase/reset_admin_password.py your@email.com';
+              msg = 'Invalid email or password. Use Forgot password on Sign in, or ask IT to reset your account.';
             }
             adminStatus.textContent = msg;
           }
