@@ -21,14 +21,34 @@ import urllib.error
 import urllib.request
 import json
 
-URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+def _env(name: str) -> str:
+    # PowerShell pastes often leave CR/LF or wrapping quotes in the value
+    return (
+        os.environ.get(name, "")
+        .strip()
+        .strip('"')
+        .strip("'")
+        .replace("\r", "")
+        .replace("\n", "")
+    )
+
+
+URL = _env("SUPABASE_URL").rstrip("/")
+SERVICE_KEY = _env("SUPABASE_SERVICE_ROLE_KEY")
 
 
 def api(method: str, path: str, body: dict | None = None) -> dict | list:
     if not URL or not SERVICE_KEY:
         raise SystemExit(
-            "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables."
+            "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.\n"
+            "PowerShell example:\n"
+            '  $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"\n'
+            '  $env:SUPABASE_SERVICE_ROLE_KEY = "eyJ..."   # one line, no Enter inside quotes'
+        )
+    if any(ch in SERVICE_KEY for ch in " \t\r\n"):
+        raise SystemExit(
+            "SUPABASE_SERVICE_ROLE_KEY still contains whitespace. "
+            "Re-copy the key as a single line with no spaces or line breaks."
         )
 
     req = urllib.request.Request(

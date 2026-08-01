@@ -32,8 +32,21 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+
+def _env(name: str) -> str:
+    return (
+        os.environ.get(name, "")
+        .strip()
+        .strip('"')
+        .strip("'")
+        .replace("\r", "")
+        .replace("\n", "")
+    )
+
+
+URL = _env("SUPABASE_URL").rstrip("/")
+SERVICE_KEY = _env("SUPABASE_SERVICE_ROLE_KEY")
 
 COMMITTEE = [
     ("hillarytaley@gmail.com", "Hillary Taley"),
