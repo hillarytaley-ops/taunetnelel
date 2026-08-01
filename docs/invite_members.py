@@ -145,10 +145,25 @@ def _action_link(payload: dict | list) -> str:
     )
 
 
+def _with_redirect(action_link: str, redirect_to: str) -> str:
+    """Ensure verify URL uses our auth page (not bare Site URL)."""
+    try:
+        parts = urllib.parse.urlsplit(action_link)
+        q = urllib.parse.parse_qs(parts.query, keep_blank_values=True)
+        q["redirect_to"] = [redirect_to]
+        new_query = urllib.parse.urlencode({k: v[0] for k, v in q.items()}, doseq=False)
+        return urllib.parse.urlunsplit(
+            (parts.scheme, parts.netloc, parts.path, new_query, parts.fragment)
+        )
+    except Exception:  # noqa: BLE001
+        return action_link
+
+
 def generate_link(link_type: str, email: str, redirect_to: str, data: dict | None = None) -> str:
     body: dict = {
         "type": link_type,
         "email": email,
+        "redirect_to": redirect_to,
         "options": {"redirect_to": redirect_to},
     }
     if data:
@@ -157,7 +172,7 @@ def generate_link(link_type: str, email: str, redirect_to: str, data: dict | Non
     link = _action_link(payload)  # type: ignore[arg-type]
     if not link:
         raise RuntimeError(f"generate_link({link_type}) returned no action_link")
-    return link
+    return _with_redirect(link, redirect_to)
 
 
 def send_resend(email: str, subject: str, text: str, html: str, tag: str) -> None:

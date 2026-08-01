@@ -57,6 +57,19 @@ http://localhost:8080/members/**
 2. Site API `/api/auth/request-password-reset` emails a real reset link via **Resend**.
 3. Member opens the link → **Choose a new password** → dashboard.
 
+**If the link opens the home page instead of the reset form:** Supabase rejected the
+`redirect_to` and fell back to Site URL. Add these under Authentication → URL Configuration
+→ Redirect URLs (exact match or wildcard):
+
+```text
+https://taunetnelel.vercel.app/members/**
+https://taunetnelel.vercel.app/members/auth.html
+https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery
+```
+
+The homepage also runs `assets/js/auth-callback-bounce.js` to forward recovery tokens
+to `/members/auth.html` if that fallback still happens.
+
 Vercel must have `RESEND_API_KEY` (see `ADMIN-DASHBOARD.md`). Check Resend → Emails if a test reset does not arrive.
 
 Primary members entry page is **`members/auth.html`** (not the older `login.html` / `register.html` paths).

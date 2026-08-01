@@ -86,7 +86,19 @@ function requestOrigin(req) {
   return PUBLIC_SITE_URL || 'https://taunetnelel.vercel.app';
 }
 
+/** Force redirect_to on the verify URL (Supabase may fall back to Site URL). */
+function withRedirectTo(actionLink, redirectTo) {
+  try {
+    const u = new URL(actionLink);
+    u.searchParams.set('redirect_to', redirectTo);
+    return u.toString();
+  } catch {
+    return actionLink;
+  }
+}
+
 async function generateRecoveryLink(email, redirectTo) {
+  // Top-level + options: GoTrue versions differ on which field they honour.
   const resp = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
     method: 'POST',
     headers: {
@@ -97,6 +109,7 @@ async function generateRecoveryLink(email, redirectTo) {
     body: JSON.stringify({
       type: 'recovery',
       email,
+      redirect_to: redirectTo,
       options: { redirect_to: redirectTo },
     }),
   });
@@ -174,19 +187,20 @@ module.exports = async function handler(req, res) {
       throw err;
     }
 
-    const actionLink =
+    const rawLink =
       linkPayload?.action_link ||
       linkPayload?.properties?.action_link ||
       linkPayload?.data?.properties?.action_link ||
       '';
 
-    if (!actionLink) {
+    if (!rawLink) {
       console.error('generate_link missing action_link', linkPayload);
       return json(res, 502, {
         error: 'Could not create a reset link. Try again or contact IT.',
       });
     }
 
+    const actionLink = withRedirectTo(rawLink, redirectTo);
     const mail = buildPasswordMail({ actionLink, kind: 'reset' });
     await sendMemberMail({ to: email, ...mail });
     return json(res, 200, CLIENT_OK);
