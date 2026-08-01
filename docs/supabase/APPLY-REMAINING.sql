@@ -47,12 +47,58 @@ insert into public.site_admins (email, full_name) values
   ('briankip57@gmail.com', 'Brian Kip')
 on conflict (email) do nothing;
 
+-- Required by 018/019 (from migration 011) — create BEFORE security policies
+create or replace function public.is_site_admin()
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+set row_security = off
+as $$
+declare
+  v_email text;
+begin
+  v_email := lower(trim(coalesce(
+    auth.jwt() ->> 'email',
+    auth.email()::text,
+    ''
+  )));
+  if v_email = '' then
+    return false;
+  end if;
+  return exists (
+    select 1 from public.site_admins a where a.email = v_email
+  );
+end;
+$$;
+
+revoke all on function public.is_site_admin() from public;
+grant execute on function public.is_site_admin() to authenticated, anon;
+
+grant select on table public.site_admins to authenticated;
+
+drop policy if exists "Admins can read site_admins" on public.site_admins;
+drop policy if exists "Users can read own site_admin row" on public.site_admins;
+
+create policy "Users can read own site_admin row"
+  on public.site_admins
+  for select
+  to authenticated
+  using (email = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+create policy "Admins can read site_admins"
+  on public.site_admins
+  for select
+  to authenticated
+  using (public.is_site_admin());
+
 -- Quick read-only confirmation
 select 'member_imports' as item, count(*)::int as n from public.member_imports
 union all
-select 'site_admins', count(*)::int from public.site_admins
+select 'site_admins', count(*)::int as n from public.site_admins
 union all
-select 'profiles', count(*)::int from public.profiles;
+select 'profiles', count(*)::int as n from public.profiles;
 
 select column_name
 from information_schema.columns

@@ -1,13 +1,15 @@
 # What to run next (production finish)
 
-## A. One paste in Supabase SQL Editor (required)
+## A. Supabase SQL Editor (required)
 
-Open: Supabase → SQL Editor → New query  
-Paste the full file: **`docs/supabase/APPLY-REMAINING.sql`** → Run  
+Open: Supabase → SQL Editor → New query
+
+1. If you already saw `function public.is_site_admin() does not exist`, run **`docs/supabase/FIX-IS-SITE-ADMIN.sql`** first.  
+2. Then paste and run **`docs/supabase/APPLY-REMAINING.sql`**.
 
 That applies:
 
-- `013` — enquiry `status` + `site_admins`
+- `011`/`013` — `site_admins` + `is_site_admin()` + enquiry `status`
 - `018` — security hardening (membership locks, newsletter RPC, form RLS)
 - `019` — Business Hub blog table + admin write policies
 
