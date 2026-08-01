@@ -151,6 +151,9 @@
             <label for="admin-password">Password</label>
             <input type="password" id="admin-password" name="password" placeholder="Your account password" autocomplete="current-password" required>
           </div>
+          <p class="login-form__forgot">
+            <a href="#" id="admin-forgot-password">Forgot password?</a>
+          </p>
           <button type="submit" class="btn btn--primary login-submit">Enter admin portal</button>
           <p class="login-form__footer">
             <a href="../index.html" class="login-form__footer-link">Back to website</a>
@@ -232,6 +235,48 @@
 
       var adminForm = document.getElementById('admin-auth-form');
       var adminStatus = document.getElementById('admin-auth-status');
+      var adminForgot = document.getElementById('admin-forgot-password');
+      adminForgot?.addEventListener('click', async function (e) {
+        e.preventDefault();
+        var email = adminForm?.querySelector('[name="email"]')?.value?.trim() || '';
+        if (!email) {
+          if (adminStatus) {
+            adminStatus.hidden = false;
+            adminStatus.classList.add('is-error');
+            adminStatus.textContent = 'Enter your committee email first, then click Forgot password.';
+          }
+          return;
+        }
+        var authApi = window.taunetMembersAuth;
+        if (!authApi?.requestPasswordReset) {
+          if (adminStatus) {
+            adminStatus.hidden = false;
+            adminStatus.classList.add('is-error');
+            adminStatus.textContent = 'Password reset is not ready. Refresh and try again.';
+          }
+          return;
+        }
+        if (adminStatus) {
+          adminStatus.hidden = false;
+          adminStatus.classList.remove('is-error');
+          adminStatus.textContent = 'Sending reset email…';
+        }
+        try {
+          await authApi.requestPasswordReset(email);
+          if (adminStatus) {
+            adminStatus.hidden = false;
+            adminStatus.classList.remove('is-error');
+            adminStatus.textContent =
+              'If that email has an account, a reset link was sent. Check inbox and spam (from noreply@taunetnelel.org).';
+          }
+        } catch (err) {
+          if (adminStatus) {
+            adminStatus.hidden = false;
+            adminStatus.classList.add('is-error');
+            adminStatus.textContent = err.message || 'Could not send reset email.';
+          }
+        }
+      });
       adminForm?.addEventListener('submit', async function (e) {
         e.preventDefault();
         var email = adminForm.querySelector('[name="email"]')?.value?.trim() || '';
@@ -268,7 +313,7 @@
             adminStatus.classList.add('is-error');
             var msg = err.message || 'Could not sign in.';
             if (/invalid login credentials/i.test(msg)) {
-              msg = 'Invalid email or password. Use Forgot password on Sign in, or ask IT to reset your account.';
+              msg = 'Invalid email or password. Use Forgot password below, or ask IT to reset your account.';
             }
             adminStatus.textContent = msg;
           }
