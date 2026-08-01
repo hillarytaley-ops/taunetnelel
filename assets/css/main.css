@@ -62,7 +62,10 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+}
 
 body {
   font-family: var(--font-body);
@@ -75,6 +78,8 @@ body {
     linear-gradient(180deg, #fffdfb 0%, var(--color-bg) 42%, #fffdfb 100%);
   -webkit-font-smoothing: antialiased;
   position: relative;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 /* Site-wide team-color shine + animated wave sweep */
@@ -3836,14 +3841,22 @@ body.nav-open { overflow: hidden; }
   display: none;
   position: fixed;
   inset: 0;
+  width: 100%;
+  max-width: 100%;
   background: rgba(0,0,0,0.5);
   z-index: 2000;
   opacity: 0;
   visibility: hidden;
-  transition: var(--transition);
+  overflow: hidden; /* keep closed drawer from widening the page */
+  pointer-events: none;
+  transition: opacity var(--transition), visibility var(--transition);
 }
 
-.mobile-nav.open { opacity: 1; visibility: visible; }
+.mobile-nav.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
 
 .mobile-nav__panel {
   position: absolute;
@@ -3851,11 +3864,14 @@ body.nav-open { overflow: hidden; }
   top: 0;
   bottom: 0;
   width: min(320px, 85vw);
+  max-width: 100%;
   background: var(--color-peru);
   padding: 1.5rem;
   transform: translateX(100%);
   transition: transform var(--transition);
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mobile-nav.open .mobile-nav__panel { transform: translateX(0); }
@@ -3994,6 +4010,7 @@ body.nav-open { overflow: hidden; }
   .header-actions { display: none; }
   .menu-toggle { display: block; }
   .mobile-nav { display: block; }
+  .site-header { overflow: hidden; }
 }
 
 @media (max-width: 768px) {
@@ -4017,12 +4034,15 @@ body.nav-open { overflow: hidden; }
   .social-links { justify-content: center; }
   .footer-grid .footer-social { justify-content: center; }
   .mobile-join-fab {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
+    left: max(1rem, env(safe-area-inset-left, 0px));
+    right: max(1rem, env(safe-area-inset-right, 0px));
+    width: max-content;
+    max-width: calc(100% - 2rem);
+    margin-inline: auto;
+    transform: none;
   }
   .mobile-join-fab:hover {
-    transform: translateX(-50%) translateY(-2px);
+    transform: translateY(-2px);
   }
   .hero__arrow { display: none; }
   .event-strip .container { flex-direction: column; text-align: center; }
