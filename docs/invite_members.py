@@ -1,15 +1,19 @@
 """
-Invite pending members from public.member_imports via Supabase Admin API.
+Invite pending members from public.member_imports.
 
-NEVER commit the service_role key. Pass it only via environment variables.
+ALWAYS sends mail via Resend (generate_link + custom template).
+Never uses Supabase /auth/v1/invite mail — that default template often lands in spam.
+
+NEVER commit the service_role key. Pass secrets only via environment variables.
 
 Usage (PowerShell):
   $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"
   $env:SUPABASE_SERVICE_ROLE_KEY = "your-service-role-key"
+  $env:RESEND_API_KEY = "re_..."
+  $env:RESEND_FROM = "Taunet Nelel <members@taunetnelel.org>"   # optional
+  $env:RESEND_REPLY_TO = "info@taunetnelel.org"                 # optional
   python docs/invite_members.py --limit 5
-  python docs/invite_members.py --email hillarykaptingei@gmail.com
-
-Then without --limit to invite all pending_invite rows.
+  python docs/invite_members.py --email someone@example.com
 """
 
 from __future__ import annotations
@@ -22,6 +26,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
 
 def _env(name: str) -> str:
     # PowerShell pastes often leave CR/LF or wrapping quotes in the value
@@ -37,6 +42,9 @@ def _env(name: str) -> str:
 
 URL = _env("SUPABASE_URL").rstrip("/")
 SERVICE_KEY = _env("SUPABASE_SERVICE_ROLE_KEY")
+RESEND_KEY = _env("RESEND_API_KEY")
+RESEND_FROM = _env("RESEND_FROM") or "Taunet Nelel <members@taunetnelel.org>"
+RESEND_REPLY_TO = _env("RESEND_REPLY_TO") or "info@taunetnelel.org"
 
 
 def api(method: str, path: str, body: dict | None = None) -> dict | list:
@@ -127,99 +135,58 @@ def ensure_member_row(email: str, full_name: str = "") -> dict:
     return row
 
 
-def invite(row: dict, redirect_to: str) -> str:
-    """
-    Invite a new Auth user, or send a recovery email if they already exist.
-    Returns: 'invited' | 'recovery_sent'
-    """
-    email = row["email"]
-    try:
-        api(
-            "POST",
-            "/auth/v1/invite",
-            {
-                "email": email,
-                "data": {
-                    "full_name": row.get("full_name") or "",
-                    "plan": row.get("plan") or "basic",
-                    "member_number": row.get("member_number") or "",
-                },
-                "redirect_to": redirect_to,
-            },
-        )
-        return "invited"
-    except RuntimeError as exc:
-        detail = str(exc)
-        if "email_exists" not in detail and "already been registered" not in detail.lower():
-            raise
-        # Existing Auth user — prefer generate_link + Resend (same path as site Forgot password)
-        redirect = redirect_to or (
-            "https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery"
-        )
-        if _env("RESEND_API_KEY"):
-            link_payload = api(
-                "POST",
-                "/auth/v1/admin/generate_link",
-                {
-                    "type": "recovery",
-                    "email": email,
-                    "options": {"redirect_to": redirect},
-                },
-            )
-            action_link = (
-                (link_payload or {}).get("action_link")
-                or (link_payload or {}).get("properties", {}).get("action_link")
-                or ""
-            )
-            if not action_link:
-                raise RuntimeError("generate_link returned no action_link")
-            send_resend_recovery(email, action_link, row.get("full_name") or "")
-            return "recovery_sent"
-
-        # Fallback: Supabase SMTP recover (redirect must be allowlisted)
-        api(
-            "POST",
-            "/auth/v1/recover",
-            {"email": email, "gotrue_meta_security": {}},
-        )
-        return "recovery_sent"
-
-
-def send_resend_recovery(email: str, action_link: str, full_name: str) -> None:
-    key = _env("RESEND_API_KEY")
-    from_addr = _env("RESEND_FROM") or "Taunet Nelel <members@taunetnelel.org>"
-    reply_to = _env("RESEND_REPLY_TO") or "info@taunetnelel.org"
-    name = (full_name or "").strip() or "there"
-    subject = "Your Taunet Nelel member password"
-    text = (
-        f"Hello {name},\n\n"
-        f"Choose a password for your Taunet Nelel member account:\n\n"
-        f"{action_link}\n\n"
-        f"If you did not request this, ignore this email.\n"
-        f"Taunet Nelel — Victoria, Australia\n"
+def _action_link(payload: dict | list) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    return (
+        payload.get("action_link")
+        or (payload.get("properties") or {}).get("action_link")
+        or ""
     )
-    html = (
-        f"<p>Hello {name},</p>"
-        f"<p>Please choose a password for your <strong>Taunet Nelel</strong> member account.</p>"
-        f'<p><a href="{action_link}" style="background:#8B4513;color:#fff;padding:12px 20px;'
-        f'text-decoration:none;border-radius:6px;display:inline-block;">Choose your password</a></p>'
-        f"<p style='font-size:13px;color:#555;word-break:break-all'>{action_link}</p>"
-        f"<p>Taunet Nelel · Victoria, Australia · info@taunetnelel.org</p>"
-    )
+
+
+def generate_link(link_type: str, email: str, redirect_to: str, data: dict | None = None) -> str:
+    body: dict = {
+        "type": link_type,
+        "email": email,
+        "options": {"redirect_to": redirect_to},
+    }
+    if data:
+        body["options"]["data"] = data
+    payload = api("POST", "/auth/v1/admin/generate_link", body)
+    link = _action_link(payload)  # type: ignore[arg-type]
+    if not link:
+        raise RuntimeError(f"generate_link({link_type}) returned no action_link")
+    return link
+
+
+def send_resend(email: str, subject: str, text: str, html: str, tag: str) -> None:
+    if not RESEND_KEY:
+        raise SystemExit(
+            "RESEND_API_KEY is required. Invites must go through Resend "
+            "(Supabase default invite mail often lands in spam)."
+        )
+    if "noreply@" in RESEND_FROM.lower():
+        raise SystemExit(
+            "RESEND_FROM must not use noreply@. Use: "
+            'Taunet Nelel <members@taunetnelel.org>'
+        )
     body = {
-        "from": from_addr,
+        "from": RESEND_FROM,
         "to": [email],
         "subject": subject,
         "html": html,
         "text": text,
-        "reply_to": reply_to,
+        "reply_to": RESEND_REPLY_TO,
+        "tags": [{"name": "category", "value": tag}],
+        "headers": {"X-Entity-Ref-ID": f"taunet-invite-{int(time.time())}"},
     }
     req = urllib.request.Request(
         "https://api.resend.com/emails",
         data=json.dumps(body).encode("utf-8"),
         method="POST",
         headers={
-            "Authorization": f"Bearer {key}",
+            "Authorization": f"Bearer {RESEND_KEY}",
             "Content-Type": "application/json",
         },
     )
@@ -229,6 +196,84 @@ def send_resend_recovery(email: str, action_link: str, full_name: str) -> None:
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         raise RuntimeError(f"Resend {exc.code}: {detail}") from exc
+
+
+def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[str, str, str]:
+    name = (full_name or "").strip() or "there"
+    is_set = kind == "set"
+    subject = (
+        "Set your Taunet Nelel member password"
+        if is_set
+        else "Reset your Taunet Nelel member password"
+    )
+    lead = (
+        "Welcome to the Taunet Nelel member portal. Use the button below to set your password."
+        if is_set
+        else "We received a request to reset the password for your Taunet Nelel member account."
+    )
+    cta = "Set your password" if is_set else "Choose a new password"
+    text = (
+        f"Hello {name},\n\n"
+        f"{lead}\n\n"
+        f"{action_link}\n\n"
+        f"This link expires soon and can be used once. "
+        f"If you did not request this, you can ignore this email.\n\n"
+        f"Questions? info@taunetnelel.org\n"
+        f"Taunet Nelel Welfare Association — Victoria, Australia\n"
+        f"https://taunetnelel.org\n"
+    )
+    html = (
+        "<!DOCTYPE html><html><body style='font-family:Arial,Helvetica,sans-serif;"
+        "line-height:1.55;color:#222;max-width:560px;margin:0 auto;padding:24px;'>"
+        f"<p style='margin:0 0 4px;font-size:13px;color:#8B4513;'>Taunet Nelel</p>"
+        f"<h1 style='font-size:22px;margin:0 0 16px;'>{cta}</h1>"
+        f"<p>Hello {name},</p>"
+        f"<p>{lead}</p>"
+        f'<p style="margin:28px 0;"><a href="{action_link}" style="background:#8B4513;'
+        f'color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;'
+        f'display:inline-block;font-weight:700;">{cta}</a></p>'
+        f"<p style='font-size:13px;color:#555;word-break:break-all;'>{action_link}</p>"
+        f"<p style='font-size:13px;color:#666;'>If you did not request this, ignore this email.</p>"
+        f"<p style='font-size:13px;'>Taunet Nelel · Victoria, Australia · "
+        f"<a href='mailto:info@taunetnelel.org'>info@taunetnelel.org</a></p>"
+        f"</body></html>"
+    )
+    return subject, text, html
+
+
+def invite(row: dict, redirect_to: str) -> str:
+    """
+    Create/invite via generate_link (no Supabase-sent email), then Resend.
+    Returns: 'invited' | 'recovery_sent'
+    """
+    email = row["email"]
+    meta = {
+        "full_name": row.get("full_name") or "",
+        "plan": row.get("plan") or "basic",
+        "member_number": row.get("member_number") or "",
+    }
+    redirect = redirect_to or (
+        "https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery"
+    )
+
+    try:
+        link = generate_link("invite", email, redirect, meta)
+        kind = "set"
+        result = "invited"
+    except RuntimeError as exc:
+        detail = str(exc).lower()
+        if "email_exists" not in detail and "already been registered" not in detail:
+            # Some projects return invite conflict differently — try recovery
+            if "already" not in detail and "exists" not in detail:
+                raise
+        link = generate_link("recovery", email, redirect)
+        kind = "reset"
+        result = "recovery_sent"
+
+    subject, text, html = build_password_mail(link, row.get("full_name") or "", kind)
+    tag = "member_invite" if kind == "set" else "password_reset"
+    send_resend(email, subject, text, html, tag)
+    return result
 
 
 def main() -> None:
@@ -246,11 +291,22 @@ def main() -> None:
     )
     parser.add_argument(
         "--redirect",
-        default="https://taunetnelel.vercel.app/members/auth.html?tab=signin",
-        help="Invite email redirect URL",
+        default="https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery",
+        help="Invite / recovery redirect URL",
     )
-    parser.add_argument("--delay", type=float, default=0.35, help="Seconds between invites")
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=1.0,
+        help="Seconds between sends (default 1.0 — slower = better reputation)",
+    )
     args = parser.parse_args()
+
+    if not RESEND_KEY:
+        raise SystemExit(
+            "Set RESEND_API_KEY before inviting. "
+            "We no longer send via Supabase default invite mail (spam risk)."
+        )
 
     if args.email:
         row = ensure_member_row(args.email.strip(), args.name.strip())
@@ -268,9 +324,9 @@ def main() -> None:
             result = invite(row, args.redirect)
             ok += 1
             if result == "recovery_sent":
-                print(f"OK  {email}  (already registered — recovery/reset email sent)")
+                print(f"OK  {email}  (already registered — Resend reset email)")
             else:
-                print(f"OK  {email}")
+                print(f"OK  {email}  (Resend invite email)")
         except Exception as exc:  # noqa: BLE001
             failed += 1
             print(f"FAIL {email}: {exc}", file=sys.stderr)
@@ -278,8 +334,9 @@ def main() -> None:
 
     print(f"Done. ok={ok} failed={failed}")
     if args.email and ok:
-        print("Check inbox + spam for noreply@taunetnelel.org (also Resend → Emails).")
-        print("Open the link, set a new password, then sign in at members/auth.html?tab=signin")
+        print("Expect From: Taunet Nelel <members@taunetnelel.org>")
+        print("Check Inbox first, then Spam — mark Not spam if needed.")
+        print("Open the link, set a password, then sign in at members/auth.html?tab=signin")
 
 
 if __name__ == "__main__":

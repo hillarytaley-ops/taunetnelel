@@ -399,7 +399,7 @@
           await authApi.requestPasswordReset(email);
           showAuthMessage(
             loginForm,
-            'If that email has an account, a reset link was sent. Check inbox and spam (from members@taunetnelel.org).',
+            'If that email has an account, a reset link was sent from members@taunetnelel.org. Check Inbox first; if it is in Spam, tap Not spam and add the address to Contacts.',
             false
           );
         } catch (error) {

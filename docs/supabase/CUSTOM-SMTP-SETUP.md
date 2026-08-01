@@ -9,7 +9,7 @@ Custom SMTP is required before **bulk member invites** or **mass email confirmat
 Project: `wgecdsdeeirzdvshdfwo`  
 Suggested sender: `members@taunetnelel.org` (**not** `noreply@` — noreply often lands in spam)  
 Sender name: `Taunet Nelel`  
-Deliverability guide: **`EMAIL-DELIVERABILITY.md`**
+**Must-read:** [`EMAIL-DELIVERABILITY.md`](./EMAIL-DELIVERABILITY.md) (DMARC + stop spam folder)
 
 ---
 
@@ -77,6 +77,7 @@ Authentication → **URL Configuration**:
 cd C:\Users\hilla\Desktop\Taunet
 $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"
 $env:SUPABASE_SERVICE_ROLE_KEY = "paste-service-role-here"
+$env:RESEND_API_KEY = "re_..."   # required — invites no longer use Supabase default mail
 python docs/invite_members.py --limit 1
 ```
 

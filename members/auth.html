@@ -167,7 +167,7 @@
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/members-auth.js?v=9"></script>
-  <script src="../assets/js/members.js?v=24"></script>
+  <script src="../assets/js/members.js?v=25"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');
@@ -267,7 +267,7 @@
             adminStatus.hidden = false;
             adminStatus.classList.remove('is-error');
             adminStatus.textContent =
-              'If that email has an account, a reset link was sent. Check inbox and spam (from members@taunetnelel.org).';
+              'If that email has an account, a reset link was sent from members@taunetnelel.org. Check Inbox first; if it is in Spam, tap Not spam and add the address to Contacts.';
           }
         } catch (err) {
           if (adminStatus) {
