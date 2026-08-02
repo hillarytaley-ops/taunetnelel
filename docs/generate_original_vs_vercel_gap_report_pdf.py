@@ -128,7 +128,7 @@ def build_pdf() -> None:
         [
             "Site search - The original has a header search box (\"Search ...\"). The Vercel site has no site-wide search.",
             "Google Analytics / Tag Manager - The original loads Google tag ID GT-KV6C4FXF. The Vercel site does not include equivalent tracking. Analytics will not continue after cutover unless this is added.",
-            "Visible \"DONATE\" CTA - The original top bar has a DONATE link. On the live site it currently points to /sponsorship/ (not a separate donate page). Vercel has Sponsorship in the navigation, but no Donate button or label.",
+            "Visible \"DONATE\" CTA - RESOLVED: Vercel header now has a Donate button linking to sponsorship.html (same destination as the original top-bar DONATE).",
             "Member login destination - Original LOG IN goes to https://members.taunetnelel.org/ (separate members subdomain). Vercel uses members/login.html on the same site. If the old members portal still has live features (payments, welfare claims, documents, etc.), those may not yet be fully mirrored on Vercel.",
         ],
     )
