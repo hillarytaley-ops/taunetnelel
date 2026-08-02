@@ -251,19 +251,29 @@
 
     const setForm = document.getElementById('reset-password-form');
     const requestForm = document.getElementById('reset-request-form');
+    const activateForm = document.getElementById('reset-activate-form');
     const title = document.getElementById('reset-panel-title');
     const lead = document.getElementById('reset-panel-lead');
-    const canSet = mode === 'set';
 
-    if (setForm) setForm.hidden = !canSet;
-    if (requestForm) requestForm.hidden = canSet;
+    if (setForm) setForm.hidden = mode !== 'set';
+    if (requestForm) requestForm.hidden = mode !== 'request';
+    if (activateForm) activateForm.hidden = mode !== 'activate';
+
     if (title) {
-      title.textContent = canSet ? 'Choose a new password' : 'Reset your password';
+      title.textContent =
+        mode === 'set'
+          ? 'Choose a new password'
+          : mode === 'activate'
+            ? 'Reset your password'
+            : 'Reset your password';
     }
     if (lead) {
-      lead.textContent = canSet
-        ? 'Enter a new password for your member account, then continue to the dashboard.'
-        : 'Your email link expired or was already used. Enter your email and we will send a fresh reset link.';
+      lead.textContent =
+        mode === 'set'
+          ? 'Enter a new password for your member account, then continue to the dashboard.'
+          : mode === 'activate'
+            ? 'Tap Continue to open the password form. This step keeps email scanners from using up your link.'
+            : 'Your email link expired or was already used. Enter your email and we will send a fresh reset link.';
     }
     document.title = 'Reset password | Taunet Nelel';
   }
@@ -280,9 +290,11 @@
     const registerForm = document.getElementById('register-form');
     const resetForm = document.getElementById('reset-password-form');
     const resetRequestForm = document.getElementById('reset-request-form');
+    const resetActivateForm = document.getElementById('reset-activate-form');
     const authApi = window.taunetMembersAuth;
     let authBusy = false;
     let recoveryMode = isPasswordRecoveryContext();
+    let pendingTokenHash = '';
 
     if (authApi?.getClient) {
       try {
@@ -303,9 +315,16 @@
         if (isPasswordRecoveryContext(callback?.type)) {
           recoveryMode = true;
         }
+        if (callback?.pendingVerify && callback?.tokenHash) {
+          pendingTokenHash = callback.tokenHash;
+          recoveryMode = true;
+          showResetPasswordPanel('activate');
+        }
         const sessionMember = await authApi.getSessionMember();
 
-        if (recoveryMode && (callback?.session?.user || sessionMember)) {
+        if (pendingTokenHash) {
+          // Wait for Continue click — do not redirect or swap panels.
+        } else if (recoveryMode && (callback?.session?.user || sessionMember)) {
           if (sessionMember) setMember(sessionMember);
           showResetPasswordPanel('set');
           if (resetForm) {
@@ -363,6 +382,54 @@
           console.warn('Auth callback failed:', error);
         }
       }
+    }
+
+    if (resetActivateForm && authApi) {
+      resetActivateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (authBusy) return;
+        const hash =
+          pendingTokenHash ||
+          new URLSearchParams(window.location.search).get('token_hash') ||
+          '';
+        if (!hash) {
+          showResetPasswordPanel('request');
+          return;
+        }
+        authBusy = true;
+        setSubmitBusy(resetActivateForm, true);
+        showAuthMessage(resetActivateForm, '');
+        try {
+          const linkType =
+            new URLSearchParams(window.location.search).get('type') || 'recovery';
+          await authApi.verifyRecoveryTokenHash(hash, linkType);
+          pendingTokenHash = '';
+          const member = await authApi.getSessionMember();
+          if (member) setMember(member);
+          showResetPasswordPanel('set');
+          if (resetForm) {
+            showAuthMessage(
+              resetForm,
+              'Choose a new password to finish resetting your account.',
+              false
+            );
+          }
+        } catch (error) {
+          showResetPasswordPanel('request');
+          if (resetRequestForm) {
+            showAuthMessage(
+              resetRequestForm,
+              error?.expired || /invalid|expired/i.test(String(error?.message || ''))
+                ? 'That reset link is no longer valid. Enter your email below for a fresh link.'
+                : authErrorMessage(error),
+              true
+            );
+          }
+        } finally {
+          authBusy = false;
+          setSubmitBusy(resetActivateForm, false);
+        }
+      });
     }
 
     if (resetRequestForm && authApi) {

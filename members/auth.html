@@ -67,6 +67,12 @@
           <p id="reset-panel-lead">Enter a new password for your member account, then continue to the dashboard.</p>
         </div>
 
+        <!-- token_hash email link: user must tap Continue (scanners only GET the page) -->
+        <form class="login-form" id="reset-activate-form" novalidate hidden>
+          <p class="auth-form__message" role="status" hidden></p>
+          <button type="submit" class="btn btn--primary login-submit">Continue to choose a new password</button>
+        </form>
+
         <!-- Shown when the email link opened a valid recovery session -->
         <form class="login-form" id="reset-password-form" novalidate hidden>
           <p class="auth-form__message" role="status" hidden></p>
@@ -181,8 +187,8 @@
   <script src="../assets/js/taunet-security.js?v=1"></script>
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=10"></script>
-  <script src="../assets/js/members.js?v=26"></script>
+  <script src="../assets/js/members-auth.js?v=11"></script>
+  <script src="../assets/js/members.js?v=27"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');

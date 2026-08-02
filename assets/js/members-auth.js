@@ -69,9 +69,21 @@
     const search = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const code = search.get('code');
+    const tokenHash = search.get('token_hash');
     const type = search.get('type') || hash.get('type');
     const errorCode = search.get('error_code') || hash.get('error_code');
     const errorDescription = search.get('error_description') || hash.get('error_description');
+
+    // token_hash links: do NOT verify yet (email scanners only GET the page).
+    // UI shows Continue → verifyRecoveryTokenHash().
+    if (tokenHash && !code && !errorDescription && !errorCode) {
+      return {
+        type: type || 'recovery',
+        session: null,
+        tokenHash,
+        pendingVerify: true
+      };
+    }
 
     if (errorDescription || errorCode) {
       const msg = errorDescription
@@ -241,6 +253,36 @@
     return payload;
   }
 
+  /**
+   * Exchange email token_hash for a recovery session (call on user Continue click).
+   */
+  async function verifyRecoveryTokenHash(tokenHash, linkType) {
+    const client = await getClient();
+    if (!client) throw new Error('Supabase is not configured.');
+    const hash = String(tokenHash || '').trim();
+    if (!hash) throw new Error('Missing reset token. Request a fresh password email.');
+
+    const otpType =
+      String(linkType || 'recovery').toLowerCase() === 'invite' ? 'invite' : 'recovery';
+    const { data, error } = await client.auth.verifyOtp({
+      token_hash: hash,
+      type: otpType
+    });
+    if (error) {
+      const err = new Error(error.message || 'This reset link is no longer valid.');
+      err.authType = 'recovery';
+      err.expired = /invalid|expired|otp_expired/i.test(String(error.message || ''));
+      throw err;
+    }
+
+    window.history.replaceState(
+      {},
+      document.title,
+      `${window.location.pathname}?tab=signin&type=recovery`
+    );
+    return { type: 'recovery', session: data?.session || null };
+  }
+
   async function updatePassword(newPassword) {
     const client = await getClient();
     if (!client) throw new Error('Supabase is not configured.');
@@ -285,6 +327,7 @@
     signUp,
     signOut,
     requestPasswordReset,
+    verifyRecoveryTokenHash,
     updatePassword,
     updateProfile,
     profileToMember,

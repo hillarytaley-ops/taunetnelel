@@ -183,6 +183,32 @@ def _with_redirect(action_link: str, redirect_to: str) -> str:
         return action_link
 
 
+def _portal_link(payload: dict, redirect_to: str, link_type: str) -> str:
+    """
+    Build a site link with token_hash so scanners do not burn Supabase /verify URLs.
+    Falls back to action_link if hashed_token is missing.
+    """
+    props = payload.get("properties") or {}
+    hashed = payload.get("hashed_token") or props.get("hashed_token") or ""
+    origin = "https://taunetnelel.vercel.app"
+    try:
+        parts = urllib.parse.urlsplit(redirect_to)
+        if parts.scheme and parts.netloc:
+            origin = f"{parts.scheme}://{parts.netloc}"
+    except Exception:  # noqa: BLE001
+        pass
+    otp_type = "invite" if link_type == "invite" else "recovery"
+    if hashed:
+        q = urllib.parse.urlencode(
+            {"tab": "signin", "type": otp_type, "token_hash": hashed}
+        )
+        return f"{origin}/members/auth.html?{q}"
+    link = _action_link(payload)
+    if not link:
+        raise RuntimeError(f"generate_link({link_type}) returned no link")
+    return _with_redirect(link, redirect_to)
+
+
 def generate_link(link_type: str, email: str, redirect_to: str, data: dict | None = None) -> str:
     body: dict = {
         "type": link_type,
@@ -193,10 +219,9 @@ def generate_link(link_type: str, email: str, redirect_to: str, data: dict | Non
     if data:
         body["options"]["data"] = data
     payload = api("POST", "/auth/v1/admin/generate_link", body)
-    link = _action_link(payload)  # type: ignore[arg-type]
-    if not link:
-        raise RuntimeError(f"generate_link({link_type}) returned no action_link")
-    return _with_redirect(link, redirect_to)
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"generate_link({link_type}) returned unexpected payload")
+    return _portal_link(payload, redirect_to, link_type)
 
 
 def send_resend(email: str, subject: str, text: str, html: str, tag: str) -> None:
@@ -257,8 +282,8 @@ def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[st
         f"Hello {name},\n\n"
         f"{lead}\n\n"
         f"{action_link}\n\n"
-        f"This link expires soon and can be used once. "
-        f"If you did not request this, you can ignore this email.\n\n"
+        f"Open the link, then tap Continue on the website. "
+        f"The link stays usable until you set a password (or until it expires — usually up to 24 hours).\n\n"
         f"Questions? info@taunetnelel.org\n"
         f"Taunet Nelel Welfare Association — Victoria, Australia\n"
         f"https://taunetnelel.org\n"

@@ -70,6 +70,21 @@ https://taunetnelel.vercel.app/members/auth.html?tab=signin&type=recovery
 The homepage also runs `assets/js/auth-callback-bounce.js` to forward recovery tokens
 to `/members/auth.html` if that fallback still happens.
 
+### Make reset links last longer (important)
+
+Password / invite links cannot stay valid forever in Supabase Auth, but we can make them
+last much longer and survive email scanners:
+
+1. **Authentication → Sign In / Providers → Email → Email OTP expiration**  
+   Set to **86400** seconds (24 hours) — the maximum recommended in the dashboard.  
+   This also applies to recovery and invite links.
+2. Our emails now use a **portal `token_hash` link** (not Supabase `/auth/v1/verify`).  
+   Members open the page and tap **Continue** — that is when the token is used.  
+   Prefetch/scanners that only GET the URL will not burn the link.
+
+True “valid until they set a password with no time limit” is not supported by Supabase;
+24 hours + Continue-click is the practical production setup.
+
 Vercel must have `RESEND_API_KEY` (see `ADMIN-DASHBOARD.md`). Check Resend → Emails if a test reset does not arrive.
 
 Primary members entry page is **`members/auth.html`** (not the older `login.html` / `register.html` paths).

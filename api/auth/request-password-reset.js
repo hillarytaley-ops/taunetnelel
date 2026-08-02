@@ -86,14 +86,36 @@ function requestOrigin(req) {
   return PUBLIC_SITE_URL || 'https://taunetnelel.vercel.app';
 }
 
-/** Force redirect_to on the verify URL (Supabase may fall back to Site URL). */
-function withRedirectTo(actionLink, redirectTo) {
+/**
+ * Prefer a portal link with token_hash so email scanners do not burn the OTP
+ * (Supabase /auth/v1/verify links are consumed on first GET).
+ */
+function portalRecoveryLink(linkPayload, origin) {
+  const props = linkPayload?.properties || {};
+  const hashed = linkPayload?.hashed_token || props.hashed_token || '';
+  if (hashed) {
+    const u = new URL(`${origin}/members/auth.html`);
+    u.searchParams.set('tab', 'signin');
+    u.searchParams.set('type', 'recovery');
+    u.searchParams.set('token_hash', String(hashed));
+    return u.toString();
+  }
+  // Fallback: old-style action_link with redirect forced to auth page
+  const raw =
+    linkPayload?.action_link ||
+    props.action_link ||
+    linkPayload?.data?.properties?.action_link ||
+    '';
+  if (!raw) return '';
   try {
-    const u = new URL(actionLink);
-    u.searchParams.set('redirect_to', redirectTo);
+    const u = new URL(raw);
+    u.searchParams.set(
+      'redirect_to',
+      `${origin}/members/auth.html?tab=signin&type=recovery`
+    );
     return u.toString();
   } catch {
-    return actionLink;
+    return raw;
   }
 }
 
@@ -187,20 +209,14 @@ module.exports = async function handler(req, res) {
       throw err;
     }
 
-    const rawLink =
-      linkPayload?.action_link ||
-      linkPayload?.properties?.action_link ||
-      linkPayload?.data?.properties?.action_link ||
-      '';
-
-    if (!rawLink) {
-      console.error('generate_link missing action_link', linkPayload);
+    const actionLink = portalRecoveryLink(linkPayload, origin);
+    if (!actionLink) {
+      console.error('generate_link missing hashed_token/action_link', linkPayload);
       return json(res, 502, {
         error: 'Could not create a reset link. Try again or contact IT.',
       });
     }
 
-    const actionLink = withRedirectTo(rawLink, redirectTo);
     const mail = buildPasswordMail({ actionLink, kind: 'reset' });
     await sendMemberMail({ to: email, ...mail });
     return json(res, 200, CLIENT_OK);

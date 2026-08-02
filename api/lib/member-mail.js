@@ -102,7 +102,8 @@ function buildPasswordMail({ actionLink, fullName = '', kind = 'reset' }) {
     `Hello ${name},\n\n` +
     `${lead}\n\n` +
     `${actionLink}\n\n` +
-    `This link expires soon and can be used once. ` +
+    `Open the link, then tap Continue on the website to choose your password. ` +
+    `The link stays usable until you set a password (or until it expires — usually up to 24 hours). ` +
     `If you did not request this, you can ignore this email — your password will stay the same.\n\n` +
     `Questions? Reply to this email or write to info@taunetnelel.org\n\n` +
     `Taunet Nelel Welfare Association\n` +
@@ -129,7 +130,7 @@ function buildPasswordMail({ actionLink, fullName = '', kind = 'reset' }) {
           </p>
           <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#555;">Or paste this link into your browser:</p>
           <p style="margin:0 0 20px;font-size:13px;line-height:1.5;color:#555;word-break:break-all;">${escapeHtml(actionLink)}</p>
-          <p style="margin:0 0 20px;font-size:13px;line-height:1.5;color:#666;">This link expires soon and can be used once. If you did not request this, ignore this email.</p>
+          <p style="margin:0 0 20px;font-size:13px;line-height:1.5;color:#666;">Open the link, then tap <strong>Continue</strong> on the website. The link stays usable until you set a password (or until it expires — usually up to 24 hours). If you did not request this, ignore this email.</p>
           <p style="margin:0;font-size:13px;line-height:1.55;color:#444;">
             Taunet Nelel Welfare Association · Victoria, Australia<br>
             <a href="mailto:info@taunetnelel.org" style="color:#8B4513;">info@taunetnelel.org</a>
