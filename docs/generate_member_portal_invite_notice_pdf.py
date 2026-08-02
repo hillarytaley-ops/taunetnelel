@@ -197,7 +197,7 @@ def build() -> None:
     pdf.set_text_color(*MUTED)
     body(
         pdf,
-        "Confirm the committee has your current email, or write to info@taunetnelel.org "
+        "Confirm we have your current email, or write to info@taunetnelel.org "
         "and we will help you activate your login.",
     )
     pdf.ln(3)
@@ -211,7 +211,7 @@ def build() -> None:
     pdf.ln(1)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*BROWN)
-    body(pdf, "- Taunet Nelel Committee & IT")
+    body(pdf, "- Taunet Nelel IT")
 
     pdf.output(str(OUTPUT_FILE))
     print(f"Wrote {OUTPUT_FILE}")
