@@ -155,7 +155,7 @@ def build() -> None:
     for line in (
         ("NOW", "Finish second-wave password emails for remaining members"),
         ("NOW", "Share member notice PDF on WhatsApp; ask members to use NEW email only"),
-        ("NEXT", "Committee UAT sign-off (checklist PDF in docs/)"),
+        ("NEXT", "IT Team UAT sign-off (checklist PDF in docs/)"),
         ("LATER", "Payments decision (or keep bank transfer for launch)"),
         ("LAST", "DNS cutover: point www.taunetnelel.org to Vercel"),
         ("AFTER", "Retire WordPress after 2-4 weeks if stable"),
@@ -172,8 +172,8 @@ def build() -> None:
         safe(
             "1. Note progress above.\n"
             "2. Approve finishing remaining password emails + WhatsApp notice.\n"
-            "3. Complete UAT, then approve DNS cutover in writing "
-            "(do not switch www until sign-off)."
+            "3. IT Team completes UAT checklist, then committee approves DNS cutover "
+            "in writing (do not switch www until that approval)."
         ),
         new_x=XPos.LMARGIN,
         new_y=YPos.NEXT,
