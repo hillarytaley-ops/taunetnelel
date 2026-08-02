@@ -27,8 +27,8 @@ DARK = (35, 28, 22)
 MUTED = (90, 75, 60)
 WHITE = (255, 255, 255)
 
-REPORT_DATE = date(2026, 7, 30)
-REPORT_REVISION = "Rev B — evening update"
+REPORT_DATE = date(2026, 8, 1)
+REPORT_REVISION = "Rev C — password reset & member rebroadcast update"
 
 
 def safe(text: str) -> str:
@@ -187,7 +187,7 @@ def build() -> None:
     pdf.multi_cell(
         0,
         7,
-        safe("Migration complete  |  Remaining work before domain cutover"),
+        safe("Migration complete  |  Member access in progress  |  DNS cutover pending"),
         align="C",
     )
     pdf.ln(5)
@@ -201,34 +201,35 @@ def build() -> None:
             "Prepared for the Taunet Nelel Committee\n"
             f"Report date: {REPORT_DATE.strftime('%d %B %Y')} ({REPORT_REVISION})\n"
             "Organisation: Taunet Nelel Incorporated - Victoria\n"
-            "Replaces: Website Migration Status Report (28 July 2026)"
+            "Prepared by: Taunet Nelel IT Team"
         ),
         align="C",
     )
-    pdf.ln(6)
+    pdf.ln(4)
 
     # Summary box
     pdf.set_fill_color(*WHITE)
     pdf.set_draw_color(*ACCENT)
     pdf.set_line_width(0.6)
     box_y = pdf.get_y()
-    pdf.rect(22, box_y, pdf.w - 44, 78, style="DF")
+    pdf.rect(22, box_y, pdf.w - 44, 92, style="DF")
     pdf.set_xy(28, box_y + 4)
     pdf.set_font("Helvetica", "B", 11)
     pdf.set_text_color(*BROWN)
-    pdf.cell(0, 6, "Executive snapshot", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 6, "Executive snapshot (1 August 2026)", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_x(28)
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*DARK)
     snapshot = [
-        "WordPress public-site migration is complete on Vercel + Supabase",
-        "Live preview: https://taunetnelel.vercel.app",
-        "540 member records imported (assoc / welfare / both)",
-        "Members auth, dashboard, announcements, resources, profile save - LIVE",
-        "Events (10) and sponsors (12) loaded from Supabase",
-        "Newsletter signups save to Supabase; Admin can export CSV",
+        "Public site + members portal live on Vercel + Supabase",
+        "Preview: https://taunetnelel.vercel.app",
+        "540 member records imported; committee admin + member dashboard LIVE",
+        "Password reset form FIXED (Choose a new password + Continue step)",
+        "Resend email live from members@taunetnelel.org (not noreply@)",
+        "Second-wave password emails: 100 members sent today (0 failures)",
+        "Member notice PDF updated with apology for first-invite dead end",
         "DNS cutover NOT done - www.taunetnelel.org still on WordPress",
-        "NEXT: Custom SMTP (Resend) so bulk member invites can proceed",
+        "NEXT: finish remaining password emails + committee UAT + DNS",
     ]
     for line in snapshot:
         pdf.set_x(28)
@@ -244,57 +245,68 @@ def build() -> None:
         align="C",
     )
 
-    # ----- Page 2: Migration complete -----
+    # ----- Page 2: Done recently -----
     pdf.add_page()
-    section_title(pdf, "1. Migration phase - COMPLETE")
+    section_title(pdf, "1. Progress since last report")
 
     body(
         pdf,
-        "The WordPress public website has been rebuilt and connected to the new "
-        "platform. The committee can treat the migration itself as finished. "
-        "What remains is go-live readiness (custom email, member access at scale, "
-        "payments decision, and domain cutover).",
+        "The migration of the public website is complete. Recent work focused on "
+        "member login access: fixing the password-reset experience and re-sending "
+        "usable password links after the first invite left some members at a dead end.",
     )
     pdf.ln(1)
 
-    subsection(pdf, "1.1 Public website (Vercel)")
-    bullet(pdf, "Live clone: https://taunetnelel.vercel.app")
-    bullet(pdf, "Public pages rebuilt as modern HTML from the WordPress public site")
-    bullet(pdf, "Gallery curated (Most recent / Past events); leadership photos kept on About")
-    bullet(pdf, "Forms (Contact, Membership, Sponsorship, Welfare, Events) save to Supabase")
-    bullet(pdf, "Contact newsletter signup writes to newsletter_subscribers")
-    pdf.ln(1)
-
-    subsection(pdf, "1.2 Platform foundation (Supabase)")
-    bullet(pdf, "Project connected; schema and security migrations applied")
+    subsection(pdf, "1.1 Password reset - FIXED")
+    bullet(pdf, "Forgot password emails send via Resend API (reliable path)")
+    bullet(pdf, "Members now land on a clear Choose a new password form")
     bullet(
         pdf,
-        "Tables in use: form_submissions, profiles, member_imports, events, sponsors, "
-        "gallery, newsletter_subscribers, announcements, member_resources",
+        "New links use a Continue step so email scanners are less likely to burn the link",
     )
-    bullet(pdf, "Association membership and Welfare membership kept separate in data model")
+    bullet(pdf, "If a link has expired, the same screen offers Email me a fresh reset link")
+    bullet(
+        pdf,
+        "Supabase Email OTP expiration should be set to 86400 seconds (24 hours) "
+        "under Authentication > Sign In / Providers > Email",
+    )
     pdf.ln(1)
 
-    subsection(pdf, "1.3 Backups retained")
-    bullet(pdf, "Full WordPress .wpress public-site backup retained locally")
-    bullet(pdf, "Migration data pack under backups/migration-ready/")
-    bullet(pdf, "WordPress kept online as rollback until after domain cutover")
+    subsection(pdf, "1.2 Second-wave member emails (in progress)")
+    bullet(pdf, "First invite: some members hit sign-in instead of a reset form - we apologise")
+    bullet(pdf, "Member notice PDF updated with apology + clear steps (share on WhatsApp)")
+    bullet(pdf, "File: docs/TAUNET-NELEL-MEMBER-PORTAL-INVITE-NOTICE.pdf")
+    bullet(
+        pdf,
+        "Today: 100 fresh password emails sent successfully (From: members@taunetnelel.org)",
+    )
+    bullet(pdf, "Remaining imported members still to receive the second-wave email")
+    pdf.ln(1)
 
-    # ----- Page 3: Delivered -----
+    subsection(pdf, "1.3 Site / portal improvements also delivered")
+    bullet(pdf, "Mobile navigation improved (public site + admin)")
+    bullet(pdf, "Home page Events card shows live upcoming / recent events from Supabase")
+    bullet(pdf, "Committee Forgot password available on the Members auth Committee tab")
+    bullet(pdf, "Vercel domains prepared for taunetnelel.org / www (cutover not started)")
+
+    # ----- Page 3: Delivered baseline -----
     pdf.add_page()
-    section_title(pdf, "2. Delivered for go-live (current)")
+    section_title(pdf, "2. Already delivered (baseline)")
 
-    subsection(pdf, "2.1 Members area")
-    bullet(pdf, "Unified Members page: Sign in / Join / Committee tabs")
-    bullet(pdf, "Supabase Auth wired for member login and registration")
-    bullet(pdf, "Dashboard announcements card (committee can publish from Admin)")
-    bullet(pdf, "Member Resources library (handbook, language, culture pages + DB list)")
-    bullet(pdf, "Profile edits save to Supabase profiles when signed in")
-    bullet(pdf, "Welfare registration path and welfare gate behaviour fixed")
-    bullet(pdf, "BuddyBoss social features (feed, groups, forums, chat) intentionally deferred")
+    subsection(pdf, "2.1 Public website and platform")
+    bullet(pdf, "Live clone: https://taunetnelel.vercel.app")
+    bullet(pdf, "Public pages, forms, gallery, events, sponsors wired to Supabase")
+    bullet(pdf, "WordPress kept online as rollback until after domain cutover")
     pdf.ln(1)
 
-    subsection(pdf, "2.2 Member records")
+    subsection(pdf, "2.2 Members area")
+    bullet(pdf, "Unified Members page: Sign in / Join / Committee tabs")
+    bullet(pdf, "Dashboard, announcements, resources, profile save")
+    bullet(pdf, "Welfare registration path working")
+    bullet(pdf, "BuddyBoss social features intentionally deferred (not required for go-live)")
+    pdf.ln(1)
+
+    subsection(pdf, "2.3 Member records")
     draw_table(
         pdf,
         ["Metric", "Count / note"],
@@ -303,35 +315,19 @@ def build() -> None:
             ["Association only", "205"],
             ["Welfare only", "22"],
             ["Both association + welfare", "313"],
-            ["Invite emails (test batch)", "5 sent successfully"],
-            ["Bulk invites", "Paused - waiting on custom SMTP"],
+            ["Earlier Auth invites", "Completed in batches (many already have Auth accounts)"],
+            ["Second-wave password emails", "100 sent (1 Aug) - remainder pending"],
         ],
         [90, 84],
     )
     pdf.ln(4)
 
-    subsection(pdf, "2.3 Committee admin")
-    bullet(pdf, "PIN-secured admin portal at /admin/ (separate from member login)")
-    bullet(pdf, "Live overview: enquiries, members (association / welfare filters)")
-    bullet(pdf, "Events seed button, sponsors, gallery toggles, newsletter CSV export")
-    bullet(pdf, "Announcements publish form for the members dashboard")
-    pdf.ln(1)
+    subsection(pdf, "2.4 Committee admin")
+    bullet(pdf, "Admin portal at /admin/ (PIN + committee email login path)")
+    bullet(pdf, "Overview, events, sponsors, gallery, newsletter CSV, announcements")
+    bullet(pdf, "Mobile admin navigation improved")
 
-    subsection(pdf, "2.4 Public / member content from database")
-    draw_table(
-        pdf,
-        ["Item", "Status"],
-        [
-            ["Published events in Supabase", "Done - 10 events seeded"],
-            ["Published sponsors in Supabase", "Done - 12 sponsors"],
-            ["Newsletter capture + Admin CSV export", "Done (campaign tool still separate)"],
-            ["Announcements + member resources", "Done - seeded and wired on site"],
-            ["Gallery", "Curated static albums; Supabase enrich available"],
-        ],
-        [95, 79],
-    )
-
-    # ----- Page 4: Systems + remaining -----
+    # ----- Page 4: Remaining -----
     pdf.add_page()
     section_title(pdf, "3. Current systems map")
 
@@ -342,9 +338,10 @@ def build() -> None:
             ["New public site (Vercel)", "https://taunetnelel.vercel.app  - LIVE preview"],
             ["Current public WordPress", "https://www.taunetnelel.org  - still live (DNS not cut over)"],
             ["New members area", "taunetnelel.vercel.app/members/auth.html  - LIVE"],
-            ["Committee admin", "taunetnelel.vercel.app/admin/  - LIVE (PIN)"],
+            ["Committee admin", "taunetnelel.vercel.app/admin/  - LIVE"],
+            ["Member password email", "Resend from members@taunetnelel.org  - LIVE"],
             ["BuddyBoss portal (old)", "https://portal.taunetnelel.org  - not the new primary"],
-            ["ClientClub / GHL portal", "https://members.taunetnelel.org  - legacy broadcasts"],
+            ["ClientClub / GHL portal", "https://members.taunetnelel.org  - legacy"],
             ["Supabase", "Connected - forms, auth, members, events, sponsors, newsletter"],
         ],
         [62, 112],
@@ -355,8 +352,7 @@ def build() -> None:
 
     body(
         pdf,
-        "These items are intentionally after migration. They should be finished "
-        "before pointing www.taunetnelel.org at Vercel.",
+        "Finish these before pointing www.taunetnelel.org at Vercel.",
     )
     pdf.ln(1)
 
@@ -365,34 +361,39 @@ def build() -> None:
         ["Item", "Status", "Owner note"],
         [
             [
-                "Custom email / SMTP",
-                "NEXT",
-                "Resend + Supabase SMTP guide ready; needed before bulk invites",
+                "Second-wave password emails",
+                "IN PROGRESS",
+                "100 done; send remaining members; share invite notice on WhatsApp",
             ],
             [
-                "Bulk member access (~540)",
-                "Paused",
-                "5 test invites done; batch after SMTP is verified",
+                "Email deliverability",
+                "Watch",
+                "Use members@; ask members to mark Not spam; strengthen DMARC when DNS allows",
+            ],
+            [
+                "Committee UAT sign-off",
+                "NEXT",
+                "Checklist PDF: docs/TAUNET-NELEL-COMMITTEE-UAT-CHECKLIST.pdf",
             ],
             [
                 "Online payments",
                 "Not done",
-                "Membership / welfare / event fees still offline or external",
+                "Membership / welfare / event fees still offline or external for launch",
             ],
             [
                 "BuddyBoss social rebuild",
                 "Deferred",
-                "Not required for go-live; core portal features already live",
+                "Not required for go-live",
             ],
             [
                 "Marketing newsletter sends",
                 "Optional",
-                "Signups captured; export CSV to Brevo / MailerLite / Resend when ready",
+                "Signups captured; export CSV when ready",
             ],
             [
                 "DNS cutover",
                 "Last step",
-                "Point www.taunetnelel.org to Vercel after UAT sign-off",
+                "Point www / apex to Vercel after UAT sign-off (guide: GO-LIVE-DNS.md)",
             ],
             [
                 "Retire WordPress / old portals",
@@ -402,61 +403,48 @@ def build() -> None:
         ],
         [48, 28, 98],
     )
-    pdf.ln(3)
-    body(
-        pdf,
-        "SMTP setup guide for the technical lead: docs/supabase/CUSTOM-SMTP-SETUP.md "
-        "(Resend recommended: verify taunetnelel.org DNS, enable Supabase custom SMTP, "
-        "raise rate limits, send 1 test invite).",
-        size=9,
-    )
 
-    # ----- Page 5: Next steps + decision -----
+    # ----- Page 5: Sequence + decision -----
     pdf.add_page()
-    section_title(pdf, "5. Recommended sequence to go-live")
+    section_title(pdf, "5. Recommended sequence (from here)")
 
     steps = [
         (
-            "Step 1 - Custom SMTP (NOW)",
+            "Step 1 - Finish member password access (NOW)",
             [
-                "Create Resend account and verify taunetnelel.org (DNS records)",
-                "Enable Custom SMTP in Supabase Auth (smtp.resend.com:465)",
-                "Raise Auth email rate limits; send 1 test invite to a committee inbox",
+                "Share TAUNET-NELEL-MEMBER-PORTAL-INVITE-NOTICE.pdf on WhatsApp",
+                "Send remaining second-wave password emails (same Resend path)",
+                "Spot-check: open NEW email > Continue > Choose a new password > sign in",
+                "Set Supabase Email OTP expiration to 86400 (24 hours) if not already done",
             ],
         ),
         (
-            "Step 2 - Member access at scale",
+            "Step 2 - Committee UAT sign-off",
             [
-                "Batch invites (e.g. 50 at a time) or self-register with list emails",
-                "Keep association and welfare membership flags correct",
-                "Committee smoke-test: sign in, dashboard, announcements, resources, welfare",
+                "Complete UAT checklist (admin, events, gallery, business hub, member login)",
+                "Confirm ordinary members can sign in and open the dashboard",
+                "Written approval before any DNS change",
             ],
         ),
         (
             "Step 3 - Payments decision",
             [
-                "Agree payment provider path (or keep bank transfer for launch)",
-                "Document fees on membership / welfare pages (already shown publicly)",
+                "Agree payment provider path, or keep bank transfer for launch",
+                "Fees already shown on membership / welfare pages",
             ],
         ),
         (
-            "Step 4 - Committee UAT sign-off",
+            "Step 4 - Domain cutover",
             [
-                "Test forms, gallery, events, sponsors, login, admin on Vercel",
-                "Mobile and desktop smoke test",
-                "Written approval before DNS change",
+                "Follow docs/supabase/GO-LIVE-DNS.md",
+                "Point www.taunetnelel.org (and apex) to Vercel",
+                "Keep Outlook mail MX and Resend DNS records intact",
             ],
         ),
         (
-            "Step 5 - Domain cutover",
+            "Step 5 - Stabilise then decommission",
             [
-                "Point www.taunetnelel.org to Vercel",
-                "Keep WordPress available as rollback for 2-4 weeks",
-            ],
-        ),
-        (
-            "Step 6 - Decommission old systems",
-            [
+                "Monitor inbox / spam feedback for 1-2 weeks",
                 "Retire WordPress public hosting when stable",
                 "Retire BuddyBoss / ClientClub only after members have adopted the new portal",
             ],
@@ -469,12 +457,13 @@ def build() -> None:
             bullet(pdf, b)
         pdf.ln(1)
 
-    section_title(pdf, "6. Gallery note (unchanged)")
+    section_title(pdf, "6. Message for members (summary)")
     body(
         pdf,
-        "Event Photos remains curated on the new site (6 albums / 38 on-site photos). "
-        "Gala 2026 full photographer set (1,400+) stays on Pixieset with a 24-photo "
-        "preview on the site. Leadership portraits stay on About / Meet Our Team.",
+        "Portal emails come from members@taunetnelel.org. Please ignore the first invite "
+        "if it did not show a password form. Use only the NEW password email, open it from "
+        "Inbox (not Spam), tap Continue, then Choose a new password. Old website passwords "
+        "will not work. Help: info@taunetnelel.org.",
         size=9,
     )
     pdf.ln(3)
@@ -482,7 +471,7 @@ def build() -> None:
     pdf.set_fill_color(*LIGHT)
     pdf.set_draw_color(*BROWN)
     y = pdf.get_y()
-    pdf.rect(18, y, pdf.epw, 40, style="DF")
+    pdf.rect(18, y, pdf.epw, 42, style="DF")
     pdf.set_xy(22, y + 3)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*BROWN)
@@ -494,11 +483,11 @@ def build() -> None:
         pdf.epw - 8,
         4.5,
         safe(
-            "1) Note that migration and core portal go-live features are complete.\n"
-            "2) Approve proceeding immediately to custom SMTP (Resend) and then "
-            "bulk member access.\n"
-            "3) Confirm DNS cutover only after committee UAT sign-off "
-            "(www.taunetnelel.org remains on WordPress until then)."
+            "1) Note progress: password reset fixed; 100 second-wave emails sent; "
+            "public site and portal remain on Vercel preview.\n"
+            "2) Approve finishing the remaining password emails and WhatsApp notice.\n"
+            "3) Approve committee UAT, then DNS cutover only after written sign-off "
+            "(www.taunetnelel.org stays on WordPress until then)."
         ),
     )
 
