@@ -227,6 +227,8 @@ def send_resend(email: str, subject: str, text: str, html: str, tag: str) -> Non
         headers={
             "Authorization": f"Bearer {RESEND_KEY}",
             "Content-Type": "application/json",
+            # Required: urllib has no default UA; Resend/Cloudflare returns 403 error 1010 without it
+            "User-Agent": "taunet-invite-members/1.0",
         },
     )
     try:
