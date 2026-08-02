@@ -211,7 +211,7 @@ def build() -> None:
     pdf.ln(1)
     pdf.set_font("Helvetica", "B", 10)
     pdf.set_text_color(*BROWN)
-    body(pdf, "- Taunet Nelel IT")
+    body(pdf, "- Taunet Nelel IT Team")
 
     pdf.output(str(OUTPUT_FILE))
     print(f"Wrote {OUTPUT_FILE}")
