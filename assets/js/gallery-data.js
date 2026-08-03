@@ -27,7 +27,7 @@ window.TAUNET_GALLERY = [
   {
     id: 'gala-2026',
     nav: 'Gala 2026',
-    group: 'recent',
+    group: 'past',
     sortDate: '2026-04-18',
     previewLimit: 8,
     totalCount: 1400,

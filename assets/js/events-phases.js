@@ -158,8 +158,8 @@
   const PHASE_META = {
     upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'Empty until new dates are published', mod: 'upcoming' },
     present: { label: 'Present Events', icon: '●', hint: 'Live now until the event end time', mod: 'present', live: true },
-    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'From end time up to 2 months after the event', mod: 'recent' },
-    past: { label: 'Past Events', icon: '◷', hint: 'Older than 2 months · photos & memories', mod: 'past' }
+    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'The latest event that has finished', mod: 'recent' },
+    past: { label: 'Past Events', icon: '◷', hint: 'Earlier events · newest first', mod: 'past' }
   };
 
   const PHASE_ORDER = ['upcoming', 'present', 'most-recent', 'past'];
@@ -245,13 +245,15 @@
     // Present only while the event is in progress (inclusive of end time).
     if (currentMs <= endMs) return 'present';
 
-    // Most Recent immediately after end, until 2 months after end.
-    const pastFrom = new Date(endMs);
-    pastFrom.setMonth(pastFrom.getMonth() + RECENT_MONTHS);
-    if (currentMs <= pastFrom.getTime()) return 'most-recent';
-
-    // Past after 2 months.
+    // Ended events default to Past; categorizeEvents promotes only the newest one to Most Recent.
     return 'past';
+  }
+
+  function hasPhaseOverride(event) {
+    const override = String(event.phaseOverride || event.phase_override || '').trim();
+    if (!override || override === 'auto') return '';
+    if (['upcoming', 'present', 'most-recent', 'past'].includes(override)) return override;
+    return '';
   }
 
   function categorizeEvents(now) {
@@ -270,8 +272,7 @@
 
     // Safety net: never leave an auto-dated ended event in Upcoming.
     groups.upcoming = groups.upcoming.filter((event) => {
-      const override = String(event.phaseOverride || event.phase_override || '').trim();
-      if (override && override !== 'auto') return true;
+      if (hasPhaseOverride(event)) return true;
       const end = parseDate(event.end || event.start);
       return !Number.isNaN(end.getTime()) && end.getTime() >= current.getTime();
     });
@@ -279,10 +280,33 @@
     const byStart = (a, b) => parseDate(a.start) - parseDate(b.start);
     const byEndDesc = (a, b) => parseDate(b.end || b.start) - parseDate(a.end || a.start);
 
+    // Most Recent = only the single newest ended event (e.g. Men's Camp).
+    // Everything else that has ended stays in Past, newest first.
+    const endedPool = [...groups['most-recent'], ...groups.past];
+    const lockedPast = [];
+    const candidates = [];
+
+    endedPool.forEach((event) => {
+      const override = hasPhaseOverride(event);
+      if (override === 'past') {
+        lockedPast.push(event);
+        return;
+      }
+      const end = parseDate(event.end || event.start);
+      if (Number.isNaN(end.getTime()) || end.getTime() >= current.getTime()) {
+        lockedPast.push(event);
+        return;
+      }
+      candidates.push(event);
+    });
+
+    candidates.sort(byEndDesc);
+    const newest = candidates[0] || null;
+    groups['most-recent'] = newest ? [newest] : [];
+    groups.past = [...lockedPast, ...candidates.filter((event) => event !== newest)].sort(byEndDesc);
+
     groups.upcoming.sort(byStart);
     groups.present.sort(byStart);
-    groups['most-recent'].sort(byEndDesc);
-    groups.past.sort(byEndDesc);
 
     return groups;
   }
@@ -328,7 +352,7 @@
     const messages = {
       upcoming: 'No upcoming events yet — this column stays empty until the committee publishes new dates.',
       present: 'No events are running right now.',
-      'most-recent': 'No events in the post-event to 2-month window yet.',
+      'most-recent': 'No recently finished event to show yet.',
       past: 'No past events to display yet.'
     };
     return messages[phase] || 'No events in this category.';
@@ -536,7 +560,13 @@
 
   function formatShortDate(event) {
     const start = parseDate(event.start);
-    return start.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (Number.isNaN(start.getTime())) return '—';
+    return start.toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Australia/Melbourne',
+    });
   }
 
   function renderDashboardList(events, phase) {
