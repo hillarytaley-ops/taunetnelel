@@ -339,10 +339,10 @@ body[data-page="pay-welfare"] {
 .pay-portal__plan-options {
   margin: 0 0 1.15rem;
   padding: 0;
-  border: none;
+  border: 0;
 }
 
-.pay-portal__plan-options legend {
+.pay-portal__plan-label {
   margin: 0 0 0.55rem;
   font-size: 0.85rem;
   font-weight: 700;
@@ -352,7 +352,8 @@ body[data-page="pay-welfare"] {
 .pay-portal__plan-option {
   display: flex;
   gap: 0.75rem;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   margin: 0 0 0.55rem;
   padding: 0.85rem 0.95rem;
   border: 1px solid rgba(139, 69, 19, 0.18);
@@ -366,8 +367,15 @@ body[data-page="pay-welfare"] {
   box-shadow: 0 0 0 1px rgba(196, 98, 28, 0.35);
 }
 
+.pay-portal__plan-option > span {
+  flex: 1;
+  min-width: 0;
+}
+
 .pay-portal__plan-option input {
-  margin-top: 0.2rem;
+  flex-shrink: 0;
+  margin: 0;
+  align-self: center;
 }
 
 .pay-portal__plan-option strong {

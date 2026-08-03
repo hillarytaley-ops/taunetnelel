@@ -8,7 +8,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=17">
-  <link rel="stylesheet" href="../assets/css/pay-portal.css?v=2">
+  <link rel="stylesheet" href="../assets/css/pay-portal.css?v=3">
 </head>
 <body data-page="pay-welfare">
 
@@ -70,23 +70,23 @@
           <p class="pay-portal__intro">Choose how you want to pay, then enter your details. We email your invoice and show PayID instructions.</p>
 
           <form id="pay-welfare-form" class="pay-portal__form" method="post" action="#" novalidate>
-            <fieldset class="pay-portal__plan-options">
-              <legend>Payment option</legend>
+            <div class="pay-portal__plan-options" role="radiogroup" aria-labelledby="pay-plan-label">
+              <p id="pay-plan-label" class="pay-portal__plan-label">Payment option</p>
               <label class="pay-portal__plan-option">
-                <input type="radio" name="plan" value="full" checked>
                 <span>
                   <strong>Pay $300 in full</strong>
                   <small>One PayID transfer for the year</small>
                 </span>
+                <input type="radio" name="plan" value="full" checked>
               </label>
               <label class="pay-portal__plan-option">
-                <input type="radio" name="plan" value="installments">
                 <span>
                   <strong>3 × $100 over 3 months</strong>
                   <small>Pay first $100 now · email reminders for months 2 &amp; 3</small>
                 </span>
+                <input type="radio" name="plan" value="installments">
               </label>
-            </fieldset>
+            </div>
 
             <div class="form-group">
               <label for="pay-name">Full name</label>
