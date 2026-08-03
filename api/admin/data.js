@@ -337,6 +337,55 @@ async function activateAssociationMembership(invoice) {
   return Array.isArray(data) ? data[0] : data;
 }
 
+/**
+ * When a welfare invoice is marked paid, unlock welfare (and association) when due.
+ * Full $300: unlock immediately. Installments: unlock when all 3 in the series are paid.
+ */
+async function activateWelfareMembership(invoice) {
+  const {
+    welfareSeriesFullyPaid,
+  } = require('../lib/invoice-service');
+
+  const ready = await welfareSeriesFullyPaid({ ...invoice, status: 'paid' });
+  if (!ready) return null;
+
+  const email = String(invoice.email || '')
+    .trim()
+    .toLowerCase();
+  const userId = invoice.user_id || null;
+  let profile = null;
+
+  if (userId) {
+    const { data } = await sb(
+      `profiles?id=eq.${encodeURIComponent(userId)}&select=id,plan,association_member,welfare_member,member_since,renews_at`
+    );
+    profile = Array.isArray(data) ? data[0] : null;
+  }
+  if (!profile && email) {
+    const { data } = await sb(
+      `profiles?email=eq.${encodeURIComponent(email)}&select=id,plan,association_member,welfare_member,member_since,renews_at&limit=1`
+    );
+    profile = Array.isArray(data) ? data[0] : null;
+  }
+  if (!profile) return null;
+
+  const year = new Date().getFullYear();
+  const patch = {
+    association_member: true,
+    welfare_member: true,
+    plan: 'both',
+    updated_at: new Date().toISOString(),
+  };
+  if (!profile.member_since) patch.member_since = year;
+  if (!profile.renews_at) patch.renews_at = `${year + 1}-12-31`;
+
+  const { data } = await sb(`profiles?id=eq.${encodeURIComponent(profile.id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+  return Array.isArray(data) ? data[0] : data;
+}
+
 /** When phase_override column is missing, nudge dates so Auto placement still matches. */
 function applyPhaseViaDates(row, phase) {
   if (!phase || phase === 'auto') return row;
@@ -1372,6 +1421,15 @@ module.exports = async function handler(req, res) {
             await activateAssociationMembership(invoice);
           } catch (activateErr) {
             console.error('invoice-status activate membership', activateErr);
+          }
+        }
+
+        // Activate Welfare Plus when full fee (or all installments) paid
+        if (status === 'paid' && invoice && invoice.kind === 'welfare') {
+          try {
+            await activateWelfareMembership(invoice);
+          } catch (activateErr) {
+            console.error('invoice-status activate welfare', activateErr);
           }
         }
 

@@ -17,6 +17,17 @@ New public signups get `association_member = false` until an **association** inv
 - Creates a pending **association** invoice ($50, 1 installment), emails the PDF, and returns PayID / bank details on screen
 - Treasurer marks paid in Admin → **Invoices** after the deposit lands
 
+## Public Welfare Plus PayID portal
+
+- Page: `/pay/welfare.html` (Membership → **Pay via PayID**)
+- API: `POST /api/pay/welfare` with `{ full_name, email, phone?, plan: "full" | "installments" }`
+- **Full:** one **welfare** invoice for $300
+- **Installments:** three **welfare** invoices of $100 (due ~ now / +1 month / +2 months), linked by `meta.series_id`
+  - Installment 1 emailed immediately
+  - Installments 2–3 emailed by daily cron near due date, with overdue reminders
+- Cron: `GET/POST /api/cron/invoice-reminders` (Vercel cron `0 22 * * *` UTC) — set `CRON_SECRET` and call with `Authorization: Bearer …`
+- Mark paid in Admin: full $300 (or all three installments) unlocks `welfare_member` + `association_member`
+
 Requires the same Vercel env as invoices (`PAYID`, `BANK_*`, `RESEND_*`, Supabase).
 
 ## Apply the schema
@@ -38,6 +49,7 @@ Requires the same Vercel env as invoices (`PAYID`, `BANK_*`, `RESEND_*`, Supabas
 | `BANK_BSB` | BSB |
 | `BANK_ACCOUNT_NUMBER` | Account number |
 | `BANK_ACCOUNT_NAME` | Account name |
+| `CRON_SECRET` | Bearer token for `/api/cron/invoice-reminders` (installment emails) |
 | `ORG_LEGAL_NAME` | Optional; default `Taunet Nelel Incorporated` |
 | `ORG_ABN` | Optional ABN on PDF |
 | `INVOICE_DUE_DAYS` | Optional; default `14` |

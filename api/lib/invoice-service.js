@@ -336,6 +336,8 @@ async function createAndEmailInvoice({
   amountCents,
   description,
   meta,
+  dueAt,
+  skipEmail = false,
 }) {
   if (!SUPABASE_URL || !SERVICE_KEY) {
     const err = new Error('Server missing Supabase credentials');
@@ -363,10 +365,25 @@ async function createAndEmailInvoice({
   let finalDescription = String(description || '').trim();
   let resolvedEventId = eventId || null;
 
-  if (normalizedKind === 'association' || normalizedKind === 'welfare') {
-    const defaults = KIND_DEFAULTS[normalizedKind];
+  if (normalizedKind === 'association') {
+    const defaults = KIND_DEFAULTS.association;
     finalAmount = defaults.amount_cents;
     if (!finalDescription) finalDescription = defaults.description;
+  } else if (normalizedKind === 'welfare') {
+    const defaults = KIND_DEFAULTS.welfare;
+    // Allow full $300 or installment $100 only
+    const allowed = new Set([defaults.amount_cents, 10000]);
+    if (!Number.isFinite(finalAmount) || !allowed.has(Math.round(finalAmount))) {
+      finalAmount = defaults.amount_cents;
+    } else {
+      finalAmount = Math.round(finalAmount);
+    }
+    if (!finalDescription) {
+      finalDescription =
+        finalAmount === 10000
+          ? 'Welfare Plus — installment (AUD $100)'
+          : defaults.description;
+    }
   } else {
     if (resolvedEventId) {
       const rows = await sb(
@@ -393,7 +410,12 @@ async function createAndEmailInvoice({
 
   const invoiceNumber = await rpcNextInvoiceNumber();
   const issued = new Date();
-  const due = new Date(issued.getTime() + INVOICE_DUE_DAYS * 24 * 60 * 60 * 1000);
+  const due =
+    dueAt instanceof Date && !Number.isNaN(dueAt.getTime())
+      ? dueAt
+      : typeof dueAt === 'string' && dueAt
+        ? new Date(dueAt)
+        : new Date(issued.getTime() + INVOICE_DUE_DAYS * 24 * 60 * 60 * 1000);
   const payReference = invoiceNumber.replace(/-/g, '');
 
   const row = {
@@ -415,7 +437,22 @@ async function createAndEmailInvoice({
 
   const created = await sb('invoices', { method: 'POST', body: row });
   const invoice = Array.isArray(created) ? created[0] : created;
-  await sendInvoiceEmail(invoice);
+  if (!skipEmail) {
+    await sendInvoiceEmail(invoice);
+    const stamped = {
+      ...(invoice.meta && typeof invoice.meta === 'object' ? invoice.meta : {}),
+      emailed_at: new Date().toISOString(),
+    };
+    try {
+      await sb(`invoices?id=eq.${encodeURIComponent(invoice.id)}`, {
+        method: 'PATCH',
+        body: { meta: stamped },
+      });
+      invoice.meta = stamped;
+    } catch (_) {
+      /* non-fatal */
+    }
+  }
   return invoice;
 }
 
@@ -431,10 +468,269 @@ function getPublicPaymentDetails() {
   };
 }
 
+function addMonthsMelbourne(baseDate, months) {
+  const d = new Date(baseDate.getTime());
+  d.setUTCMonth(d.getUTCMonth() + months);
+  return d;
+}
+
+/**
+ * Welfare Plus checkout: full $300 or 3 × $100 installments.
+ * Installments 2–3 are created now (with future due dates) and emailed by cron near due.
+ */
+async function createWelfarePayCheckout({
+  email,
+  fullName,
+  userId,
+  phone,
+  plan,
+}) {
+  const mode = String(plan || 'full').toLowerCase() === 'installments' ? 'installments' : 'full';
+  const mail = String(email || '')
+    .trim()
+    .toLowerCase();
+  const name = String(fullName || '').trim();
+
+  if (mode === 'full') {
+    const invoice = await createAndEmailInvoice({
+      kind: 'welfare',
+      email: mail,
+      fullName: name,
+      userId,
+      amountCents: 30000,
+      description: 'Welfare Plus membership — full year (AUD $300)',
+      meta: {
+        source: 'pay_portal_welfare',
+        plan: 'full',
+        installments: 1,
+        installment: 1,
+        of: 1,
+        phone: phone || null,
+      },
+    });
+    return { plan: 'full', invoices: [invoice], primary: invoice };
+  }
+
+  const seriesId =
+    (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
+    `welf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const issued = new Date();
+  const dueDates = [
+    new Date(issued.getTime() + 14 * 24 * 60 * 60 * 1000),
+    addMonthsMelbourne(issued, 1),
+    addMonthsMelbourne(issued, 2),
+  ];
+
+  const invoices = [];
+  for (let i = 0; i < 3; i += 1) {
+    const n = i + 1;
+    const invoice = await createAndEmailInvoice({
+      kind: 'welfare',
+      email: mail,
+      fullName: name,
+      userId,
+      amountCents: 10000,
+      description: `Welfare Plus — installment ${n} of 3 (AUD $100)`,
+      dueAt: dueDates[i],
+      skipEmail: n > 1,
+      meta: {
+        source: 'pay_portal_welfare',
+        plan: 'installments',
+        installments: 3,
+        installment: n,
+        of: 3,
+        series_id: seriesId,
+        phone: phone || null,
+        email_scheduled: n > 1,
+      },
+    });
+    invoices.push(invoice);
+  }
+
+  return { plan: 'installments', series_id: seriesId, invoices, primary: invoices[0] };
+}
+
+function buildReminderEmailHtml(invoice, kind) {
+  const amount = formatAud(invoice.amount_cents);
+  const heading =
+    kind === 'due'
+      ? 'Payment reminder — installment due'
+      : 'Your Welfare Plus installment invoice';
+  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
+  <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
+  <h1 style="font-size:22px;margin:0 0 12px;">${escapeHtml(heading)}</h1>
+  <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
+  <p>${
+    kind === 'due'
+      ? 'This is a friendly reminder that your Welfare Plus installment is due. Please pay via PayID using the reference below.'
+      : 'Your next Welfare Plus installment invoice is ready. Please pay via PayID using the reference below.'
+  }</p>
+  <p><strong>${escapeHtml(invoice.description)}</strong><br>
+  Amount due: <strong>${amount} AUD</strong><br>
+  Due: ${escapeHtml(formatDate(invoice.due_at))}<br>
+  Payment reference: <strong>${escapeHtml(invoice.pay_reference)}</strong></p>
+  ${PAYID ? `<p><strong>PayID:</strong> ${escapeHtml(PAYID)}</p>` : ''}
+  <p style="font-size:13px;color:#555;">A PDF copy is attached. Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
+</body></html>`;
+}
+
+async function sendInvoiceReminderEmail(invoice, reminderKind) {
+  if (!RESEND_API_KEY) {
+    const err = new Error('RESEND_API_KEY is not configured on the server.');
+    err.status = 500;
+    throw err;
+  }
+
+  const kind = reminderKind === 'due' ? 'due' : 'issue';
+  const pdf = buildInvoicePdf({
+    orgName: ORG_LEGAL_NAME,
+    abn: ORG_ABN,
+    invoiceNumber: invoice.invoice_number,
+    issuedAt: formatDate(invoice.issued_at),
+    dueAt: formatDate(invoice.due_at),
+    paidAt: '',
+    status: invoice.status,
+    billToName: invoice.full_name || invoice.email,
+    billToEmail: invoice.email,
+    description: invoice.description,
+    amountLabel: formatAud(invoice.amount_cents),
+    payReference: invoice.pay_reference,
+    payid: PAYID,
+    bankName: BANK_NAME,
+    bankBsb: BANK_BSB,
+    bankAccount: BANK_ACCOUNT,
+    bankAccountName: BANK_ACCOUNT_NAME,
+  });
+
+  const subject =
+    kind === 'due'
+      ? `Reminder: ${invoice.invoice_number} due — Taunet Nelel`
+      : `Invoice ${invoice.invoice_number} — installment ready — Taunet Nelel`;
+
+  const payload = {
+    from: RESEND_FROM,
+    to: [invoice.email],
+    subject,
+    html: buildReminderEmailHtml(invoice, kind),
+    text:
+      `${subject}\n\n` +
+      `${invoice.description}\n` +
+      `Amount: ${formatAud(invoice.amount_cents)} AUD\n` +
+      `Due: ${formatDate(invoice.due_at)}\n` +
+      `Reference: ${invoice.pay_reference}\n`,
+    reply_to: RESEND_REPLY_TO,
+    attachments: [
+      {
+        filename: `${invoice.invoice_number}.pdf`,
+        content: pdf.toString('base64'),
+      },
+    ],
+    tags: [{ name: 'category', value: 'invoice-reminder' }],
+  };
+
+  const resp = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = new Error(data?.message || 'Resend failed to send reminder');
+    err.status = 502;
+    throw err;
+  }
+  return data;
+}
+
+/**
+ * Daily job: email scheduled installment invoices near due, and nudge overdue pending ones.
+ */
+async function processInvoiceReminders() {
+  const now = Date.now();
+  const inThreeDays = new Date(now + 3 * 24 * 60 * 60 * 1000).toISOString();
+  const rows = await sb(
+    `invoices?status=eq.pending&kind=eq.welfare&due_at=lte.${encodeURIComponent(inThreeDays)}&select=*&order=due_at.asc&limit=100`
+  );
+  const list = Array.isArray(rows) ? rows : [];
+  const results = { issued: 0, reminded: 0, skipped: 0, errors: [] };
+
+  for (const invoice of list) {
+    const meta = invoice.meta && typeof invoice.meta === 'object' ? { ...invoice.meta } : {};
+    try {
+      if (!meta.emailed_at) {
+        await sendInvoiceReminderEmail(invoice, 'issue');
+        meta.emailed_at = new Date().toISOString();
+        meta.email_scheduled = false;
+        await sb(`invoices?id=eq.${encodeURIComponent(invoice.id)}`, {
+          method: 'PATCH',
+          body: { meta },
+        });
+        results.issued += 1;
+        continue;
+      }
+
+      const dueMs = new Date(invoice.due_at).getTime();
+      const overdueOrDue = Number.isFinite(dueMs) && dueMs <= now + 12 * 60 * 60 * 1000;
+      const reminders = Number(meta.reminder_count || 0);
+      if (overdueOrDue && reminders < 2) {
+        const last = meta.reminder_sent_at ? new Date(meta.reminder_sent_at).getTime() : 0;
+        if (now - last < 5 * 24 * 60 * 60 * 1000) {
+          results.skipped += 1;
+          continue;
+        }
+        await sendInvoiceReminderEmail(invoice, 'due');
+        meta.reminder_sent_at = new Date().toISOString();
+        meta.reminder_count = reminders + 1;
+        await sb(`invoices?id=eq.${encodeURIComponent(invoice.id)}`, {
+          method: 'PATCH',
+          body: { meta },
+        });
+        results.reminded += 1;
+      } else {
+        results.skipped += 1;
+      }
+    } catch (err) {
+      results.errors.push({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        error: err.message || String(err),
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * True when a welfare invoice payment should unlock welfare membership.
+ * Full plan: any paid welfare invoice. Installments: all in the series paid.
+ */
+async function welfareSeriesFullyPaid(invoice) {
+  if (!invoice || invoice.kind !== 'welfare') return false;
+  const meta = invoice.meta && typeof invoice.meta === 'object' ? invoice.meta : {};
+  if (meta.plan !== 'installments' || !meta.series_id) {
+    return invoice.status === 'paid' && Number(invoice.amount_cents) >= 30000;
+  }
+  const rows = await sb(
+    `invoices?kind=eq.welfare&select=id,status,meta&limit=50&email=eq.${encodeURIComponent(invoice.email)}`
+  );
+  const list = Array.isArray(rows) ? rows : [];
+  const series = list.filter((row) => row.meta?.series_id === meta.series_id);
+  if (series.length < 3) return false;
+  return series.every((row) => row.status === 'paid' || row.id === invoice.id);
+}
+
 module.exports = {
   createAndEmailInvoice,
+  createWelfarePayCheckout,
   sendInvoiceEmail,
   sendPaidInvoiceReceiptEmail,
+  sendInvoiceReminderEmail,
+  processInvoiceReminders,
+  welfareSeriesFullyPaid,
   paymentConfigured,
   getPublicPaymentDetails,
   formatAud,

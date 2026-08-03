@@ -65,6 +65,10 @@
                 <li>Peer support network</li>
               </ul>
               <button type="button" class="btn btn--accent" id="invoice-welfare-btn">Email me $300 invoice</button>
+              <p style="margin-top:0.65rem;">
+                <a href="../pay/welfare.html" id="pay-welfare-portal-link">Or pay via PayID</a>
+                <span class="plan__pay-note" style="display:block;margin-top:0.35rem;">$300 in full · or 3 × $100 with reminders</span>
+              </p>
               <p id="welfare-invoice-hint" class="plan__pay-note" hidden style="margin-top:0.75rem;">
                 You must register for Social Welfare before requesting this invoice.
               </p>
@@ -300,6 +304,15 @@
       }
 
       applyUpgradeView();
+
+      (function prefillWelfarePayLink() {
+        const link = document.getElementById('pay-welfare-portal-link');
+        const member = getMemberSafe();
+        if (!link || !member?.email) return;
+        const q = new URLSearchParams({ email: member.email });
+        if (member.name) q.set('name', member.name);
+        link.href = '../pay/welfare.html?' + q.toString();
+      })();
 
       document.getElementById('invoice-association-btn')?.addEventListener('click', function (e) {
         requestKind('association', e.currentTarget);

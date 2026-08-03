@@ -1,6 +1,7 @@
 /* Basic Plan PayID payment portal */
 
-body[data-page="pay-basic"] {
+body[data-page="pay-basic"],
+body[data-page="pay-welfare"] {
   background: #faf6f1;
 }
 
@@ -333,6 +334,80 @@ body[data-page="pay-basic"] {
   flex: 1 1 10rem;
   text-align: center;
   justify-content: center;
+}
+
+.pay-portal__plan-options {
+  margin: 0 0 1.15rem;
+  padding: 0;
+  border: none;
+}
+
+.pay-portal__plan-options legend {
+  margin: 0 0 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-brown, #5c2e10);
+}
+
+.pay-portal__plan-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin: 0 0 0.55rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(139, 69, 19, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+
+.pay-portal__plan-option:has(input:checked) {
+  border-color: var(--color-accent, #c4621c);
+  box-shadow: 0 0 0 1px rgba(196, 98, 28, 0.35);
+}
+
+.pay-portal__plan-option input {
+  margin-top: 0.2rem;
+}
+
+.pay-portal__plan-option strong {
+  display: block;
+  color: var(--color-brown, #5c2e10);
+}
+
+.pay-portal__plan-option small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-muted, #5a4b3c);
+  line-height: 1.4;
+}
+
+.pay-portal__schedule {
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 248, 240, 0.9);
+  border: 1px solid rgba(139, 69, 19, 0.12);
+  border-radius: 10px;
+}
+
+.pay-portal__schedule h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+}
+
+.pay-portal__schedule ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.pay-portal__schedule li {
+  margin-bottom: 0.45rem;
+  line-height: 1.4;
+}
+
+.pay-portal__schedule .meta {
+  font-size: 0.8rem;
+  color: var(--color-muted, #5a4b3c);
 }
 
 @media (max-width: 820px) {
