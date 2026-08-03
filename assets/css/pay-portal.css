@@ -156,7 +156,7 @@ body[data-page="pay-welfare"] {
   color: #888;
 }
 
-.pay-portal__form input {
+.pay-portal__form input:not([type="radio"]):not([type="checkbox"]) {
   width: 100%;
   padding: 0.7rem 0.85rem;
   border: 1px solid rgba(139, 69, 19, 0.22);
@@ -165,9 +165,22 @@ body[data-page="pay-welfare"] {
   background: #fffdf9;
 }
 
-.pay-portal__form input:focus {
+.pay-portal__form input:not([type="radio"]):not([type="checkbox"]):focus {
   outline: 2px solid rgba(196, 98, 28, 0.35);
   border-color: var(--color-accent, #c4621c);
+}
+
+.pay-portal__plan-option input[type="radio"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  flex-shrink: 0;
+  accent-color: var(--color-accent, #c4621c);
+  cursor: pointer;
 }
 
 .pay-portal__submit {
