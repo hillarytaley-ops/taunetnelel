@@ -1053,70 +1053,94 @@
   }
 
   function initDashboard() {
+    initLogout();
+
     const member = requireAuth();
     if (!member) return;
 
-    populateMemberFields(member);
+    try {
+      populateMemberFields(member);
 
-    showWelfareSection(member);
+      showWelfareSection(member);
 
-    initWelfareRegister(member);
+      initWelfareRegister(member);
 
-    if (window.TaunetEventsPhases) {
-      window.TaunetEventsPhases.initMemberEvents(member);
-      renderMemberRegistrations(member);
-    }
-
-    loadAnnouncements(member);
-    loadMemberResources();
-
-    const welfareQuickAction = document.querySelector('.quick-actions [data-welfare-only]');
-    const isWelfare = isWelfareMember(member);
-    if (welfareQuickAction && !isWelfare) {
-      welfareQuickAction.textContent = 'Register for Welfare';
-      welfareQuickAction.href = 'dashboard.html#welfare-register-card';
-    }
-
-    const profileForm = document.getElementById('profile-form');
-    if (profileForm) {
-      profileForm.querySelector('[name="name"]').value = member.name;
-      profileForm.querySelector('[name="email"]').value = member.email;
-      profileForm.querySelector('[name="phone"]').value = member.phone || '';
-      profileForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = profileForm.querySelector('[name="name"]').value;
-        const phone = profileForm.querySelector('[name="phone"]').value;
-        const email = profileForm.querySelector('[name="email"]').value;
-        const submitBtn = profileForm.querySelector('[type="submit"]');
-        if (submitBtn) submitBtn.disabled = true;
-        try {
-          let updated = { ...member, name, email, phone };
-          if (window.taunetMembersAuth?.updateProfile && member.id) {
-            updated = await window.taunetMembersAuth.updateProfile({ fullName: name, phone });
-          }
-          setMember(updated);
-          populateMemberFields(updated);
-          alert('Profile updated successfully.');
-        } catch (error) {
-          console.warn('Profile save failed, kept local copy:', error);
-          setMember({ ...member, name, email, phone });
-          alert(error.message || 'Could not save to the server. Changes kept on this device.');
-        } finally {
-          if (submitBtn) submitBtn.disabled = false;
-        }
-      });
-    }
-
-    document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
-      e.preventDefault();
-      clearPreviewMode();
-      clearMember();
-      try {
-        await window.taunetMembersAuth?.signOut();
-      } catch (error) {
-        console.warn('Sign out error:', error);
+      if (window.TaunetEventsPhases) {
+        window.TaunetEventsPhases.initMemberEvents(member);
+        renderMemberRegistrations(member);
       }
-      window.location.href = authPageUrl('signin');
+
+      loadAnnouncements(member);
+      loadMemberResources();
+
+      const welfareQuickAction = document.querySelector('.quick-actions [data-welfare-only]');
+      const isWelfare = isWelfareMember(member);
+      if (welfareQuickAction && !isWelfare) {
+        welfareQuickAction.textContent = 'Register for Welfare';
+        welfareQuickAction.href = 'dashboard.html#welfare-register-card';
+      }
+
+      const profileForm = document.getElementById('profile-form');
+      if (profileForm) {
+        profileForm.querySelector('[name="name"]').value = member.name;
+        profileForm.querySelector('[name="email"]').value = member.email;
+        profileForm.querySelector('[name="phone"]').value = member.phone || '';
+        profileForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = profileForm.querySelector('[name="name"]').value;
+          const phone = profileForm.querySelector('[name="phone"]').value;
+          const email = profileForm.querySelector('[name="email"]').value;
+          const submitBtn = profileForm.querySelector('[type="submit"]');
+          if (submitBtn) submitBtn.disabled = true;
+          try {
+            let updated = { ...member, name, email, phone };
+            if (window.taunetMembersAuth?.updateProfile && member.id) {
+              updated = await window.taunetMembersAuth.updateProfile({ fullName: name, phone });
+            }
+            setMember(updated);
+            populateMemberFields(updated);
+            alert('Profile updated successfully.');
+          } catch (error) {
+            console.warn('Profile save failed, kept local copy:', error);
+            setMember({ ...member, name, email, phone });
+            alert(error.message || 'Could not save to the server. Changes kept on this device.');
+          } finally {
+            if (submitBtn) submitBtn.disabled = false;
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Member dashboard init error:', error);
+    }
+  }
+
+  async function performSignOut() {
+    clearPreviewMode();
+    clearMember();
+    try {
+      await window.taunetMembersAuth?.signOut();
+    } catch (error) {
+      console.warn('Sign out error:', error);
+    }
+    window.location.replace(authPageUrl('signin'));
+  }
+
+  function initLogout() {
+    const btn = document.getElementById('logout-btn');
+    if (!btn || btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (btn.dataset.busy === '1') return;
+      btn.dataset.busy = '1';
+      btn.setAttribute('aria-busy', 'true');
+      btn.textContent = 'Signing out…';
+      // Always leave the members area, even if Supabase is slow/offline.
+      const failSafe = window.setTimeout(() => {
+        window.location.replace(authPageUrl('signin'));
+      }, 2500);
+      performSignOut().finally(() => window.clearTimeout(failSafe));
     });
   }
 
@@ -1160,11 +1184,14 @@
 
     if (!path.includes('members')) return;
 
+    // Bind Sign out immediately so it works even if later init fails
+    initLogout();
+    initMobileSidebar();
+
     // Preview mode still works without Auth
     if (applyPreviewMode()) {
       initDashboard();
       showPreviewBanner();
-      initMobileSidebar();
       initInquirySuccess();
       return;
     }
@@ -1197,7 +1224,6 @@
 
     initDashboard();
     showPreviewBanner();
-    initMobileSidebar();
     initInquirySuccess();
   }
 

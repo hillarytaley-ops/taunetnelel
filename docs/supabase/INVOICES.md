@@ -56,6 +56,8 @@ At least **PayID** or full bank fields (`BANK_BSB` + `BANK_ACCOUNT_NUMBER`) shou
 1. Admin → **Invoices**
 2. Filter **Pending** → match bank deposit to invoice number / pay reference
 3. **Mark paid** (or **Void** if cancelled)
+   - **Mark paid** emails the member the **paid invoice PDF** automatically (same branded PDF as Download PDF).
+   - For invoices already paid, use **Email paid PDF** to resend.
 
 Event fees: Admin → **Events** → set **Fee (AUD)** when creating, or edit the fee field on an existing row.
 
@@ -71,4 +73,5 @@ Event fees: Admin → **Events** → set **Fee (AUD)** when creating, or edit th
 
 - `POST /api/invoices/create` — member Bearer token; body `{ kind, event_id?, amount_cents? }`
 - Admin `GET ?resource=invoices&status=pending|paid|void|all`
-- Admin `PATCH ?resource=invoice-status` — body `{ id, status }`
+- Admin `PATCH ?resource=invoice-status` — body `{ id, status }` (when `status=paid`, emails paid PDF)
+- Admin `POST ?resource=invoice-receipt` — body `{ id }` (resend paid PDF email)

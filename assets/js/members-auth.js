@@ -266,7 +266,30 @@
   async function signOut() {
     const client = await getClient();
     if (!client) return;
-    await client.auth.signOut();
+    // Prefer local scope so the UI is never blocked waiting on the network.
+    try {
+      await Promise.race([
+        client.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    } catch (_) {
+      /* continue — clear storage below */
+    }
+    try {
+      // Best-effort revoke on the server; do not block logout on this.
+      void client.auth.signOut({ scope: 'global' });
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-') && key.includes('auth')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   /**

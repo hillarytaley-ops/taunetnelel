@@ -218,6 +218,115 @@ async function sendInvoiceEmail(invoice) {
   return data;
 }
 
+function formatDateTime(d) {
+  try {
+    return new Date(d).toLocaleString('en-AU', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Australia/Melbourne',
+    });
+  } catch {
+    return String(d);
+  }
+}
+
+function buildPaidEmailHtml(invoice) {
+  const amount = formatAud(invoice.amount_cents);
+  const paidWhen = invoice.paid_at ? formatDateTime(invoice.paid_at) : formatDateTime(new Date());
+  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
+  <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
+  <h1 style="font-size:22px;margin:0 0 12px;">Payment confirmed</h1>
+  <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
+  <p>Thank you. We have confirmed your payment and attached your paid invoice as a PDF.</p>
+  <p><strong>${escapeHtml(invoice.description)}</strong><br>
+  Amount paid: <strong>${amount} AUD</strong><br>
+  Invoice: <strong>${escapeHtml(invoice.invoice_number)}</strong><br>
+  Paid: ${escapeHtml(paidWhen)}<br>
+  Reference: ${escapeHtml(invoice.pay_reference || '—')}</p>
+  <p style="font-size:13px;color:#555;">You can also download this invoice anytime from the Members → Membership page.</p>
+  <p style="font-size:13px;color:#555;">Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
+  <p style="font-size:13px;color:#666;">Taunet Nelel · Victoria, Australia</p>
+</body></html>`;
+}
+
+async function sendPaidInvoiceReceiptEmail(invoice) {
+  if (!RESEND_API_KEY) {
+    const err = new Error('RESEND_API_KEY is not configured on the server.');
+    err.status = 500;
+    throw err;
+  }
+
+  const paidInvoice = {
+    ...invoice,
+    status: 'paid',
+    paid_at: invoice.paid_at || new Date().toISOString(),
+  };
+
+  const pdf = buildInvoicePdf({
+    orgName: ORG_LEGAL_NAME,
+    abn: ORG_ABN,
+    invoiceNumber: paidInvoice.invoice_number,
+    issuedAt: formatDate(paidInvoice.issued_at),
+    dueAt: formatDate(paidInvoice.due_at),
+    paidAt: formatDateTime(paidInvoice.paid_at),
+    status: 'paid',
+    billToName: paidInvoice.full_name || paidInvoice.email,
+    billToEmail: paidInvoice.email,
+    description: paidInvoice.description,
+    amountLabel: formatAud(paidInvoice.amount_cents),
+    payReference: paidInvoice.pay_reference,
+    payid: PAYID,
+    bankName: BANK_NAME,
+    bankBsb: BANK_BSB,
+    bankAccount: BANK_ACCOUNT,
+    bankAccountName: BANK_ACCOUNT_NAME,
+  });
+
+  const payload = {
+    from: RESEND_FROM,
+    to: [paidInvoice.email],
+    subject: `Payment confirmed — ${paidInvoice.invoice_number} — Taunet Nelel`,
+    html: buildPaidEmailHtml(paidInvoice),
+    text:
+      `Payment confirmed\n\n` +
+      `Invoice ${paidInvoice.invoice_number}\n` +
+      `${paidInvoice.description}\n` +
+      `Amount paid: ${formatAud(paidInvoice.amount_cents)} AUD\n` +
+      `Paid: ${formatDateTime(paidInvoice.paid_at)}\n` +
+      `Reference: ${paidInvoice.pay_reference || ''}\n` +
+      `Questions: info@taunetnelel.org\n`,
+    reply_to: RESEND_REPLY_TO,
+    attachments: [
+      {
+        filename: `${paidInvoice.invoice_number}-paid.pdf`,
+        content: pdf.toString('base64'),
+      },
+    ],
+    tags: [{ name: 'category', value: 'invoice-paid' }],
+    headers: { 'User-Agent': 'taunet-invoices/1.0' },
+  };
+
+  const resp = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'taunet-invoices/1.0',
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = new Error(data?.message || 'Resend failed to send paid invoice email');
+    err.status = 502;
+    throw err;
+  }
+  return data;
+}
+
 async function createAndEmailInvoice({
   kind,
   email,
@@ -325,6 +434,7 @@ function getPublicPaymentDetails() {
 module.exports = {
   createAndEmailInvoice,
   sendInvoiceEmail,
+  sendPaidInvoiceReceiptEmail,
   paymentConfigured,
   getPublicPaymentDetails,
   formatAud,

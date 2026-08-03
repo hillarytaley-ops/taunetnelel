@@ -1102,7 +1102,10 @@
           status === 'pending'
             ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="paid">Mark paid</button>
                <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="void">Void</button>`
-            : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`;
+            : status === 'paid'
+              ? `<button type="button" data-invoice-receipt="${escapeHtml(row.id)}">Email paid PDF</button>
+                 <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`
+              : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`;
         return `<tr>
           <td>
             <strong>${escapeHtml(row.invoice_number || '—')}</strong>
@@ -1131,10 +1134,41 @@
           await adminApi('invoice-status', {
             method: 'PATCH',
             body: { id: btn.dataset.invoiceStatus, status: next }
+          }).then((result) => {
+            if (next === 'paid') {
+              if (result?.receipt_emailed) {
+                alert('Marked paid. Paid invoice PDF emailed to the member.');
+              } else if (result?.receipt_error) {
+                alert(
+                  'Marked paid, but the receipt email failed: ' + result.receipt_error
+                );
+              }
+            }
           });
           await loadInvoices();
         } catch (err) {
           alert(err.message || 'Could not update invoice.');
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-invoice-receipt]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Email the paid invoice PDF to this member now?')) return;
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        try {
+          const result = await adminApi('invoice-receipt', {
+            method: 'POST',
+            body: { id: btn.dataset.invoiceReceipt }
+          });
+          alert(result.message || 'Paid invoice emailed.');
+        } catch (err) {
+          alert(err.message || 'Could not email paid invoice.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = label;
         }
       });
     });

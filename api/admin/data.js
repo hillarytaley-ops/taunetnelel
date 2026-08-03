@@ -19,6 +19,13 @@ const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'i
 const ENQUIRY_STATUSES = new Set(['new', 'reviewed', 'actioned', 'archived']);
 const rateBuckets = new Map();
 
+let sendPaidInvoiceReceiptEmail;
+try {
+  ({ sendPaidInvoiceReceiptEmail } = require('../lib/invoice-service'));
+} catch (_) {
+  sendPaidInvoiceReceiptEmail = null;
+}
+
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
@@ -1268,6 +1275,33 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { rows: data || [] });
       }
 
+      if (resource === 'invoice-receipt') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Invoice id is required' });
+        if (typeof sendPaidInvoiceReceiptEmail !== 'function') {
+          return json(res, 500, { error: 'Invoice email service unavailable' });
+        }
+        const { data } = await sb(`invoices?id=eq.${encodeURIComponent(id)}&select=*`);
+        const invoice = Array.isArray(data) ? data[0] : null;
+        if (!invoice) return json(res, 404, { error: 'Invoice not found' });
+        if (invoice.status !== 'paid') {
+          return json(res, 400, { error: 'Only paid invoices can email a paid PDF receipt' });
+        }
+        if (!invoice.email) {
+          return json(res, 400, { error: 'Invoice has no member email' });
+        }
+        try {
+          await sendPaidInvoiceReceiptEmail(invoice);
+          return json(res, 200, {
+            ok: true,
+            message: `Paid invoice PDF emailed to ${invoice.email}.`,
+          });
+        } catch (mailErr) {
+          console.error('invoice-receipt email', mailErr);
+          return json(res, 502, { error: mailErr.message || 'Could not email paid invoice' });
+        }
+      }
+
       return json(res, 400, { error: 'Unknown POST resource' });
     }
 
@@ -1341,7 +1375,24 @@ module.exports = async function handler(req, res) {
           }
         }
 
-        return json(res, 200, { rows: data || [] });
+        // Email paid invoice PDF to the member automatically
+        let receiptEmailed = false;
+        let receiptError = null;
+        if (status === 'paid' && invoice?.email && typeof sendPaidInvoiceReceiptEmail === 'function') {
+          try {
+            await sendPaidInvoiceReceiptEmail(invoice);
+            receiptEmailed = true;
+          } catch (mailErr) {
+            console.error('invoice-status paid receipt email', mailErr);
+            receiptError = mailErr.message || 'Could not email paid invoice.';
+          }
+        }
+
+        return json(res, 200, {
+          rows: data || [],
+          receipt_emailed: receiptEmailed,
+          receipt_error: receiptError,
+        });
       }
 
       if (resource === 'event-update') {
