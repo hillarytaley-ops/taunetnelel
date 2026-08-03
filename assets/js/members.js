@@ -536,8 +536,43 @@
           showResetPasswordPanel('request');
         } else if (sessionMember) {
           setMember(sessionMember);
-          redirectAfterAuth();
-          return;
+          // Paid members go to the dashboard. Unpaid members stay on auth —
+          // the Members button must open sign-in, not auto-jump to PayID.
+          if (hasActiveMembership(sessionMember)) {
+            redirectAfterAuth();
+            return;
+          }
+          if (loginForm) {
+            const emailInput = loginForm.querySelector('[name="email"]');
+            if (emailInput && sessionMember.email && !emailInput.value) {
+              emailInput.value = sessionMember.email;
+            }
+            showAuthMessage(
+              loginForm,
+              'You are signed in, but the $50 Basic Plan is still unpaid. Use Pay via PayID below to finish, or Sign out to use a different account.',
+              false
+            );
+            let actions = document.getElementById('auth-pending-pay-actions');
+            if (!actions) {
+              actions = document.createElement('div');
+              actions.id = 'auth-pending-pay-actions';
+              actions.className = 'auth-pending-pay-actions';
+              actions.innerHTML =
+                `<a class="btn btn--accent" href="${membershipPayUrl(sessionMember.email, {
+                  name: sessionMember.name,
+                  joined: true,
+                })}">Pay $50 via PayID</a>` +
+                `<button type="button" class="btn btn--ghost" id="auth-pending-signout">Sign out</button>`;
+              loginForm.appendChild(actions);
+              document.getElementById('auth-pending-signout')?.addEventListener('click', async () => {
+                try {
+                  await performSignOut();
+                } catch (_) {
+                  window.location.replace(authPageUrl('signin'));
+                }
+              });
+            }
+          }
         } else if (callback?.type === 'signup' || callback?.type === 'email') {
           const payEmail =
             prefillEmail ||

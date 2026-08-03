@@ -1642,6 +1642,19 @@
   font-size: 0.8rem;
 }
 
+.auth-pending-pay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.auth-pending-pay-actions .btn {
+  flex: 1 1 8rem;
+  text-align: center;
+  justify-content: center;
+}
+
 .auth-tabs {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
