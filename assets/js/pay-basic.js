@@ -75,16 +75,17 @@
     if (invoiceEl) invoiceEl.textContent = invoice.invoice_number || '—';
     if (refEl) refEl.textContent = invoice.pay_reference || '—';
     if (payidEl) {
-      payidEl.textContent = payment.payid || 'PayID will appear on your emailed invoice';
+      payidEl.textContent = payment.payid || 'PayID will appear above once ready';
     }
     if (emailNote) {
       const alreadyJoined = params.get('joined') === '1';
       emailNote.textContent =
         (data.message ||
-          'A PDF invoice was emailed to you with the same PayID details.') +
+          'PayID details are shown above. Keep your payment reference.') +
+        ' A paid receipt PDF is emailed only after Admin confirms your payment.' +
         (alreadyJoined
-          ? ' After the Treasurer marks your payment paid, sign in to open the member dashboard.'
-          : ' Next: create your member login with this email so you appear in Members / profiles.');
+          ? ' After confirmation, sign in to open the member dashboard.'
+          : ' Next: create your member login with this same email.');
     }
 
     const joinBtn = document.getElementById('pay-create-login');

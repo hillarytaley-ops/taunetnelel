@@ -126,7 +126,7 @@
     if (emailNote) {
       emailNote.textContent =
         data.message ||
-        'A PDF invoice was emailed to you with the same PayID details.';
+        'PayID details are shown above. A paid receipt is emailed only after the Treasurer confirms your payment.';
     }
 
     const joinBtn = document.getElementById('pay-create-login');

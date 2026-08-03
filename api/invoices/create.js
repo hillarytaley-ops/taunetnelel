@@ -131,7 +131,7 @@ module.exports = async function handler(req, res) {
         due_at: invoice.due_at,
         issued_at: invoice.issued_at,
       },
-      message: `Invoice ${invoice.invoice_number} was emailed to ${invoice.email}.`,
+      message: `Payment request ${invoice.invoice_number} was emailed to ${invoice.email}. A paid receipt is sent only after Admin marks it paid.`,
     });
   } catch (err) {
     console.error('invoices/create', err);

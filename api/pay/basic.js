@@ -145,6 +145,8 @@ module.exports = async function handler(req, res) {
       email,
       fullName,
       userId,
+      // PayID shown on screen — paid receipt emailed only after Admin Mark paid
+      skipEmail: true,
       meta: {
         source: 'pay_portal_basic',
         installments: 1,
@@ -158,7 +160,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       plan: 'basic',
       installments: 1,
-      message: `Invoice ${invoice.invoice_number} emailed to ${invoice.email}. Pay the single $50 installment via PayID using your reference.`,
+      message: `Payment request ${invoice.invoice_number} is ready. Pay $50 via PayID using your reference. You will receive a paid receipt by email only after the Treasurer confirms your payment.`,
       invoice: {
         id: invoice.id,
         invoice_number: invoice.invoice_number,

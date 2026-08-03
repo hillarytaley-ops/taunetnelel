@@ -129,15 +129,15 @@ function buildEmailHtml(invoice) {
 
   return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
   <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
-  <h1 style="font-size:22px;margin:0 0 12px;">Invoice ${escapeHtml(invoice.invoice_number)}</h1>
+  <h1 style="font-size:22px;margin:0 0 12px;">Payment request ${escapeHtml(invoice.invoice_number)}</h1>
   <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
-  <p>Your invoice is ready. Please pay by PayID or bank transfer using the reference below so we can match your payment.</p>
+  <p>This is a <strong>payment request</strong>, not a receipt. Please pay by PayID or bank transfer using the reference below. A paid receipt is emailed only after the Treasurer confirms your payment in Admin.</p>
   <p><strong>${escapeHtml(invoice.description)}</strong><br>
   Amount due: <strong>${amount} AUD</strong><br>
   Due: ${escapeHtml(formatDate(invoice.due_at))}</p>
   <p style="margin:0 0 8px;"><strong>How to pay</strong></p>
   <ul>${payBits.join('')}</ul>
-  <p style="font-size:13px;color:#555;">A PDF copy is attached. Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
+  <p style="font-size:13px;color:#555;">A PDF payment request is attached (status: pending). Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
   <p style="font-size:13px;color:#666;">Taunet Nelel · Victoria, Australia</p>
 </body></html>`;
 }
@@ -162,8 +162,9 @@ async function sendInvoiceEmail(invoice) {
     invoiceNumber: invoice.invoice_number,
     issuedAt: formatDate(invoice.issued_at),
     dueAt: formatDate(invoice.due_at),
-    paidAt: invoice.paid_at ? formatDate(invoice.paid_at) : '',
-    status: invoice.status,
+    paidAt: '',
+    // Never send a paid/receipt PDF until Admin marks paid
+    status: 'pending',
     billToName: invoice.full_name || invoice.email,
     billToEmail: invoice.email,
     description: invoice.description,
@@ -179,24 +180,25 @@ async function sendInvoiceEmail(invoice) {
   const payload = {
     from: RESEND_FROM,
     to: [invoice.email],
-    subject: `Invoice ${invoice.invoice_number} — Taunet Nelel`,
+    subject: `Payment request ${invoice.invoice_number} — Taunet Nelel`,
     html: buildEmailHtml(invoice),
     text:
-      `Invoice ${invoice.invoice_number}\n\n` +
+      `Payment request ${invoice.invoice_number}\n\n` +
       `${invoice.description}\n` +
-      `Amount: ${formatAud(invoice.amount_cents)} AUD\n` +
+      `Amount due: ${formatAud(invoice.amount_cents)} AUD\n` +
       `Due: ${formatDate(invoice.due_at)}\n` +
       `Reference: ${invoice.pay_reference}\n` +
       (PAYID ? `PayID: ${PAYID}\n` : '') +
+      `This is not a receipt. You will receive a paid receipt after the Treasurer confirms your payment.\n` +
       `Questions: info@taunetnelel.org\n`,
     reply_to: RESEND_REPLY_TO,
     attachments: [
       {
-        filename: `${invoice.invoice_number}.pdf`,
+        filename: `${invoice.invoice_number}-payment-request.pdf`,
         content: pdf.toString('base64'),
       },
     ],
-    tags: [{ name: 'category', value: 'invoice' }],
+    tags: [{ name: 'category', value: 'invoice-request' }],
     headers: { 'User-Agent': 'taunet-invoices/1.0' },
   };
 
@@ -253,6 +255,13 @@ function buildPaidEmailHtml(invoice) {
 }
 
 async function sendPaidInvoiceReceiptEmail(invoice) {
+  if (String(invoice?.status || '').toLowerCase() !== 'paid' || !invoice?.paid_at) {
+    const err = new Error(
+      'Paid receipt emails are only sent after Admin marks the invoice paid.'
+    );
+    err.status = 400;
+    throw err;
+  }
   if (!RESEND_API_KEY) {
     const err = new Error('RESEND_API_KEY is not configured on the server.');
     err.status = 500;
@@ -262,7 +271,7 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
   const paidInvoice = {
     ...invoice,
     status: 'paid',
-    paid_at: invoice.paid_at || new Date().toISOString(),
+    paid_at: invoice.paid_at,
   };
 
   const pdf = buildInvoicePdf({
@@ -499,6 +508,7 @@ async function createWelfarePayCheckout({
       userId,
       amountCents: 30000,
       description: 'Welfare Plus membership — full year (AUD $300)',
+      skipEmail: true,
       meta: {
         source: 'pay_portal_welfare',
         plan: 'full',
@@ -532,7 +542,8 @@ async function createWelfarePayCheckout({
       amountCents: 10000,
       description: `Welfare Plus — installment ${n} of 3 (AUD $100)`,
       dueAt: dueDates[i],
-      skipEmail: n > 1,
+      // Installment 1: PayID on screen only. Later installments emailed as payment requests (not receipts).
+      skipEmail: true,
       meta: {
         source: 'pay_portal_welfare',
         plan: 'installments',
@@ -554,16 +565,16 @@ function buildReminderEmailHtml(invoice, kind) {
   const amount = formatAud(invoice.amount_cents);
   const heading =
     kind === 'due'
-      ? 'Payment reminder — installment due'
-      : 'Your Welfare Plus installment invoice';
+      ? 'Payment reminder — amount still due'
+      : 'Payment request — installment ready';
   return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
   <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
   <h1 style="font-size:22px;margin:0 0 12px;">${escapeHtml(heading)}</h1>
   <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
   <p>${
     kind === 'due'
-      ? 'This is a friendly reminder that your Welfare Plus installment is due. Please pay via PayID using the reference below.'
-      : 'Your next Welfare Plus installment invoice is ready. Please pay via PayID using the reference below.'
+      ? 'This is a friendly reminder that your Welfare Plus installment is still due. This is not a receipt — a paid receipt is emailed only after the Treasurer confirms your payment.'
+      : 'Your next Welfare Plus installment payment request is ready. This is not a receipt — a paid receipt is emailed only after the Treasurer confirms your payment.'
   }</p>
   <p><strong>${escapeHtml(invoice.description)}</strong><br>
   Amount due: <strong>${amount} AUD</strong><br>
@@ -589,7 +600,7 @@ async function sendInvoiceReminderEmail(invoice, reminderKind) {
     issuedAt: formatDate(invoice.issued_at),
     dueAt: formatDate(invoice.due_at),
     paidAt: '',
-    status: invoice.status,
+    status: 'pending',
     billToName: invoice.full_name || invoice.email,
     billToEmail: invoice.email,
     description: invoice.description,

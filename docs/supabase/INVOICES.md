@@ -14,8 +14,8 @@ New public signups get `association_member = false` until an **association** inv
 
 - Page: `/pay/basic.html` (linked from Membership → **Pay $50 via PayID**)
 - API: `POST /api/pay/basic` with `{ full_name, email, phone? }`
-- Creates a pending **association** invoice ($50, 1 installment), emails the PDF, and returns PayID / bank details on screen
-- Treasurer marks paid in Admin → **Invoices** after the deposit lands
+- Creates a pending **association** invoice ($50, 1 installment) and returns PayID / bank details **on screen** (no receipt email yet)
+- Treasurer marks paid in Admin → **Invoices** → paid receipt PDF is emailed then
 
 ## Public Welfare Plus PayID portal
 
@@ -23,8 +23,9 @@ New public signups get `association_member = false` until an **association** inv
 - API: `POST /api/pay/welfare` with `{ full_name, email, phone?, plan: "full" | "installments" }`
 - **Full:** one **welfare** invoice for $300
 - **Installments:** three **welfare** invoices of $100 (due ~ now / +1 month / +2 months), linked by `meta.series_id`
-  - Installment 1 emailed immediately
-  - Installments 2–3 emailed by daily cron near due date, with overdue reminders
+  - Installment 1 shown on screen (no receipt email yet)
+  - Installments 2–3 emailed later as **payment requests** (not receipts) near due date
+- **Paid receipt PDF is emailed only after Admin marks the invoice Paid** (never on PayID start)
 - Cron: `GET/POST /api/cron/invoice-reminders` (Vercel cron `0 22 * * *` UTC) — set `CRON_SECRET` and call with `Authorization: Bearer …`
 - Mark paid in Admin: full $300 (or all three installments) unlocks `welfare_member` + `association_member`
 
