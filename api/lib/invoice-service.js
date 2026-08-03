@@ -162,6 +162,8 @@ async function sendInvoiceEmail(invoice) {
     invoiceNumber: invoice.invoice_number,
     issuedAt: formatDate(invoice.issued_at),
     dueAt: formatDate(invoice.due_at),
+    paidAt: invoice.paid_at ? formatDate(invoice.paid_at) : '',
+    status: invoice.status,
     billToName: invoice.full_name || invoice.email,
     billToEmail: invoice.email,
     description: invoice.description,

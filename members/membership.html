@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=17">
   <link rel="stylesheet" href="../assets/css/members.css">
+  <link rel="stylesheet" href="../assets/css/member-invoices.css?v=1">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -102,7 +103,7 @@
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/members-auth.js?v=12"></script>
-  <script src="../assets/js/invoices.js?v=1"></script>
+  <script src="../assets/js/invoices.js?v=2"></script>
   <script src="../assets/js/members.js?v=30"></script>
   <script>
     (function () {
@@ -163,6 +164,73 @@
         statusEl.style.borderRadius = '6px';
       }
 
+      function escapeHtml(s) {
+        return String(s || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function renderInvoiceCard(r) {
+        const paid = String(r.status || '') === 'paid';
+        const amount = window.taunetInvoices.formatAud(r.amount_cents);
+        const issued = window.taunetInvoices.formatDateTime(r.issued_at);
+        const paidAt = paid
+          ? window.taunetInvoices.formatDateTime(r.paid_at)
+          : '';
+        const due = window.taunetInvoices.formatDate(r.due_at);
+        const statusClass = paid ? 'is-paid' : 'is-pending';
+        return (
+          '<article class="member-invoice" data-invoice-id="' +
+          escapeHtml(r.id) +
+          '">' +
+          '<header class="member-invoice__head">' +
+          '<img class="member-invoice__logo" src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" width="120" height="52">' +
+          '<div class="member-invoice__brand">' +
+          '<strong>Taunet Nelel</strong>' +
+          '<span>Membership invoice</span>' +
+          '</div>' +
+          '<span class="member-invoice__status ' +
+          statusClass +
+          '">' +
+          escapeHtml((r.status || 'pending').toUpperCase()) +
+          '</span>' +
+          '</header>' +
+          '<div class="member-invoice__meta">' +
+          '<div><span>Invoice</span><strong>' +
+          escapeHtml(r.invoice_number || '—') +
+          '</strong></div>' +
+          '<div><span>Issued</span><strong>' +
+          escapeHtml(issued) +
+          '</strong></div>' +
+          (paid
+            ? '<div><span>Paid</span><strong>' + escapeHtml(paidAt) + '</strong></div>'
+            : '<div><span>Due</span><strong>' + escapeHtml(due) + '</strong></div>') +
+          '</div>' +
+          '<p class="member-invoice__desc">' +
+          escapeHtml(r.description || '') +
+          '</p>' +
+          '<div class="member-invoice__amount">' +
+          '<span>Amount</span>' +
+          '<strong>' +
+          escapeHtml(amount) +
+          ' <small>AUD</small></strong>' +
+          '</div>' +
+          '<div class="member-invoice__actions">' +
+          '<button type="button" class="btn btn--primary btn--sm" data-download-invoice="' +
+          escapeHtml(r.id) +
+          '">Download PDF</button>' +
+          (r.pay_reference
+            ? '<span class="member-invoice__ref">Ref: ' +
+              escapeHtml(r.pay_reference) +
+              '</span>'
+            : '') +
+          '</div>' +
+          '</article>'
+        );
+      }
+
       async function refreshHistory() {
         if (!historyEl || !window.taunetInvoices) return;
         try {
@@ -172,25 +240,23 @@
             return;
           }
           historyEl.innerHTML =
-            '<table class="compare-table"><thead><tr><th>Invoice</th><th>Description</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead><tbody>' +
-            rows
-              .map(function (r) {
-                return (
-                  '<tr><td>' +
-                  (r.invoice_number || '') +
-                  '</td><td>' +
-                  (r.description || '') +
-                  '</td><td>' +
-                  window.taunetInvoices.formatAud(r.amount_cents) +
-                  '</td><td>' +
-                  (r.status || '') +
-                  '</td><td>' +
-                  (r.due_at ? new Date(r.due_at).toLocaleDateString() : '—') +
-                  '</td></tr>'
-                );
-              })
-              .join('') +
-            '</tbody></table>';
+            '<div class="member-invoice-list">' + rows.map(renderInvoiceCard).join('') + '</div>';
+          historyEl.querySelectorAll('[data-download-invoice]').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+              const id = btn.getAttribute('data-download-invoice');
+              const label = btn.textContent;
+              btn.disabled = true;
+              btn.textContent = 'Preparing…';
+              try {
+                await window.taunetInvoices.downloadPdf(id);
+              } catch (err) {
+                showStatus(err.message || 'Could not download PDF.', true);
+              } finally {
+                btn.disabled = false;
+                btn.textContent = label;
+              }
+            });
+          });
         } catch (err) {
           historyEl.innerHTML =
             '<p class="muted">Could not load invoices yet. If this is the first time, ask IT to run migration 020.</p>';

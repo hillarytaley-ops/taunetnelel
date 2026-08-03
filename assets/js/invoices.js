@@ -1,5 +1,5 @@
 /**
- * Member invoice helpers — create invoice via API, list via Supabase RLS.
+ * Member invoice helpers — create invoice via API, list via Supabase RLS, download PDF.
  */
 (function (global) {
   'use strict';
@@ -39,7 +39,7 @@
     const { data, error } = await client
       .from('invoices')
       .select(
-        'id,invoice_number,kind,description,amount_cents,status,pay_reference,issued_at,due_at,paid_at'
+        'id,invoice_number,kind,description,amount_cents,status,pay_reference,issued_at,due_at,paid_at,full_name,email'
       )
       .order('issued_at', { ascending: false })
       .limit(50);
@@ -47,13 +47,70 @@
     return data || [];
   }
 
+  async function downloadPdf(invoiceId) {
+    const token = await getAccessToken();
+    const resp = await fetch(
+      '/api/invoices/download?id=' + encodeURIComponent(invoiceId),
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.error || 'Could not download invoice PDF.');
+    }
+    const blob = await resp.blob();
+    const disposition = resp.headers.get('Content-Disposition') || '';
+    const match = /filename="([^"]+)"/i.exec(disposition);
+    const filename = match ? match[1] : 'invoice.pdf';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function formatAud(cents) {
     return `$${(Number(cents || 0) / 100).toFixed(2)}`;
+  }
+
+  function formatDateTime(value) {
+    if (!value) return '—';
+    try {
+      return new Date(value).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return String(value);
+    }
+  }
+
+  function formatDate(value) {
+    if (!value) return '—';
+    try {
+      return new Date(value).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return String(value);
+    }
   }
 
   global.taunetInvoices = {
     createInvoice,
     listMyInvoices,
+    downloadPdf,
     formatAud,
+    formatDateTime,
+    formatDate,
   };
 })(window);
