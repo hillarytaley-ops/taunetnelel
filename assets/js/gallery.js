@@ -113,7 +113,12 @@
         </header>
         <div class="gallery-grid gallery-grid--photos gallery-grid--compact" data-album-grid="${albumId}">${photosHtml}</div>
         ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${albumId}">Show all ${event.photos.length} preview photos</button>` : ''}
-        ${primaryExternal && totalCount > event.photos.length ? `<p class="gallery-album-card__full-note">Full set (1,000+ photos) is hosted by PQ Photography on Pixieset — use the button above.</p>` : ''}
+        ${primaryExternal && totalCount > event.photos.length
+          ? `<div class="gallery-album-card__full-footer">
+              <a class="btn btn--accent gallery-album-card__full-album" href="${escapeHtml(safeUrl(primaryExternal.url))}" target="_blank" rel="noopener">${escapeHtml(primaryExternal.label)}</a>
+              <p class="gallery-album-card__full-note">The remaining 1,000+ photos are not stored on this website — open Pixieset for the complete album.</p>
+            </div>`
+          : ''}
       </article>`;
   }
 
@@ -280,6 +285,13 @@
 
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash.replace('#', '');
-    if (hash && findAlbum(hash)) scrollToAlbum(hash);
+    const album = hash ? findAlbum(hash) : null;
+    if (!album) return;
+    if (album.group !== activeFilter) {
+      activeFilter = album.group;
+      init();
+      return;
+    }
+    scrollToAlbum(hash);
   });
 })();
