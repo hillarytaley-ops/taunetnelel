@@ -27,17 +27,20 @@ window.TAUNET_GALLERY = [
   {
     id: 'gala-2026',
     nav: 'Gala 2026',
-    group: 'recent',
+    group: 'past',
     sortDate: '2026-04-18',
     previewLimit: 8,
+    totalCount: 1400,
     title: 'Taunet Nelel Gala 2026',
     date: '18 April 2026',
-    description: 'Event photos from our gala celebration — courtesy of PQ Photography. Browse a preview below or view the full album on Pixieset.',
+    description:
+      'Preview photos on this site (24). The full PQ Photography album — 1,400+ images — opens on Pixieset.',
     externalAlbums: [
       {
-        label: 'View all 1,400+ photos on Pixieset',
-        url: 'https://pqphotography90.pixieset.com/taunetnelel/'
-      }
+        label: 'Open full album — 1,400+ photos on Pixieset',
+        url: 'https://pqphotography90.pixieset.com/taunetnelel/',
+        primary: true,
+      },
     ],
     photos: [
       'gala-2026-01-PQS_0001.jpg',

@@ -67,7 +67,10 @@
       .map((photo, index) => renderPhotoFigure(photo, index >= previewLimit))
       .join('');
 
-    const albumLinks = (event.externalAlbums || [])
+    const externalAlbums = event.externalAlbums || [];
+    const primaryExternal = externalAlbums.find((a) => a.primary) || externalAlbums[0];
+    const secondaryLinks = externalAlbums
+      .filter((album) => album !== primaryExternal)
       .map((album) => {
         const href = escapeHtml(safeUrl(album.url));
         if (!href) return '';
@@ -75,6 +78,16 @@
       })
       .filter(Boolean)
       .join('');
+
+    const primaryCta = primaryExternal
+      ? `<a class="btn btn--accent gallery-album-card__full-album" href="${escapeHtml(safeUrl(primaryExternal.url))}" target="_blank" rel="noopener">${escapeHtml(primaryExternal.label)}</a>`
+      : '';
+
+    const totalCount = Number(event.totalCount) || 0;
+    const countLabel =
+      totalCount > event.photos.length
+        ? `${event.photos.length} preview · ${totalCount.toLocaleString('en-AU')}+ full album`
+        : `${event.photos.length} photos`;
 
     const badge =
       event.group === 'recent'
@@ -86,7 +99,7 @@
         <a href="#${albumId}" class="gallery-album-card__hero" aria-hidden="true" tabindex="-1">
           <img src="${cover}" alt="" width="960" height="360" loading="lazy">
           <span class="gallery-album-card__overlay"></span>
-          <span class="gallery-album-card__count">${event.photos.length} photos</span>
+          <span class="gallery-album-card__count">${escapeHtml(countLabel)}</span>
         </a>
         <header class="gallery-album-card__head">
           <div class="gallery-album-card__meta">
@@ -95,10 +108,12 @@
           </div>
           <h2>${escapeHtml(event.title)}</h2>
           <p class="gallery-album-card__desc">${escapeHtml(event.description)}</p>
-          ${albumLinks ? `<div class="gallery-event__albums">${albumLinks}</div>` : ''}
+          ${primaryCta}
+          ${secondaryLinks ? `<div class="gallery-event__albums">${secondaryLinks}</div>` : ''}
         </header>
         <div class="gallery-grid gallery-grid--photos gallery-grid--compact" data-album-grid="${albumId}">${photosHtml}</div>
-        ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${albumId}">Show all ${event.photos.length} photos</button>` : ''}
+        ${hasMore ? `<button type="button" class="btn btn--outline gallery-event__show-more" data-show-more="${albumId}">Show all ${event.photos.length} preview photos</button>` : ''}
+        ${primaryExternal && totalCount > event.photos.length ? `<p class="gallery-album-card__full-note">Full set (1,000+ photos) is hosted by PQ Photography on Pixieset — use the button above.</p>` : ''}
       </article>`;
   }
 

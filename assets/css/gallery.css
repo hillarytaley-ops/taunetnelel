@@ -273,6 +273,20 @@ body[data-page="gallery"] .page-hero--gallery .page-hero__content {
   line-height: 1.55;
 }
 
+.gallery-album-card__full-album {
+  display: inline-flex;
+  margin-top: 0.85rem;
+  text-align: center;
+  justify-content: center;
+}
+
+.gallery-album-card__full-note {
+  margin: 0 1.25rem 1.15rem;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
 .gallery-album-card .gallery-event__albums {
   margin-top: 0.65rem;
   justify-content: flex-start;
