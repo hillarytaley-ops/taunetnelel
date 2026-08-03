@@ -78,11 +78,24 @@
       remoteAlbums.filter((a) => curatedIds.has(a.id)).map((a) => [a.id, a])
     );
 
-    // Prefer DB albums that already have photos; keep static when DB album empty.
+    // Prefer DB photo lists when present, but keep curated site metadata
+    // (Pixieset links, full album counts, clearer copy) from gallery-data.js.
     const mergedCurated = current.map((album) => {
       const remote = remoteById.get(album.id);
-      if (remote && remote.photos.length) return remote;
-      return album;
+      if (!(remote && remote.photos.length)) return album;
+
+      return {
+        ...remote,
+        externalAlbums: album.externalAlbums || remote.externalAlbums,
+        totalCount: album.totalCount || remote.totalCount,
+        description: album.description || remote.description,
+        previewLimit: album.previewLimit || remote.previewLimit,
+        group: album.group || remote.group,
+        date: album.date || remote.date,
+        title: album.title || remote.title,
+        nav: album.nav || remote.nav,
+        sortDate: album.sortDate || remote.sortDate
+      };
     });
 
     // Append committee-uploaded albums (e.g. event-* from admin photo uploads).
