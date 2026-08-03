@@ -42,6 +42,7 @@
         <button type="button" data-admin-nav="imports">Association &amp; Welfare</button>
         <button type="button" data-admin-nav="business">Business Hub</button>
         <button type="button" data-admin-nav="events">Events</button>
+        <button type="button" data-admin-nav="invoices">Invoices</button>
         <button type="button" data-admin-nav="sponsors">Sponsors</button>
         <button type="button" data-admin-nav="gallery">Gallery</button>
         <button type="button" data-admin-nav="newsletter">Newsletter</button>
@@ -304,6 +305,10 @@
             <div class="admin-flyer-preview admin-field--wide" id="admin-event-flyer-preview" hidden>
               <img alt="Flyer preview" id="admin-event-flyer-preview-img">
             </div>
+            <label class="admin-field"><span>Fee (AUD)</span>
+              <input name="fee_aud" type="number" min="0" step="0.01" placeholder="0 = no invoice">
+              <span class="admin-field__hint">Optional. Members can request an invoice for this amount.</span>
+            </label>
             <label class="admin-field admin-field--check"><input name="is_published" type="checkbox" checked> Published</label>
             <label class="admin-field admin-field--check"><input name="registration_open" type="checkbox"> Registration open</label>
             <label class="admin-field admin-field--check"><input name="featured" type="checkbox"> Featured</label>
@@ -328,6 +333,40 @@
             </thead>
             <tbody id="admin-events-body">
               <tr><td colspan="5" class="admin-empty">Open this tab to load events.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="invoices">
+        <p class="admin-muted">
+          PayID / bank invoices emailed to members for association ($50), welfare ($300), and event fees.
+          Mark <strong>Paid</strong> when the deposit appears in the bank account.
+        </p>
+        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <select id="admin-invoice-filter" aria-label="Filter invoices">
+            <option value="pending">Pending</option>
+            <option value="paid">Paid</option>
+            <option value="all">All</option>
+            <option value="void">Void</option>
+          </select>
+          <button type="button" class="btn btn--ghost btn--sm" id="admin-invoices-refresh">Refresh</button>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Member</th>
+                <th>Kind</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Due</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-invoices-body">
+              <tr><td colspan="7" class="admin-empty">Open this tab to load invoices.</td></tr>
             </tbody>
           </table>
         </div>
@@ -467,6 +506,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=19"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20"></script>
 </body>
 </html>

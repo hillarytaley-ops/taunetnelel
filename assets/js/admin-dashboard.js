@@ -176,6 +176,7 @@
     if (!token && !pin) throw new Error('Admin session missing. Sign in again.');
     const params = new URLSearchParams({ resource });
     if (options.filter) params.set('filter', options.filter);
+    if (options.status) params.set('status', options.status);
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (pin) headers['x-admin-bootstrap-pin'] = pin;
@@ -563,6 +564,19 @@
                 ${row.is_published ? 'Unpublish' : 'Publish'}
               </button>
             </div>
+            <div class="admin-detail" style="margin-top:0.45rem">
+              Fee $
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                style="width:5.5rem"
+                value="${row.fee_cents != null ? (Number(row.fee_cents) / 100).toFixed(2) : ''}"
+                data-event-fee="${escapeHtml(row.id)}"
+                aria-label="Event fee AUD"
+                placeholder="0"
+              >
+            </div>
           </td>
           <td>${row.is_published ? 'Yes' : 'No'}</td>
           <td>
@@ -604,6 +618,27 @@
           await loadEvents();
         } catch (err) {
           alert(err.message || 'Could not update publish state.');
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-event-fee]').forEach((input) => {
+      input.addEventListener('change', async () => {
+        const raw = String(input.value || '').trim();
+        const feeCents = raw === '' ? null : Math.round(Number(raw) * 100);
+        if (raw !== '' && (!Number.isFinite(feeCents) || feeCents < 0)) {
+          alert('Enter a valid fee in AUD (e.g. 25).');
+          await loadEvents();
+          return;
+        }
+        try {
+          await adminApi('event-update', {
+            method: 'PATCH',
+            body: { id: input.dataset.eventFee, fee_cents: feeCents }
+          });
+        } catch (err) {
+          alert(err.message || 'Could not update event fee. Run migration 020 if fee_cents is missing.');
+          await loadEvents();
         }
       });
     });
@@ -657,6 +692,11 @@
     const endRaw = fd.get('end_at');
     const flyerInput = form.querySelector('[name="flyer"]');
     const flyerFile = flyerInput?.files?.[0] || null;
+    const feeAudRaw = String(fd.get('fee_aud') || '').trim();
+    const feeCents =
+      feeAudRaw === ''
+        ? null
+        : Math.round(Number(feeAudRaw) * 100);
     const payload = {
       title: String(fd.get('title') || '').trim(),
       location: String(fd.get('location') || '').trim(),
@@ -666,6 +706,7 @@
       meta: String(fd.get('meta') || '').trim(),
       badge: String(fd.get('badge') || '').trim(),
       phase_override: String(fd.get('phase_override') || 'auto'),
+      fee_cents: Number.isFinite(feeCents) && feeCents >= 0 ? feeCents : null,
       is_published: form.querySelector('[name="is_published"]')?.checked !== false,
       registration_open: Boolean(form.querySelector('[name="registration_open"]')?.checked),
       featured: Boolean(form.querySelector('[name="featured"]')?.checked)
@@ -1014,6 +1055,68 @@
     });
   }
 
+  async function loadInvoices() {
+    const body = document.getElementById('admin-invoices-body');
+    if (!body) return;
+    const statusFilter = document.getElementById('admin-invoice-filter')?.value || 'pending';
+    body.innerHTML = `<tr><td colspan="7" class="admin-empty">Loading…</td></tr>`;
+    const data = await adminApi('invoices', { status: statusFilter });
+    const rows = data.rows || [];
+    if (data.warning && !rows.length) {
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">${escapeHtml(data.warning)}</td></tr>`;
+      return;
+    }
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No invoices for this filter.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
+      .map((row) => {
+        const amount = `$${(Number(row.amount_cents || 0) / 100).toFixed(2)}`;
+        const actions =
+          row.status === 'pending'
+            ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="paid">Mark paid</button>
+               <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="void">Void</button>`
+            : row.status === 'paid'
+              ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`
+              : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`;
+        return `<tr>
+          <td>
+            <strong>${escapeHtml(row.invoice_number || '—')}</strong>
+            <div class="admin-detail">${escapeHtml(row.pay_reference || '')}</div>
+          </td>
+          <td>
+            ${escapeHtml(row.full_name || '—')}
+            <div class="admin-detail">${escapeHtml(row.email || '')}</div>
+          </td>
+          <td>${escapeHtml(row.kind || '—')}</td>
+          <td>${escapeHtml(amount)}</td>
+          <td>${escapeHtml(row.status || '—')}</td>
+          <td class="admin-detail">${escapeHtml(formatDate(row.due_at))}</td>
+          <td><div class="admin-actions">${actions}</div></td>
+        </tr>`;
+      })
+      .join('');
+
+    body.querySelectorAll('[data-invoice-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.next;
+        const label =
+          next === 'paid' ? 'Mark this invoice as paid?' : next === 'void' ? 'Void this invoice?' : 'Reopen this invoice?';
+        if (!confirm(label)) return;
+        try {
+          await adminApi('invoice-status', {
+            method: 'PATCH',
+            body: { id: btn.dataset.invoiceStatus, status: next }
+          });
+          await loadInvoices();
+        } catch (err) {
+          alert(err.message || 'Could not update invoice.');
+        }
+      });
+    });
+  }
+
   async function refreshPanel(id) {
     if (id === 'business' || id === 'pages') {
       if (id === 'business') ensureBusinessEditor();
@@ -1042,6 +1145,7 @@
       if (id === 'members') await loadMembers();
       if (id === 'imports') await loadImports();
       if (id === 'events') await loadEvents();
+      if (id === 'invoices') await loadInvoices();
       if (id === 'sponsors') await loadSponsors();
       if (id === 'gallery') await loadGallery();
       if (id === 'newsletter') await loadNewsletter();
@@ -1125,6 +1229,13 @@
 
     document.getElementById('admin-event-form')?.addEventListener('submit', createEventFromForm);
     bindEventFlyerPreview();
+
+    document.getElementById('admin-invoice-filter')?.addEventListener('change', () => {
+      if (state.isAdmin) loadInvoices().catch((err) => alert(err.message || 'Could not load invoices.'));
+    });
+    document.getElementById('admin-invoices-refresh')?.addEventListener('click', () => {
+      if (state.isAdmin) loadInvoices().catch((err) => alert(err.message || 'Could not load invoices.'));
+    });
 
     document.getElementById('admin-newsletter-export')?.addEventListener('click', () => {
       exportNewsletterCsv();

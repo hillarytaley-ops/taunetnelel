@@ -581,6 +581,9 @@
     const gallery = safeUrl(assetPath(event.galleryUrl, prefix));
     const eventId = escapeHtml(event.id);
 
+    const feeCents = Number(event.feeCents || event.fee_cents || 0);
+    const feeLabel = feeCents > 0 ? `$${(feeCents / 100).toFixed(2)}` : '';
+
     let action = '';
     if (registered && booking?.startsWith('http')) {
       action = `<a href="${escapeHtml(booking)}" class="btn btn--accent" target="_blank" rel="noopener">View Ticket</a>`;
@@ -590,6 +593,11 @@
         : `<button type="button" class="btn btn--primary" data-register-interest="${eventId}">Register Interest</button>`;
     } else if (gallery && (phase === 'past' || phase === 'most-recent')) {
       action = `<a href="${escapeHtml(gallery)}" class="btn btn--ghost">View gallery</a>`;
+    }
+    if (feeCents > 0 && (phase === 'upcoming' || phase === 'present')) {
+      action +=
+        `<button type="button" class="btn btn--ghost" data-event-invoice="${eventId}" data-event-fee="${feeCents}">` +
+        `Email ${escapeHtml(feeLabel)} invoice</button>`;
     }
 
     return `
@@ -601,6 +609,7 @@
             <div class="event-card__badges">
               ${registered ? '<span class="event-card__badge event-card__badge--member">Registered</span>' : ''}
               <span class="event-card__badge event-card__badge--phase">${phaseLabel}</span>
+              ${feeLabel ? `<span class="event-card__badge">${escapeHtml(feeLabel)}</span>` : ''}
             </div>
             <h3>${title}</h3>
             <div class="event-card__meta"><span>${escapeHtml(event.meta || event.location)}</span></div>
@@ -670,6 +679,33 @@
     root.querySelectorAll('[data-register-interest]').forEach((btn) => {
       btn.addEventListener('click', () => {
         alert('You will be notified when event details are confirmed.');
+      });
+    });
+
+    root.querySelectorAll('[data-event-invoice]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!global.taunetInvoices?.createInvoice) {
+          alert('Invoices are not ready. Refresh the page or contact IT.');
+          return;
+        }
+        const eventId = btn.getAttribute('data-event-invoice');
+        const fee = Number(btn.getAttribute('data-event-fee') || 0);
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        try {
+          const result = await global.taunetInvoices.createInvoice({
+            kind: 'event',
+            event_id: eventId,
+            amount_cents: fee,
+          });
+          alert(result.message || 'Invoice emailed to you.');
+        } catch (err) {
+          alert(err.message || 'Could not create event invoice.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = label;
+        }
       });
     });
   }

@@ -6,7 +6,7 @@
   <title>Membership | Taunet Nelel Members</title>
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/main.css?v=7">
+  <link rel="stylesheet" href="../assets/css/main.css?v=17">
   <link rel="stylesheet" href="../assets/css/members.css">
 </head>
 <body>
@@ -35,20 +35,21 @@
         <h1>Membership</h1>
         <span class="status-chip status-chip--active">Active · <span data-member-plan>Basic</span></span>
       </div>
+      <p id="invoice-status" class="auth-form__message" role="status" hidden style="margin:0 0 1rem;"></p>
       <div class="dash-grid">
         <div class="dash-card dash-card--full">
           <h2>Current Plan</h2>
           <div class="plans" style="margin-top:1rem;">
             <div class="plan">
-              <h3>Your Plan: <span data-member-plan>Basic</span></h3>
+              <h3>Association — Basic</h3>
               <div class="plan__price">$50 <small>/ year</small></div>
-              <p>Renews on <strong data-member-renews>12 Aug 2026</strong></p>
+              <p>Renews on <strong data-member-renews>—</strong></p>
               <ul>
                 <li>Exclusive workshops &amp; webinars</li>
                 <li>Member event discounts</li>
                 <li>Cultural &amp; educational resources</li>
               </ul>
-              <button class="btn btn--ghost" onclick="alert('Payment history will be available when connected to a payment provider.')">View Payment History</button>
+              <button type="button" class="btn btn--primary" id="invoice-association-btn">Email me $50 invoice</button>
             </div>
             <div class="plan plan--featured">
               <h3>Welfare Plus</h3>
@@ -59,8 +60,17 @@
                 <li>Exclusive welfare portal access</li>
                 <li>Peer support network</li>
               </ul>
-              <button class="btn btn--accent" onclick="alert('Upgrade flow will connect to payment when live.')">Upgrade Plan</button>
+              <button type="button" class="btn btn--accent" id="invoice-welfare-btn">Email me $300 invoice</button>
             </div>
+          </div>
+          <p style="margin-top:1rem;font-size:0.95rem;color:var(--color-muted, #666);">
+            Invoices are emailed instantly with PayID / bank details. Use the payment reference on your transfer.
+          </p>
+        </div>
+        <div class="dash-card dash-card--full">
+          <h2>Payment history / invoices</h2>
+          <div id="invoice-history">
+            <p class="muted">Loading…</p>
           </div>
         </div>
         <div class="dash-card dash-card--full">
@@ -80,7 +90,87 @@
   </div>
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=6"></script>
-  <script src="../assets/js/members.js?v=20"></script>
+  <script src="../assets/js/members-auth.js?v=11"></script>
+  <script src="../assets/js/invoices.js?v=1"></script>
+  <script src="../assets/js/members.js?v=28"></script>
+  <script>
+    (function () {
+      const statusEl = document.getElementById('invoice-status');
+      const historyEl = document.getElementById('invoice-history');
+
+      function showStatus(msg, isError) {
+        if (!statusEl) return;
+        statusEl.hidden = !msg;
+        statusEl.textContent = msg || '';
+        statusEl.classList.toggle('is-error', Boolean(isError));
+        statusEl.style.display = msg ? 'block' : 'none';
+        statusEl.style.padding = '0.75rem 1rem';
+        statusEl.style.background = isError ? '#5c1a1a' : '#2e4a2e';
+        statusEl.style.color = '#fff';
+        statusEl.style.borderRadius = '6px';
+      }
+
+      async function refreshHistory() {
+        if (!historyEl || !window.taunetInvoices) return;
+        try {
+          const rows = await window.taunetInvoices.listMyInvoices();
+          if (!rows.length) {
+            historyEl.innerHTML = '<p class="muted">No invoices yet. Request one above.</p>';
+            return;
+          }
+          historyEl.innerHTML =
+            '<table class="compare-table"><thead><tr><th>Invoice</th><th>Description</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead><tbody>' +
+            rows
+              .map(function (r) {
+                return (
+                  '<tr><td>' +
+                  (r.invoice_number || '') +
+                  '</td><td>' +
+                  (r.description || '') +
+                  '</td><td>' +
+                  window.taunetInvoices.formatAud(r.amount_cents) +
+                  '</td><td>' +
+                  (r.status || '') +
+                  '</td><td>' +
+                  (r.due_at ? new Date(r.due_at).toLocaleDateString() : '—') +
+                  '</td></tr>'
+                );
+              })
+              .join('') +
+            '</tbody></table>';
+        } catch (err) {
+          historyEl.innerHTML =
+            '<p class="muted">Could not load invoices yet. If this is the first time, ask IT to run migration 020.</p>';
+        }
+      }
+
+      async function requestKind(kind, btn) {
+        if (!window.taunetInvoices) return;
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        showStatus('');
+        try {
+          const result = await window.taunetInvoices.createInvoice({ kind: kind });
+          showStatus(result.message || 'Invoice emailed.', false);
+          await refreshHistory();
+        } catch (err) {
+          showStatus(err.message || 'Could not create invoice.', true);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = label;
+        }
+      }
+
+      document.getElementById('invoice-association-btn')?.addEventListener('click', function (e) {
+        requestKind('association', e.currentTarget);
+      });
+      document.getElementById('invoice-welfare-btn')?.addEventListener('click', function (e) {
+        requestKind('welfare', e.currentTarget);
+      });
+
+      refreshHistory();
+    })();
+  </script>
 </body>
 </html>

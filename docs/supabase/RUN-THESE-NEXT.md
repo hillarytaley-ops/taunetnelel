@@ -55,3 +55,9 @@ Members can also self-join at `/members/auth.html?tab=join` with their list emai
 | `ADMIN_BOOTSTRAP_PIN` | optional emergency PIN (server only) |
 
 Remove reliance on the bootstrap PIN once committee Auth logins work.
+
+## F. Invoices (PayID / bank)
+
+1. Run **`supabase/migrations/020_invoices.sql`** in SQL Editor  
+2. Set PayID / bank env vars on Vercel — see **`docs/supabase/INVOICES.md`**  
+3. Members: Membership → Email me invoice; Admin → Invoices → Mark paid

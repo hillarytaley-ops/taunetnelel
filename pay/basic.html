@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pay Basic Plan — PayID | Taunet Nelel</title>
+  <meta name="description" content="Pay your Taunet Nelel Basic Plan membership ($50 / year) in a single installment via PayID.">
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css?v=17">
+  <link rel="stylesheet" href="../assets/css/pay-portal.css?v=1">
+</head>
+<body data-page="pay-basic">
+
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="logo">
+        <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" width="120" height="52">
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <ul>
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../membership.html">Membership</a></li>
+          <li><a href="../contact.html">Contact</a></li>
+        </ul>
+      </nav>
+      <div class="header-actions">
+        <a href="../members/auth.html" class="btn btn--primary">Members</a>
+      </div>
+      <button class="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav-panel"><span></span><span></span><span></span></button>
+    </div>
+  </header>
+
+  <div class="mobile-nav" id="mobile-nav" aria-hidden="true">
+    <div class="mobile-nav__panel" id="mobile-nav-panel">
+      <button class="mobile-nav__close" type="button" aria-label="Close menu">&times;</button>
+      <ul class="mobile-nav__list">
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../membership.html">Membership</a></li>
+        <li><a href="../contact.html">Contact</a></li>
+        <li><a href="../members/auth.html">Members</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <main class="pay-portal">
+    <div class="pay-portal__bg" aria-hidden="true"></div>
+    <div class="container pay-portal__layout">
+      <aside class="pay-portal__summary">
+        <p class="pay-portal__eyebrow">Basic Plan</p>
+        <h1>Pay by PayID</h1>
+        <p class="pay-portal__lede">One installment of <strong>$50 AUD</strong> for your annual association membership.</p>
+        <div class="pay-portal__amount" aria-label="Amount due">
+          <span class="pay-portal__amount-value">$50</span>
+          <span class="pay-portal__amount-meta">single payment · / year</span>
+        </div>
+        <ul class="pay-portal__perks">
+          <li>Exclusive workshops &amp; webinars</li>
+          <li>Member event discounts</li>
+          <li>Cultural &amp; educational resources</li>
+          <li>Family-oriented cultural activities</li>
+        </ul>
+        <p class="pay-portal__note">After you pay, the Treasurer matches your transfer using the payment reference and activates your membership.</p>
+      </aside>
+
+      <section class="pay-portal__card" aria-labelledby="pay-basic-heading">
+        <div id="pay-step-form">
+          <h2 id="pay-basic-heading">Start your $50 payment</h2>
+          <p class="pay-portal__intro">Enter your details. We email your invoice and show PayID instructions for a single installment.</p>
+
+          <form id="pay-basic-form" class="pay-portal__form" novalidate>
+            <div class="form-group">
+              <label for="pay-name">Full name</label>
+              <input type="text" id="pay-name" name="full_name" required autocomplete="name" placeholder="Your full name">
+            </div>
+            <div class="form-group">
+              <label for="pay-email">Email</label>
+              <input type="email" id="pay-email" name="email" required autocomplete="email" placeholder="you@example.com">
+            </div>
+            <div class="form-group">
+              <label for="pay-phone">Phone <span class="optional">(optional)</span></label>
+              <input type="tel" id="pay-phone" name="phone" autocomplete="tel" placeholder="+61 4XX XXX XXX">
+            </div>
+            <button type="submit" class="btn btn--primary pay-portal__submit" id="pay-submit">
+              Get PayID details
+            </button>
+            <p class="pay-portal__fine">You will pay in your banking app. No card details are collected on this site.</p>
+            <p id="pay-form-status" class="pay-portal__status" role="status" aria-live="polite" hidden></p>
+          </form>
+        </div>
+
+        <div id="pay-step-instructions" hidden>
+          <p class="pay-portal__badge">Invoice ready · single installment</p>
+          <h2>Pay $50 via PayID</h2>
+          <p class="pay-portal__intro">Use your banking app. Include the <strong>payment reference</strong> exactly so we can match your deposit.</p>
+
+          <dl class="pay-portal__facts">
+            <div>
+              <dt>Amount</dt>
+              <dd id="pay-out-amount">$50.00 AUD</dd>
+            </div>
+            <div>
+              <dt>Installments</dt>
+              <dd>1 of 1 (full year)</dd>
+            </div>
+            <div>
+              <dt>Invoice</dt>
+              <dd id="pay-out-invoice">—</dd>
+            </div>
+            <div>
+              <dt>Payment reference</dt>
+              <dd class="pay-portal__ref">
+                <span id="pay-out-ref">—</span>
+                <button type="button" class="btn btn--ghost btn--sm" id="pay-copy-ref">Copy</button>
+              </dd>
+            </div>
+          </dl>
+
+          <div class="pay-portal__paybox">
+            <h3>PayID</h3>
+            <p class="pay-portal__payid" id="pay-out-payid">—</p>
+            <button type="button" class="btn btn--ghost btn--sm" id="pay-copy-payid">Copy PayID</button>
+          </div>
+
+          <div class="pay-portal__bank" id="pay-bank-block" hidden>
+            <h3>Or bank transfer</h3>
+            <ul id="pay-out-bank"></ul>
+          </div>
+
+          <ol class="pay-portal__steps">
+            <li>Open your banking app and choose PayID (or EFT).</li>
+            <li>Enter the PayID / account details above.</li>
+            <li>Pay <strong>$50.00</strong> once — one installment for the year.</li>
+            <li>Paste the <strong>payment reference</strong> in the description field.</li>
+            <li>Keep your receipt. Membership is confirmed after the Treasurer marks the invoice paid.</li>
+          </ol>
+
+          <p class="pay-portal__email-note" id="pay-email-note"></p>
+
+          <div class="pay-portal__actions">
+            <a href="../members/auth.html?tab=join" class="btn btn--primary">Create member login</a>
+            <a href="../membership.html#plans" class="btn btn--ghost">Back to plans</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-bottom">
+      <div class="container">
+        Copyright &copy; <span class="footer-year">2026</span> Taunet Nelel ·
+        <a href="../membership.html">Membership</a> ·
+        <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/js/main.js?v=13"></script>
+  <script src="../assets/js/pay-basic.js?v=1"></script>
+</body>
+</html>

@@ -274,6 +274,20 @@ function isMissingPhaseOverrideError(err) {
   return text.includes('phase_override');
 }
 
+function isMissingFeeCentsError(err) {
+  const text = `${err?.message || ''} ${JSON.stringify(err?.details || {})}`;
+  return text.includes('fee_cents');
+}
+
+function parseEventFeeCents(body) {
+  if (body?.fee_cents === undefined || body?.fee_cents === null || body?.fee_cents === '') {
+    return null;
+  }
+  const cents = Math.round(Number(body.fee_cents));
+  if (!Number.isFinite(cents) || cents < 0) return null;
+  return cents;
+}
+
 /** When phase_override column is missing, nudge dates so Auto placement still matches. */
 function applyPhaseViaDates(row, phase) {
   if (!phase || phase === 'auto') return row;
@@ -632,12 +646,18 @@ module.exports = async function handler(req, res) {
         let data;
         try {
           ({ data } = await sb(
-            'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override&order=start_at.desc&limit=100'
+            'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override,fee_cents&order=start_at.desc&limit=100'
           ));
         } catch (_) {
-          ({ data } = await sb(
-            'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published&order=start_at.desc&limit=100'
-          ));
+          try {
+            ({ data } = await sb(
+              'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,fee_cents&order=start_at.desc&limit=100'
+            ));
+          } catch (__) {
+            ({ data } = await sb(
+              'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published&order=start_at.desc&limit=100'
+            ));
+          }
         }
         return json(res, 200, { rows: data || [] });
       }
@@ -677,6 +697,26 @@ module.exports = async function handler(req, res) {
           'newsletter_subscribers?select=email,list_key,subscribed_at&order=subscribed_at.desc&limit=200'
         );
         return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'invoices') {
+        const status = url.searchParams.get('status') || 'all';
+        let query =
+          'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at&order=issued_at.desc&limit=300';
+        if (status === 'pending' || status === 'paid' || status === 'void') {
+          query += `&status=eq.${status}`;
+        }
+        try {
+          const { data } = await sb(query);
+          return json(res, 200, { rows: data || [] });
+        } catch (err) {
+          return json(res, 200, {
+            rows: [],
+            warning:
+              err.message ||
+              'Invoices table missing. Run supabase/migrations/020_invoices.sql in Supabase.',
+          });
+        }
       }
 
       if (resource === 'announcements') {
@@ -966,7 +1006,8 @@ module.exports = async function handler(req, res) {
               featured: Boolean(body.featured),
               registration_open: Boolean(body.registration_open),
               is_published: body.is_published !== false,
-              phase_override: requestedPhase
+              phase_override: requestedPhase,
+              fee_cents: parseEventFeeCents(body)
             };
             try {
               const { data } = await sb('events', {
@@ -978,15 +1019,17 @@ module.exports = async function handler(req, res) {
                 warning: `Event saved without flyer. ${flyerWarning}`
               });
             } catch (createErr) {
-              if (!isMissingPhaseOverrideError(createErr)) throw createErr;
-              const { phase_override, ...withoutPhase } = row;
-              applyPhaseViaDates(withoutPhase, requestedPhase || 'auto');
+              if (!isMissingPhaseOverrideError(createErr) && !isMissingFeeCentsError(createErr)) throw createErr;
+              const { phase_override, fee_cents, ...withoutOptional } = row;
+              if (isMissingPhaseOverrideError(createErr)) {
+                applyPhaseViaDates(withoutOptional, requestedPhase || 'auto');
+              }
               const { data } = await sb('events', {
                 method: 'POST',
-                body: JSON.stringify(withoutPhase)
+                body: JSON.stringify(withoutOptional)
               });
               return json(res, 200, {
-                rows: data || [withoutPhase],
+                rows: data || [withoutOptional],
                 warning: `Event saved without flyer. ${flyerWarning}`
               });
             }
@@ -1008,7 +1051,8 @@ module.exports = async function handler(req, res) {
           featured: Boolean(body.featured),
           registration_open: Boolean(body.registration_open),
           is_published: body.is_published !== false,
-          phase_override: requestedPhase
+          phase_override: requestedPhase,
+          fee_cents: parseEventFeeCents(body)
         };
 
         try {
@@ -1018,17 +1062,29 @@ module.exports = async function handler(req, res) {
           });
           return json(res, 200, { rows: data || [row] });
         } catch (err) {
-          if (!isMissingPhaseOverrideError(err)) throw err;
-          const { phase_override, ...withoutPhase } = row;
-          applyPhaseViaDates(withoutPhase, requestedPhase || 'auto');
+          if (!isMissingPhaseOverrideError(err) && !isMissingFeeCentsError(err)) throw err;
+          let fallback = { ...row };
+          const warnings = [];
+          if (isMissingPhaseOverrideError(err)) {
+            const { phase_override, ...withoutPhase } = fallback;
+            applyPhaseViaDates(withoutPhase, requestedPhase || 'auto');
+            fallback = withoutPhase;
+            warnings.push(
+              'Saved without phase_override. Run migration 017 in Supabase to enable board overrides.'
+            );
+          }
+          if (isMissingFeeCentsError(err)) {
+            const { fee_cents, ...withoutFee } = fallback;
+            fallback = withoutFee;
+            warnings.push('Saved without fee_cents. Run migration 020 for event invoices.');
+          }
           const { data } = await sb('events', {
             method: 'POST',
-            body: JSON.stringify(withoutPhase)
+            body: JSON.stringify(fallback)
           });
           return json(res, 200, {
-            rows: data || [withoutPhase],
-            warning:
-              'Saved without phase_override. Run migration 017 in Supabase to enable board overrides.'
+            rows: data || [fallback],
+            warning: warnings.join(' ') || undefined
           });
         }
       }
@@ -1195,6 +1251,26 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { rows: data || [] });
       }
 
+      if (resource === 'invoice-status') {
+        const id = String(body.id || '').trim();
+        const status = String(body.status || '').trim();
+        if (!id) return json(res, 400, { error: 'Invoice id is required' });
+        if (!['pending', 'paid', 'void'].includes(status)) {
+          return json(res, 400, { error: 'Invalid invoice status' });
+        }
+        const patch = {
+          status,
+          updated_at: new Date().toISOString(),
+        };
+        if (status === 'paid') patch.paid_at = new Date().toISOString();
+        if (status === 'pending') patch.paid_at = null;
+        const { data } = await sb(`invoices?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
       if (resource === 'event-update') {
         const id = String(body.id || '').trim();
         if (!id) return json(res, 400, { error: 'Event id is required' });
@@ -1212,6 +1288,17 @@ module.exports = async function handler(req, res) {
         if (body.featured != null) patch.featured = Boolean(body.featured);
         if (body.registration_open != null) patch.registration_open = Boolean(body.registration_open);
         if (body.is_published != null) patch.is_published = Boolean(body.is_published);
+        if (body.fee_cents !== undefined) {
+          if (body.fee_cents === null || body.fee_cents === '') {
+            patch.fee_cents = null;
+          } else {
+            const cents = Math.round(Number(body.fee_cents));
+            if (!Number.isFinite(cents) || cents < 0) {
+              return json(res, 400, { error: 'fee_cents must be a non-negative number' });
+            }
+            patch.fee_cents = cents;
+          }
+        }
         if (body.flyer_data_url) {
           patch.image_path = await uploadFlyerFromDataUrl(id, body.flyer_data_url, body.flyer_name);
         }

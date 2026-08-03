@@ -20,7 +20,8 @@
       bookingUrl: row.booking_url || undefined,
       galleryUrl: row.gallery_url || undefined,
       registrationOpen: Boolean(row.registration_open),
-      phaseOverride: row.phase_override || null
+      phaseOverride: row.phase_override || null,
+      feeCents: row.fee_cents != null ? Number(row.fee_cents) : null
     };
   }
 
@@ -34,13 +35,13 @@
     let query = client
       .from('events')
       .select(
-        'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override'
+        'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override,fee_cents'
       )
       .eq('is_published', true)
       .order('start_at', { ascending: false });
 
     let { data, error } = await query;
-    if (error && String(error.message || '').includes('phase_override')) {
+    if (error && /phase_override|fee_cents/i.test(String(error.message || ''))) {
       ({ data, error } = await client
         .from('events')
         .select(

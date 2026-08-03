@@ -251,6 +251,15 @@ body[data-page="membership"] .plan .btn {
   text-overflow: ellipsis;
 }
 
+body[data-page="membership"] .plan__pay-note {
+  margin: 0.65rem auto 0;
+  max-width: 16rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-muted, #666);
+  text-align: center;
+}
+
 .membership-compare {
   max-width: 860px;
   margin: 2.75rem auto 0;

@@ -1,0 +1,346 @@
+/* Basic Plan PayID payment portal */
+
+body[data-page="pay-basic"] {
+  background: #faf6f1;
+}
+
+.pay-portal {
+  position: relative;
+  padding: clamp(2.5rem, 5vw, 4rem) 0 4rem;
+  overflow: hidden;
+}
+
+.pay-portal__bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(196, 98, 28, 0.12), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 20%, rgba(92, 46, 16, 0.08), transparent 50%),
+    linear-gradient(180deg, #f3ebe2 0%, #faf6f1 45%, #fff 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.pay-portal__layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: clamp(1.5rem, 4vw, 2.75rem);
+  align-items: start;
+  max-width: 980px;
+}
+
+.pay-portal__summary {
+  padding: 0.25rem 0.25rem 1rem;
+}
+
+.pay-portal__eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent, #c4621c);
+}
+
+.pay-portal__summary h1 {
+  margin: 0 0 0.65rem;
+  font-family: "DM Sans", sans-serif;
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  line-height: 1.15;
+  color: var(--color-brown, #5c2e10);
+}
+
+.pay-portal__lede {
+  margin: 0 0 1.25rem;
+  color: var(--color-muted, #5a4b3c);
+  line-height: 1.55;
+  max-width: 28rem;
+}
+
+.pay-portal__amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.85rem;
+  margin-bottom: 1.35rem;
+  padding: 1rem 1.15rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(139, 69, 19, 0.12);
+  border-radius: 12px;
+}
+
+.pay-portal__amount-value {
+  font-family: "DM Sans", sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--color-accent, #c4621c);
+  line-height: 1;
+}
+
+.pay-portal__amount-meta {
+  font-size: 0.92rem;
+  color: var(--color-muted, #666);
+}
+
+.pay-portal__perks {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-portal__perks li {
+  position: relative;
+  padding: 0.35rem 0 0.35rem 1.45rem;
+  color: #3a2f28;
+  font-size: 0.95rem;
+}
+
+.pay-portal__perks li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.7rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #2f9e6b;
+}
+
+.pay-portal__note {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--color-muted, #666);
+  max-width: 26rem;
+}
+
+.pay-portal__card {
+  background: #fff;
+  border: 1px solid rgba(139, 69, 19, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(92, 46, 16, 0.08);
+  padding: clamp(1.35rem, 3vw, 1.85rem);
+}
+
+.pay-portal__card h2 {
+  margin: 0 0 0.45rem;
+  font-family: "DM Sans", sans-serif;
+  font-size: 1.35rem;
+  color: var(--color-brown, #5c2e10);
+}
+
+.pay-portal__intro {
+  margin: 0 0 1.15rem;
+  color: var(--color-muted, #5a4b3c);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.pay-portal__form .form-group {
+  margin-bottom: 0.95rem;
+}
+
+.pay-portal__form label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #3a2f28;
+}
+
+.pay-portal__form .optional {
+  font-weight: 400;
+  color: #888;
+}
+
+.pay-portal__form input {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(139, 69, 19, 0.22);
+  border-radius: 10px;
+  font: inherit;
+  background: #fffdf9;
+}
+
+.pay-portal__form input:focus {
+  outline: 2px solid rgba(196, 98, 28, 0.35);
+  border-color: var(--color-accent, #c4621c);
+}
+
+.pay-portal__submit {
+  width: 100%;
+  margin-top: 0.35rem;
+  min-height: 3rem;
+}
+
+.pay-portal__fine {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  color: #777;
+  line-height: 1.45;
+}
+
+.pay-portal__status {
+  margin: 0.85rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #f3ebe2;
+  color: #3a2f28;
+}
+
+.pay-portal__status.is-error {
+  background: #fdeceb;
+  color: #8a1f11;
+}
+
+.pay-portal__badge {
+  display: inline-block;
+  margin: 0 0 0.65rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(47, 158, 107, 0.12);
+  color: #1f7a52;
+}
+
+.pay-portal__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin: 0 0 1.15rem;
+  padding: 0;
+}
+
+.pay-portal__facts > div {
+  padding: 0.75rem 0.85rem;
+  background: #faf6f1;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 69, 19, 0.08);
+}
+
+.pay-portal__facts dt {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #8a7464;
+}
+
+.pay-portal__facts dd {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #2c221c;
+  word-break: break-word;
+}
+
+.pay-portal__ref {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pay-portal__paybox {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #5c2e10 0%, #8b4513 55%, #c4621c 100%);
+  color: #fff;
+}
+
+.pay-portal__paybox h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.pay-portal__payid {
+  margin: 0 0 0.75rem;
+  font-family: "DM Sans", sans-serif;
+  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.pay-portal__paybox .btn--ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: transparent;
+}
+
+.pay-portal__paybox .btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pay-portal__bank {
+  margin-bottom: 1.1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  background: #faf6f1;
+  border: 1px solid rgba(139, 69, 19, 0.1);
+}
+
+.pay-portal__bank h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--color-brown, #5c2e10);
+}
+
+.pay-portal__bank ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #3a2f28;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.pay-portal__steps {
+  margin: 0 0 1.1rem;
+  padding-left: 1.2rem;
+  color: #3a2f28;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.pay-portal__steps li + li {
+  margin-top: 0.35rem;
+}
+
+.pay-portal__email-note {
+  margin: 0 0 1.1rem;
+  font-size: 0.9rem;
+  color: var(--color-muted, #666);
+}
+
+.pay-portal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.pay-portal__actions .btn {
+  flex: 1 1 10rem;
+  text-align: center;
+  justify-content: center;
+}
+
+@media (max-width: 820px) {
+  .pay-portal__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pay-portal__facts {
+    grid-template-columns: 1fr;
+  }
+}
