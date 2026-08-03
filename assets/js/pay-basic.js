@@ -12,10 +12,23 @@
 
   const params = new URLSearchParams(window.location.search);
   const prefillEmail = params.get('email');
+  const prefillName = params.get('name');
+  const prefillPhone = params.get('phone');
   if (prefillEmail && form?.email) {
     form.email.value = prefillEmail;
   }
-  if (params.get('reason') === 'membership' && statusEl && stepForm && !stepForm.hidden) {
+  if (prefillName && form?.full_name) {
+    form.full_name.value = prefillName;
+  }
+  if (prefillPhone && form?.phone) {
+    form.phone.value = prefillPhone;
+  }
+  if (params.get('joined') === '1' && statusEl && stepForm && !stepForm.hidden) {
+    statusEl.hidden = false;
+    statusEl.classList.remove('is-error');
+    statusEl.textContent =
+      'Account created. Enter the same details below to get your $50 PayID invoice. Confirm your email if you received a confirmation link.';
+  } else if (params.get('reason') === 'membership' && statusEl && stepForm && !stepForm.hidden) {
     statusEl.hidden = false;
     statusEl.classList.remove('is-error');
     statusEl.textContent =
@@ -65,10 +78,13 @@
       payidEl.textContent = payment.payid || 'PayID will appear on your emailed invoice';
     }
     if (emailNote) {
+      const alreadyJoined = params.get('joined') === '1';
       emailNote.textContent =
         (data.message ||
           'A PDF invoice was emailed to you with the same PayID details.') +
-        ' Next: create your member login with this email so you appear in Members / profiles.';
+        (alreadyJoined
+          ? ' After the Treasurer marks your payment paid, sign in to open the member dashboard.'
+          : ' Next: create your member login with this email so you appear in Members / profiles.');
     }
 
     const joinBtn = document.getElementById('pay-create-login');

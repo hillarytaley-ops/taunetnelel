@@ -173,14 +173,28 @@
     return Boolean(member.associationMember || member.welfareMember);
   }
 
-  function membershipPayUrl(email) {
+  function membershipPayUrl(email, extras) {
     const inMembers = /\/members\//i.test(window.location.pathname || '');
     const base = inMembers ? '../pay/basic.html' : 'pay/basic.html';
     const params = new URLSearchParams();
     if (email) params.set('email', email);
+    if (extras?.name) params.set('name', extras.name);
+    if (extras?.phone) params.set('phone', extras.phone);
+    if (extras?.joined) params.set('joined', '1');
     params.set('reason', 'membership');
     const q = params.toString();
     return q ? `${base}?${q}` : base;
+  }
+
+  function goToMembershipPayment(memberOrDetails) {
+    const email = memberOrDetails?.email || '';
+    const name = memberOrDetails?.name || memberOrDetails?.full_name || '';
+    const phone = memberOrDetails?.phone || '';
+    window.location.href = membershipPayUrl(email, {
+      name,
+      phone,
+      joined: true,
+    });
   }
 
   function requirePaidMembership(member) {
@@ -256,7 +270,7 @@
   function redirectAfterAuth() {
     const member = getMember();
     if (member && !hasActiveMembership(member)) {
-      window.location.href = membershipPayUrl(member.email);
+      goToMembershipPayment(member);
       return;
     }
     const params = new URLSearchParams(window.location.search);
@@ -338,6 +352,146 @@
       if (joinName) joinName.value = prefillName;
     }
 
+    // Bind Join / Sign in BEFORE any awaits so Create account never does a native
+    // GET submit (that drops ?tab=join and reloads the Sign in panel).
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (authBusy) return;
+        const email = loginForm.querySelector('[name="email"]')?.value?.trim();
+        const password = loginForm.querySelector('[name="password"]')?.value || '';
+
+        if (!authApi || !window.taunetSupabaseApi?.isConfigured()) {
+          showAuthMessage(loginForm, 'Member login is not connected yet. Check supabase-config.js.', true);
+          return;
+        }
+
+        authBusy = true;
+        setSubmitBusy(loginForm, true);
+        showAuthMessage(loginForm, '');
+        try {
+          const member = await authApi.signIn(email, password);
+          setMember(member);
+          redirectAfterAuth();
+        } catch (error) {
+          showAuthMessage(loginForm, authErrorMessage(error), true);
+        } finally {
+          authBusy = false;
+          setSubmitBusy(loginForm, false);
+        }
+      });
+
+      document.getElementById('forgot-password')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (authBusy) return;
+        const email = loginForm.querySelector('[name="email"]')?.value?.trim();
+        if (!email) {
+          showAuthMessage(loginForm, 'Enter your email first, then click Forgot password.', true);
+          return;
+        }
+        if (!authApi) return;
+        authBusy = true;
+        try {
+          await authApi.requestPasswordReset(email);
+          showAuthMessage(
+            loginForm,
+            'If that email has an account, a reset link was sent from members@taunetnelel.org. Check Inbox first; if it is in Spam, tap Not spam and add the address to Contacts.',
+            false
+          );
+        } catch (error) {
+          showAuthMessage(loginForm, authErrorMessage(error, 'password-reset'), true);
+        } finally {
+          authBusy = false;
+        }
+      });
+    }
+
+    if (registerForm) {
+      registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (authBusy) return;
+        const name = registerForm.querySelector('[name="name"]')?.value?.trim() || '';
+        const email = registerForm.querySelector('[name="email"]')?.value?.trim() || '';
+        const phone = registerForm.querySelector('[name="phone"]')?.value?.trim() || '';
+        const password = registerForm.querySelector('[name="password"]')?.value || '';
+        const plan = registerForm.querySelector('[name="plan"]:checked')?.value
+          || registerForm.querySelector('[name="plan"]')?.value
+          || 'basic';
+
+        if (!name || name.length < 2) {
+          showAuthMessage(registerForm, 'Please enter your full name.', true);
+          return;
+        }
+        if (!email) {
+          showAuthMessage(registerForm, 'Please enter your email address.', true);
+          return;
+        }
+        if (!password || password.length < 8) {
+          showAuthMessage(registerForm, 'Password must be at least 8 characters.', true);
+          return;
+        }
+
+        if (!authApi || !window.taunetSupabaseApi?.isConfigured()) {
+          showAuthMessage(registerForm, 'Registration is not connected yet. Check supabase-config.js.', true);
+          return;
+        }
+
+        authBusy = true;
+        setSubmitBusy(registerForm, true);
+        showAuthMessage(registerForm, '');
+        try {
+          const result = await authApi.signUp({ name, email, phone, password, plan });
+          if (result.member) setMember(result.member);
+
+          showAuthMessage(
+            registerForm,
+            result.needsEmailConfirmation
+              ? 'Account created. Opening PayID payment… (also confirm the email we sent you).'
+              : 'Account created. Opening PayID payment…',
+            false
+          );
+          window.setTimeout(() => {
+            goToMembershipPayment({
+              email,
+              name,
+              phone,
+              ...(result.member || {}),
+            });
+          }, 400);
+        } catch (error) {
+          const raw = String(error?.message || '').toLowerCase();
+          const already =
+            raw.includes('already') ||
+            raw.includes('registered') ||
+            raw.includes('exists') ||
+            error?.status === 422;
+          if (already) {
+            showAuthMessage(
+              registerForm,
+              'That email already has an account. Sign in, or continue to PayID if you still need to pay the $50 Basic Plan.',
+              true
+            );
+            const msg = registerForm.querySelector('.auth-form__message');
+            if (msg && !msg.querySelector('[data-join-pay-link]')) {
+              const a = document.createElement('a');
+              a.href = membershipPayUrl(email, { name, phone, joined: true });
+              a.dataset.joinPayLink = '1';
+              a.textContent = 'Open PayID payment';
+              a.style.display = 'inline-block';
+              a.style.marginTop = '0.5rem';
+              msg.appendChild(document.createElement('br'));
+              msg.appendChild(a);
+            }
+          } else {
+            showAuthMessage(registerForm, authErrorMessage(error, 'signup'), true);
+          }
+        } finally {
+          authBusy = false;
+          setSubmitBusy(registerForm, false);
+        }
+      });
+    }
+
     if (authApi?.getClient) {
       try {
         const client = await authApi.getClient();
@@ -385,10 +539,18 @@
           redirectAfterAuth();
           return;
         } else if (callback?.type === 'signup' || callback?.type === 'email') {
+          const payEmail =
+            prefillEmail ||
+            loginForm?.querySelector('[name="email"]')?.value?.trim() ||
+            '';
+          if (payEmail) {
+            goToMembershipPayment({ email: payEmail, name: prefillName || '' });
+            return;
+          }
           if (loginForm) {
             showAuthMessage(
               loginForm,
-              'Email confirmed. Sign in with the password you created.',
+              'Email confirmed. Sign in — you will be taken to PayID if payment is still due.',
               false
             );
           }
@@ -529,100 +691,6 @@
         } finally {
           authBusy = false;
           setSubmitBusy(resetForm, false);
-        }
-      });
-    }
-
-    if (loginForm) {
-      loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (authBusy) return;
-        const email = loginForm.querySelector('[name="email"]')?.value?.trim();
-        const password = loginForm.querySelector('[name="password"]')?.value || '';
-
-        if (!authApi || !window.taunetSupabaseApi?.isConfigured()) {
-          showAuthMessage(loginForm, 'Member login is not connected yet. Check supabase-config.js.', true);
-          return;
-        }
-
-        authBusy = true;
-        setSubmitBusy(loginForm, true);
-        showAuthMessage(loginForm, '');
-        try {
-          const member = await authApi.signIn(email, password);
-          setMember(member);
-          redirectAfterAuth();
-        } catch (error) {
-          showAuthMessage(loginForm, authErrorMessage(error), true);
-        } finally {
-          authBusy = false;
-          setSubmitBusy(loginForm, false);
-        }
-      });
-
-      const forgotBtn = document.getElementById('forgot-password');
-      forgotBtn?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        if (authBusy) return;
-        const email = loginForm.querySelector('[name="email"]')?.value?.trim();
-        if (!email) {
-          showAuthMessage(loginForm, 'Enter your email first, then click Forgot password.', true);
-          return;
-        }
-        if (!authApi) return;
-        authBusy = true;
-        try {
-          await authApi.requestPasswordReset(email);
-          showAuthMessage(
-            loginForm,
-            'If that email has an account, a reset link was sent from members@taunetnelel.org. Check Inbox first; if it is in Spam, tap Not spam and add the address to Contacts.',
-            false
-          );
-        } catch (error) {
-          showAuthMessage(loginForm, authErrorMessage(error, 'password-reset'), true);
-        } finally {
-          authBusy = false;
-        }
-      });
-    }
-
-    if (registerForm) {
-      registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (authBusy) return;
-        const name = registerForm.querySelector('[name="name"]')?.value?.trim() || '';
-        const email = registerForm.querySelector('[name="email"]')?.value?.trim() || '';
-        const phone = registerForm.querySelector('[name="phone"]')?.value?.trim() || '';
-        const password = registerForm.querySelector('[name="password"]')?.value || '';
-        const plan = registerForm.querySelector('[name="plan"]:checked')?.value
-          || registerForm.querySelector('[name="plan"]')?.value
-          || 'basic';
-
-        if (!authApi || !window.taunetSupabaseApi?.isConfigured()) {
-          showAuthMessage(registerForm, 'Registration is not connected yet. Check supabase-config.js.', true);
-          return;
-        }
-
-        authBusy = true;
-        setSubmitBusy(registerForm, true);
-        showAuthMessage(registerForm, '');
-        try {
-          const result = await authApi.signUp({ name, email, phone, password, plan });
-          if (result.needsEmailConfirmation) {
-            showAuthMessage(
-              registerForm,
-              'Account created. Confirm your email, then pay the $50 Basic Plan via PayID to unlock the member dashboard.',
-              false
-            );
-            return;
-          }
-          setMember(result.member);
-          redirectAfterAuth();
-        } catch (error) {
-          showAuthMessage(registerForm, authErrorMessage(error, 'signup'), true);
-        } finally {
-          authBusy = false;
-          setSubmitBusy(registerForm, false);
         }
       });
     }
@@ -886,6 +954,7 @@
             window.location.href = 'membership.html?upgrade=welfare&ready=1';
           }, 1200);
         }
+      } catch (error) {
         console.error('Welfare registration failed:', error);
         if (msg) {
           msg.hidden = false;

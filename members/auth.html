@@ -31,7 +31,7 @@
           <h1>Welcome Back</h1>
           <p>Sign in to access your member dashboard, events, and community updates.</p>
         </div>
-        <form class="login-form" id="login-form" novalidate>
+        <form class="login-form" id="login-form" method="post" action="?tab=signin" novalidate>
           <p class="auth-form__message" role="status" hidden></p>
           <div class="form-group">
             <label for="signin-email">Email address</label>
@@ -119,7 +119,7 @@
           <h1>Join our community</h1>
           <p>Celebrate Kalenjin heritage across Australia.</p>
         </div>
-        <form class="login-form auth-join-form" id="register-form" novalidate>
+        <form class="login-form auth-join-form" id="register-form" method="post" action="?tab=join" novalidate>
           <p class="auth-form__message" role="status" hidden></p>
           <div class="auth-join-grid">
             <div class="form-group">
@@ -187,8 +187,8 @@
   <script src="../assets/js/taunet-security.js?v=1"></script>
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=13"></script>
-  <script src="../assets/js/members.js?v=31"></script>
+  <script src="../assets/js/members-auth.js?v=14"></script>
+  <script src="../assets/js/members.js?v=32"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');

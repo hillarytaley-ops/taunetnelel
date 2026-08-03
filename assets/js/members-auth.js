@@ -254,6 +254,17 @@
     });
     if (error) throw error;
 
+    // Existing email: Supabase may return a user with empty identities and no session
+    if (
+      data?.user &&
+      Array.isArray(data.user.identities) &&
+      data.user.identities.length === 0
+    ) {
+      const err = new Error('User already registered');
+      err.status = 422;
+      throw err;
+    }
+
     // If email confirmation is required, session may be null
     if (!data.session || !data.user) {
       return { needsEmailConfirmation: true, member: null };
