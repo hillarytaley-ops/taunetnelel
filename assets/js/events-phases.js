@@ -289,11 +289,26 @@
 
   function dateBadge(event) {
     const start = parseDate(event.start);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (Number.isNaN(start.getTime())) {
+      return { day: '—', month: '', monthLong: '', short: '—', year: '' };
+    }
+    const parts = new Intl.DateTimeFormat('en-AU', {
+      timeZone: 'Australia/Melbourne',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).formatToParts(start);
+    const day = parts.find((p) => p.type === 'day')?.value || '';
+    const month = parts.find((p) => p.type === 'month')?.value || '';
+    const year = parts.find((p) => p.type === 'year')?.value || '';
+    // Always include the year so 2025 past events are not mistaken for current dates
+    const short = `${day} ${month} ${year}`;
     return {
-      day: String(start.getDate()),
-      month: months[start.getMonth()],
-      monthLong: `${months[start.getMonth()]} ${start.getFullYear()}`
+      day,
+      month,
+      monthLong: `${month} ${year}`,
+      short,
+      year: String(year),
     };
   }
 
@@ -433,7 +448,7 @@
         <a href="${href}" class="events-phase-item__media"${event.galleryUrl ? '' : linkAttrs}>
           <img src="${img}" alt="${title}" width="120" height="80" loading="lazy">
           <span class="events-phase-item__overlay"></span>
-          <span class="events-phase-item__date">${escapeHtml(badge.day)} ${escapeHtml(badge.month)}</span>
+          <span class="events-phase-item__date">${escapeHtml(badge.short)}</span>
         </a>
         <div class="events-phase-item__body">
           ${phaseLabelText ? `<span class="events-phase-item__badge events-phase-item__badge--${meta.mod}">${phaseLabelText}</span>` : ''}
