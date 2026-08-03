@@ -25,6 +25,29 @@ window.TAUNET_FIND_PHOTOS = [
 /** Event photo albums — sourced from taunetnelel.org WordPress media */
 window.TAUNET_GALLERY = [
   {
+    id: 'men-s-camp-2026-08-01',
+    nav: "Men's Camp",
+    group: 'recent',
+    sortDate: '2026-08-02',
+    previewLimit: 8,
+    title: "Men's Camp 2026",
+    date: '1–2 August 2026',
+    description:
+      'Most recent event. More camp photos will be added here as they are published — see Events for full details.',
+    photos: [
+      {
+        src: 'wp-content/uploads/2025/10/Taunet-Nele-Men-camp-fire.jpeg',
+        alt: "Taunet Nelel Men's Camp — campfire",
+        downloadName: 'Taunet-Mens-Camp-fire.jpeg'
+      },
+      {
+        src: 'wp-content/uploads/2025/10/Taunet-mens-affairs.jpg',
+        alt: "Taunet Nelel Men's Camp — men's affairs",
+        downloadName: 'Taunet-Mens-Camp-affairs.jpg'
+      }
+    ]
+  },
+  {
     id: 'gala-2026',
     nav: 'Gala 2026',
     group: 'past',

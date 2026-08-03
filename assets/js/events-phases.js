@@ -32,7 +32,7 @@
       meta: '1–2 August 2026',
       badge: 'Recently ended',
       featured: true,
-      galleryUrl: 'gallery.html',
+      galleryUrl: 'gallery.html#men-s-camp-2026-08-01',
       registrationOpen: false
     },
     {

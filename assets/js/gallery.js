@@ -147,7 +147,7 @@
     list.className = 'gallery-album-list';
     list.innerHTML = albums.length
       ? albums.map((album) => renderAlbumCard(album)).join('')
-      : `<div class="gallery-phase-empty"><p>No albums in this section yet.</p></div>`;
+      : `<div class="gallery-phase-empty"><p>No photo albums in this section yet. Event listings are on the <a href="events.html#most-recent">Events</a> page.</p></div>`;
     root.appendChild(list);
   }
 
