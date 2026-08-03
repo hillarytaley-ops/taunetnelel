@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=14">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=15">
 </head>
 <body data-page="site-admin">
 
@@ -42,7 +42,7 @@
         <button type="button" data-admin-nav="imports">Association &amp; Welfare</button>
         <button type="button" data-admin-nav="business">Business Hub</button>
         <button type="button" data-admin-nav="events">Events</button>
-        <button type="button" data-admin-nav="invoices">Invoices</button>
+        <a href="#invoices" data-admin-nav="invoices" class="site-admin__nav-link">Invoices</a>
         <button type="button" data-admin-nav="sponsors">Sponsors</button>
         <button type="button" data-admin-nav="gallery">Gallery</button>
         <button type="button" data-admin-nav="newsletter">Newsletter</button>
@@ -102,7 +102,7 @@
             </div>
             <div class="admin-quick-actions">
               <button type="button" data-admin-jump="enquiries">Review enquiries</button>
-              <button type="button" data-admin-jump="invoices">Mark invoices paid</button>
+              <a href="#invoices" data-admin-jump="invoices" class="admin-quick-action-link">Mark invoices paid</a>
               <button type="button" data-admin-jump="announcements">Post announcement</button>
               <button type="button" data-admin-jump="events">Manage events</button>
               <button type="button" data-admin-jump="business">Edit Business Hub</button>

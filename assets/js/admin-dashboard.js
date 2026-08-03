@@ -88,12 +88,17 @@
     if (backdrop) backdrop.hidden = !isOpen;
   }
 
+  function panelExists(id) {
+    return Boolean(document.querySelector(`[data-admin-panel="${id}"]`));
+  }
+
   function setPanel(id) {
-    const next = PANELS.includes(id) ? id : 'overview';
-    els.nav.forEach((btn) => {
+    // Prefer DOM panels over the static list so new sections (e.g. invoices) always open
+    const next = panelExists(id) ? id : panelExists('overview') ? 'overview' : (PANELS.includes(id) ? id : 'overview');
+    document.querySelectorAll('[data-admin-nav]').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset.adminNav === next);
     });
-    els.panels.forEach((panel) => {
+    document.querySelectorAll('[data-admin-panel]').forEach((panel) => {
       panel.classList.toggle('is-active', panel.dataset.adminPanel === next);
     });
     const title = document.getElementById('admin-panel-title');
@@ -105,6 +110,7 @@
       imports: 'Association & Welfare',
       business: 'Business Hub',
       events: 'Events',
+      invoices: 'Invoices',
       sponsors: 'Sponsors',
       gallery: 'Gallery',
       newsletter: 'Newsletter',
@@ -118,6 +124,7 @@
       imports: 'Association and Welfare membership lists.',
       business: 'Edit business cards, news, and blog posts.',
       events: 'Published events for the public site and members.',
+      invoices: 'PayID / bank invoices — mark paid when the deposit lands.',
       sponsors: 'Sponsor listings for the public sponsorship page.',
       gallery: 'Album visibility for the public gallery.',
       newsletter: 'Event update subscribers from the Contact page.',
@@ -1196,15 +1203,17 @@
     });
 
     els.nav.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.adminNav;
+      btn.addEventListener('click', (e) => {
+        const id = btn.dataset.adminNav || btn.getAttribute('data-admin-nav');
+        if (!id) return;
+        if (btn.tagName === 'A') e.preventDefault();
         jumpToPanel(id);
       });
     });
 
     document.getElementById('admin-refresh')?.addEventListener('click', () => {
       const active = document.querySelector('[data-admin-nav].is-active');
-      refreshPanel(active?.dataset.adminNav || 'overview');
+      refreshPanel(active?.dataset.adminNav || active?.getAttribute('data-admin-nav') || 'overview');
       setAdminNavOpen(false);
     });
 
@@ -1212,7 +1221,14 @@
       const jump = e.target.closest('[data-admin-jump]');
       if (!jump || !document.getElementById('admin-shell')?.contains(jump)) return;
       e.preventDefault();
-      jumpToPanel(jump.dataset.adminJump);
+      const id = jump.dataset.adminJump || jump.getAttribute('data-admin-jump');
+      if (id) jumpToPanel(id);
+    });
+
+    window.addEventListener('hashchange', () => {
+      if (!state.isAdmin) return;
+      const id = (location.hash || '#overview').replace(/^#/, '');
+      if (panelExists(id)) jumpToPanel(id);
     });
 
     document.getElementById('enquiry-filter')?.addEventListener('change', (e) => {
