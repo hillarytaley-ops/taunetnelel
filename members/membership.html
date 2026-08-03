@@ -38,9 +38,12 @@
       <p id="invoice-status" class="auth-form__message" role="status" hidden style="margin:0 0 1rem;"></p>
       <div class="dash-grid">
         <div class="dash-card dash-card--full">
-          <h2>Current Plan</h2>
-          <div class="plans" style="margin-top:1rem;">
-            <div class="plan">
+          <h2 id="membership-plans-heading">Current Plan</h2>
+          <p id="membership-upgrade-lead" class="muted" hidden style="margin:0.35rem 0 0;">
+            Upgrade to Welfare Plus — register for welfare first, then request your $300 invoice.
+          </p>
+          <div class="plans" id="membership-plans" style="margin-top:1rem;">
+            <div class="plan" id="plan-association-card" data-plan-card="association">
               <h3>Association — Basic</h3>
               <div class="plan__price">$50 <small>/ year</small></div>
               <p>Renews on <strong data-member-renews>—</strong></p>
@@ -51,7 +54,7 @@
               </ul>
               <button type="button" class="btn btn--primary" id="invoice-association-btn">Email me $50 invoice</button>
             </div>
-            <div class="plan plan--featured">
+            <div class="plan plan--featured" id="plan-welfare-card" data-plan-card="welfare">
               <h3>Welfare Plus</h3>
               <div class="plan__price">$300 <small>/ year</small></div>
               <ul>
@@ -61,8 +64,16 @@
                 <li>Peer support network</li>
               </ul>
               <button type="button" class="btn btn--accent" id="invoice-welfare-btn">Email me $300 invoice</button>
+              <p id="welfare-invoice-hint" class="plan__pay-note" hidden style="margin-top:0.75rem;">
+                You must register for Social Welfare before requesting this invoice.
+              </p>
             </div>
           </div>
+          <p id="membership-upgrade-back" hidden style="margin-top:1rem;">
+            <a href="membership.html">← Back to all plans</a>
+            ·
+            <a href="dashboard.html#welfare-register-card">Register for Social Welfare</a>
+          </p>
           <p style="margin-top:1rem;font-size:0.95rem;color:var(--color-muted, #666);">
             Invoices are emailed instantly with PayID / bank details. Use the payment reference on your transfer.
           </p>
@@ -92,11 +103,53 @@
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/members-auth.js?v=12"></script>
   <script src="../assets/js/invoices.js?v=1"></script>
-  <script src="../assets/js/members.js?v=29"></script>
+  <script src="../assets/js/members.js?v=30"></script>
   <script>
     (function () {
       const statusEl = document.getElementById('invoice-status');
       const historyEl = document.getElementById('invoice-history');
+      const params = new URLSearchParams(window.location.search);
+      const upgradeWelfare = params.get('upgrade') === 'welfare';
+
+      function getMemberSafe() {
+        try {
+          const raw = localStorage.getItem('taunet_member');
+          return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function hasWelfareRegistration(member) {
+        if (!member) return false;
+        return Boolean(
+          member.welfareMember ||
+            member.welfareRegistered ||
+            member.welfareStatus === 'active' ||
+            member.welfareStatus === 'pending' ||
+            member.plan === 'welfare' ||
+            member.plan === 'both'
+        );
+      }
+
+      function applyUpgradeView() {
+        if (!upgradeWelfare) return;
+        const associationCard = document.getElementById('plan-association-card');
+        const heading = document.getElementById('membership-plans-heading');
+        const lead = document.getElementById('membership-upgrade-lead');
+        const back = document.getElementById('membership-upgrade-back');
+        const plans = document.getElementById('membership-plans');
+        if (associationCard) associationCard.hidden = true;
+        if (heading) heading.textContent = 'Upgrade to Welfare Plus';
+        if (lead) lead.hidden = false;
+        if (back) back.hidden = false;
+        if (plans) {
+          plans.style.maxWidth = '28rem';
+          plans.style.marginInline = 'auto';
+          plans.style.gridTemplateColumns = '1fr';
+        }
+        document.title = 'Upgrade to Welfare Plus | Taunet Nelel Members';
+      }
 
       function showStatus(msg, isError) {
         if (!statusEl) return;
@@ -162,12 +215,36 @@
         }
       }
 
+      function requireWelfareBeforeInvoice(btn) {
+        const member = getMemberSafe();
+        if (hasWelfareRegistration(member)) {
+          requestKind('welfare', btn);
+          return;
+        }
+        const hint = document.getElementById('welfare-invoice-hint');
+        if (hint) hint.hidden = false;
+        showStatus(
+          'Register for Social Welfare first, then you can request the $300 invoice.',
+          true
+        );
+        window.setTimeout(function () {
+          window.location.href =
+            'dashboard.html?next=membership-welfare#welfare-register-card';
+        }, 900);
+      }
+
+      applyUpgradeView();
+
       document.getElementById('invoice-association-btn')?.addEventListener('click', function (e) {
         requestKind('association', e.currentTarget);
       });
       document.getElementById('invoice-welfare-btn')?.addEventListener('click', function (e) {
-        requestKind('welfare', e.currentTarget);
+        requireWelfareBeforeInvoice(e.currentTarget);
       });
+
+      if (params.get('ready') === '1' && hasWelfareRegistration(getMemberSafe())) {
+        showStatus('Welfare registration received. You can now request your $300 invoice.', false);
+      }
 
       refreshHistory();
     })();

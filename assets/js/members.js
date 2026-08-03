@@ -790,6 +790,18 @@
       history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
     }
 
+    if (params.get('next') === 'membership-welfare' && !isWelfareMember(member)) {
+      card?.removeAttribute('hidden');
+      card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const msg = document.getElementById('welfare-register-message');
+      if (msg) {
+        msg.hidden = false;
+        msg.classList.remove('is-error');
+        msg.textContent =
+          'Register for Social Welfare below. After you submit, you can request the $300 invoice.';
+      }
+    }
+
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -862,7 +874,18 @@
         renderWelfareStatus(updated);
         summary?.removeAttribute('hidden');
         upgradeBtn?.setAttribute('hidden', '');
-      } catch (error) {
+
+        // Came from Membership → Email $300 invoice without registering yet
+        const next = new URLSearchParams(window.location.search).get('next');
+        if (next === 'membership-welfare') {
+          if (msg) {
+            msg.textContent =
+              'Registration submitted. Continue to request your $300 Welfare Plus invoice.';
+          }
+          window.setTimeout(() => {
+            window.location.href = 'membership.html?upgrade=welfare&ready=1';
+          }, 1200);
+        }
         console.error('Welfare registration failed:', error);
         if (msg) {
           msg.hidden = false;
