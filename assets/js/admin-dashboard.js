@@ -12,6 +12,7 @@
     'imports',
     'business',
     'events',
+    'invoices',
     'sponsors',
     'gallery',
     'newsletter',
