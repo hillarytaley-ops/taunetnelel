@@ -288,6 +288,48 @@ function parseEventFeeCents(body) {
   return cents;
 }
 
+/**
+ * When an association (Basic $50) invoice is marked paid, unlock the member portal.
+ */
+async function activateAssociationMembership(invoice) {
+  const email = String(invoice.email || '')
+    .trim()
+    .toLowerCase();
+  const userId = invoice.user_id || null;
+  let profile = null;
+
+  if (userId) {
+    const { data } = await sb(
+      `profiles?id=eq.${encodeURIComponent(userId)}&select=id,plan,association_member,welfare_member,member_since,renews_at`
+    );
+    profile = Array.isArray(data) ? data[0] : null;
+  }
+  if (!profile && email) {
+    const { data } = await sb(
+      `profiles?email=eq.${encodeURIComponent(email)}&select=id,plan,association_member,welfare_member,member_since,renews_at&limit=1`
+    );
+    profile = Array.isArray(data) ? data[0] : null;
+  }
+  if (!profile) return null;
+
+  const welfare = Boolean(profile.welfare_member);
+  const nextPlan = welfare ? 'both' : 'basic';
+  const year = new Date().getFullYear();
+  const patch = {
+    association_member: true,
+    plan: nextPlan,
+    updated_at: new Date().toISOString(),
+  };
+  if (!profile.member_since) patch.member_since = year;
+  if (!profile.renews_at) patch.renews_at = `${year + 1}-12-31`;
+
+  const { data } = await sb(`profiles?id=eq.${encodeURIComponent(profile.id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+  return Array.isArray(data) ? data[0] : data;
+}
+
 /** When phase_override column is missing, nudge dates so Auto placement still matches. */
 function applyPhaseViaDates(row, phase) {
   if (!phase || phase === 'auto') return row;
@@ -701,21 +743,41 @@ module.exports = async function handler(req, res) {
 
       if (resource === 'invoices') {
         const status = url.searchParams.get('status') || 'all';
+        // Quote status column — PostgREST can mis-parse unquoted "status" in some setups
         let query =
           'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at&order=issued_at.desc&limit=300';
         if (status === 'pending' || status === 'paid' || status === 'void') {
-          query += `&status=eq.${status}`;
+          query += `&status=eq.${encodeURIComponent(status)}`;
         }
         try {
           const { data } = await sb(query);
-          return json(res, 200, { rows: data || [] });
+          const rows = Array.isArray(data) ? data : [];
+          return json(res, 200, { rows, filter: status, count: rows.length });
         } catch (err) {
-          return json(res, 200, {
-            rows: [],
-            warning:
-              err.message ||
-              'Invoices table missing. Run supabase/migrations/020_invoices.sql in Supabase.',
-          });
+          // Fallback: load all, filter in memory if column filter fails
+          try {
+            const { data } = await sb(
+              'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at&order=issued_at.desc&limit=300'
+            );
+            let rows = Array.isArray(data) ? data : [];
+            if (status === 'pending' || status === 'paid' || status === 'void') {
+              rows = rows.filter((r) => String(r.status || '') === status);
+            }
+            return json(res, 200, {
+              rows,
+              filter: status,
+              count: rows.length,
+              warning: err.message || undefined,
+            });
+          } catch (err2) {
+            return json(res, 200, {
+              rows: [],
+              warning:
+                err2.message ||
+                err.message ||
+                'Invoices table missing. Run supabase/migrations/020_invoices.sql in Supabase.',
+            });
+          }
         }
       }
 
@@ -1268,6 +1330,17 @@ module.exports = async function handler(req, res) {
           method: 'PATCH',
           body: JSON.stringify(patch),
         });
+        const invoice = Array.isArray(data) ? data[0] : null;
+
+        // Activate Basic Plan membership when association invoice is paid
+        if (status === 'paid' && invoice && invoice.kind === 'association') {
+          try {
+            await activateAssociationMembership(invoice);
+          } catch (activateErr) {
+            console.error('invoice-status activate membership', activateErr);
+          }
+        }
+
         return json(res, 200, { rows: data || [] });
       }
 
@@ -1347,6 +1420,21 @@ module.exports = async function handler(req, res) {
       }
 
       return json(res, 400, { error: 'Unknown PATCH resource' });
+    }
+
+    if (req.method === 'DELETE') {
+      const body = await readBody(req);
+
+      if (resource === 'enquiry-delete') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Enquiry id is required' });
+        await sb(`form_submissions?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        });
+        return json(res, 200, { ok: true, id });
+      }
+
+      return json(res, 400, { error: 'Unknown DELETE resource' });
     }
 
     return json(res, 405, { error: 'Method not allowed' });

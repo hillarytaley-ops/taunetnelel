@@ -168,6 +168,28 @@
     return /\/members\/(auth|login|register)\.html/i.test(pathname || '');
   }
 
+  function hasActiveMembership(member) {
+    if (!member) return false;
+    return Boolean(member.associationMember || member.welfareMember);
+  }
+
+  function membershipPayUrl(email) {
+    const inMembers = /\/members\//i.test(window.location.pathname || '');
+    const base = inMembers ? '../pay/basic.html' : 'pay/basic.html';
+    const params = new URLSearchParams();
+    if (email) params.set('email', email);
+    params.set('reason', 'membership');
+    const q = params.toString();
+    return q ? `${base}?${q}` : base;
+  }
+
+  function requirePaidMembership(member) {
+    if (!member) return null;
+    if (hasActiveMembership(member)) return member;
+    window.location.href = membershipPayUrl(member.email);
+    return null;
+  }
+
   function authPageUrl(tab) {
     const base = window.location.pathname.includes('/members/') ? '' : 'members/';
     return `${base}auth.html?tab=${tab || 'signin'}`;
@@ -232,6 +254,11 @@
   }
 
   function redirectAfterAuth() {
+    const member = getMember();
+    if (member && !hasActiveMembership(member)) {
+      window.location.href = membershipPayUrl(member.email);
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get('redirect');
     const fallback = 'dashboard.html';
@@ -295,6 +322,21 @@
     let authBusy = false;
     let recoveryMode = isPasswordRecoveryContext();
     let pendingTokenHash = '';
+
+    // Prefill join / sign-in from PayID portal (?email=&name=)
+    const prefill = new URLSearchParams(window.location.search);
+    const prefillEmail = prefill.get('email');
+    const prefillName = prefill.get('name');
+    if (prefillEmail) {
+      const joinEmail = document.getElementById('join-email');
+      const signinEmail = document.getElementById('signin-email');
+      if (joinEmail) joinEmail.value = prefillEmail;
+      if (signinEmail) signinEmail.value = prefillEmail;
+    }
+    if (prefillName) {
+      const joinName = document.getElementById('join-name');
+      if (joinName) joinName.value = prefillName;
+    }
 
     if (authApi?.getClient) {
       try {
@@ -569,7 +611,7 @@
           if (result.needsEmailConfirmation) {
             showAuthMessage(
               registerForm,
-              'Account created. Check your email to confirm, then sign in. If your email is on the member list, your membership will be applied automatically.',
+              'Account created. Confirm your email, then pay the $50 Basic Plan via PayID to unlock the member dashboard.',
               false
             );
             return;
@@ -1126,6 +1168,9 @@
       requireAuth();
       return;
     }
+
+    const member = getMember();
+    if (!requirePaidMembership(member)) return;
 
     initDashboard();
     showPreviewBanner();

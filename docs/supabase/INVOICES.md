@@ -2,6 +2,14 @@
 
 Members request an invoice from the portal; Vercel creates a row, emails a PDF with PayID / EFT details, and the Treasurer marks it **Paid** in Admin when the deposit lands.
 
+## Membership gate (Basic Plan)
+
+New public signups get `association_member = false` until an **association** invoice is marked **Paid** in Admin (or they already have a paid association invoice when they register).
+
+- Migration: `supabase/migrations/021_require_paid_basic_membership.sql`
+- Unpaid signed-in users are redirected to `/pay/basic.html`
+- Imported members (`member_imports`) keep their existing membership flags
+
 ## Public Basic Plan PayID portal
 
 - Page: `/pay/basic.html` (linked from Membership → **Pay $50 via PayID**)

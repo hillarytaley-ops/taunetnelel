@@ -329,12 +329,13 @@
           <td>${escapeHtml(row.message || '—')}${meta ? `<div class="admin-detail">${meta}</div>` : ''}</td>
           <td>
             <div class="admin-actions">
-              <select data-status-for="${escapeHtml(row.id)}">
+              <select data-status-for="${escapeHtml(row.id)}" aria-label="Update enquiry status">
                 <option value="new"${status === 'new' ? ' selected' : ''}>new</option>
                 <option value="reviewed"${status === 'reviewed' ? ' selected' : ''}>reviewed</option>
                 <option value="actioned"${status === 'actioned' ? ' selected' : ''}>actioned</option>
                 <option value="archived"${status === 'archived' ? ' selected' : ''}>archived</option>
               </select>
+              <button type="button" class="admin-btn-danger" data-enquiry-remove="${escapeHtml(row.id)}">Remove</button>
             </div>
           </td>
           <td class="admin-detail">${escapeHtml(row.admin_notes || '')}</td>
@@ -355,6 +356,21 @@
           loadOverview();
         } catch (err) {
           alert(err.message || 'Could not update status.');
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-enquiry-remove]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.enquiryRemove;
+        if (!confirm('Remove this enquiry permanently?')) return;
+        try {
+          await adminApi('enquiry-delete', { method: 'DELETE', body: { id } });
+          state.enquiries = state.enquiries.filter((r) => r.id !== id);
+          renderEnquiries();
+          loadOverview();
+        } catch (err) {
+          alert(err.message || 'Could not remove enquiry.');
         }
       });
     });
@@ -1058,7 +1074,7 @@
   async function loadInvoices() {
     const body = document.getElementById('admin-invoices-body');
     if (!body) return;
-    const statusFilter = document.getElementById('admin-invoice-filter')?.value || 'pending';
+    const statusFilter = document.getElementById('admin-invoice-filter')?.value || 'all';
     body.innerHTML = `<tr><td colspan="7" class="admin-empty">Loading…</td></tr>`;
     const data = await adminApi('invoices', { status: statusFilter });
     const rows = data.rows || [];
@@ -1067,19 +1083,18 @@
       return;
     }
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No invoices for this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No invoices for “${escapeHtml(statusFilter)}”. Check Supabase → invoices, or choose All invoices.</td></tr>`;
       return;
     }
     body.innerHTML = rows
       .map((row) => {
         const amount = `$${(Number(row.amount_cents || 0) / 100).toFixed(2)}`;
+        const status = String(row.status || 'pending');
         const actions =
-          row.status === 'pending'
+          status === 'pending'
             ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="paid">Mark paid</button>
                <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="void">Void</button>`
-            : row.status === 'paid'
-              ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`
-              : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`;
+            : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`;
         return `<tr>
           <td>
             <strong>${escapeHtml(row.invoice_number || '—')}</strong>
@@ -1091,7 +1106,7 @@
           </td>
           <td>${escapeHtml(row.kind || '—')}</td>
           <td>${escapeHtml(amount)}</td>
-          <td>${escapeHtml(row.status || '—')}</td>
+          <td><span class="admin-chip admin-chip--${status === 'paid' ? 'reviewed' : status === 'pending' ? 'new' : ''}">${escapeHtml(status)}</span></td>
           <td class="admin-detail">${escapeHtml(formatDate(row.due_at))}</td>
           <td><div class="admin-actions">${actions}</div></td>
         </tr>`;

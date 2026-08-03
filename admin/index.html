@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=13">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=14">
 </head>
 <body data-page="site-admin">
 
@@ -102,6 +102,7 @@
             </div>
             <div class="admin-quick-actions">
               <button type="button" data-admin-jump="enquiries">Review enquiries</button>
+              <button type="button" data-admin-jump="invoices">Mark invoices paid</button>
               <button type="button" data-admin-jump="announcements">Post announcement</button>
               <button type="button" data-admin-jump="events">Manage events</button>
               <button type="button" data-admin-jump="business">Edit Business Hub</button>
@@ -341,14 +342,15 @@
       <section class="site-admin__panel" data-admin-panel="invoices">
         <p class="admin-muted">
           PayID / bank invoices emailed to members for association ($50), welfare ($300), and event fees.
-          Mark <strong>Paid</strong> when the deposit appears in the bank account.
+          Open this tab, then use <strong>Mark paid</strong> on a pending invoice when the bank deposit lands.
         </p>
-        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+          <label for="admin-invoice-filter" class="admin-muted" style="margin:0;">Show</label>
           <select id="admin-invoice-filter" aria-label="Filter invoices">
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="all">All</option>
-            <option value="void">Void</option>
+            <option value="all" selected>All invoices</option>
+            <option value="pending">Pending only</option>
+            <option value="paid">Paid only</option>
+            <option value="void">Void only</option>
           </select>
           <button type="button" class="btn btn--ghost btn--sm" id="admin-invoices-refresh">Refresh</button>
         </div>
@@ -506,6 +508,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20"></script>
+  <script src="../assets/js/admin-dashboard.js?v=22"></script>
 </body>
 </html>

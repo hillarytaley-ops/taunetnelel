@@ -10,6 +10,18 @@
   const stepInstructions = document.getElementById('pay-step-instructions');
   const submitBtn = document.getElementById('pay-submit');
 
+  const params = new URLSearchParams(window.location.search);
+  const prefillEmail = params.get('email');
+  if (prefillEmail && form?.email) {
+    form.email.value = prefillEmail;
+  }
+  if (params.get('reason') === 'membership' && statusEl && stepForm && !stepForm.hidden) {
+    statusEl.hidden = false;
+    statusEl.classList.remove('is-error');
+    statusEl.textContent =
+      'Pay the $50 Basic Plan via PayID to unlock your member dashboard. Use the same email you registered with.';
+  }
+
   function showStatus(message, isError) {
     if (!statusEl) return;
     statusEl.hidden = false;
@@ -54,8 +66,17 @@
     }
     if (emailNote) {
       emailNote.textContent =
-        data.message ||
-        'A PDF invoice was emailed to you with the same PayID details.';
+        (data.message ||
+          'A PDF invoice was emailed to you with the same PayID details.') +
+        ' Next: create your member login with this email so you appear in Members / profiles.';
+    }
+
+    const joinBtn = document.getElementById('pay-create-login');
+    if (joinBtn) {
+      const joinParams = new URLSearchParams({ tab: 'join' });
+      if (form?.email?.value) joinParams.set('email', form.email.value.trim());
+      if (form?.full_name?.value) joinParams.set('name', form.full_name.value.trim());
+      joinBtn.href = '../members/auth.html?' + joinParams.toString();
     }
 
     const bankLines = [];

@@ -12,12 +12,19 @@
   }
 
   function profileToMember(profile, email) {
-    const association = Boolean(profile?.association_member) || profile?.plan === 'basic' || profile?.plan === 'both';
-    const welfare = Boolean(profile?.welfare_member) || profile?.plan === 'welfare' || profile?.plan === 'both';
+    // Trust DB flags only — plan='basic' alone must NOT unlock the portal
+    const association = Boolean(profile?.association_member);
+    const welfare = Boolean(profile?.welfare_member);
     let plan = profile?.plan || 'basic';
     if (association && welfare) plan = 'both';
     else if (welfare && !association) plan = 'welfare';
-    else if (association) plan = plan === 'welfare' ? 'both' : 'basic';
+    else if (association) plan = 'basic';
+    else plan = 'basic';
+
+    const label =
+      association || welfare
+        ? planLabel(plan, association, welfare)
+        : 'Pending payment';
 
     return {
       id: profile?.id || null,
@@ -25,10 +32,11 @@
       email: profile?.email || email || '',
       phone: profile?.phone || '',
       plan,
-      planLabel: planLabel(plan, association, welfare),
+      planLabel: label,
       associationMember: association,
       welfareMember: welfare,
       welfareRegistered: welfare,
+      membershipPending: !association && !welfare,
       memberNumber: profile?.member_number || '',
       memberSince: profile?.member_since ? String(profile.member_since) : '',
       renews: profile?.renews_at || '',
@@ -55,7 +63,45 @@
       .maybeSingle();
 
     if (error) throw error;
-    return profileToMember(data || { full_name: '', email }, email);
+    if (data) return profileToMember(data, email);
+
+    // Trigger may have missed — create a pending profile so Admin can see the member
+    const ensured = await ensureProfile(client, userId, email);
+    return profileToMember(ensured || { full_name: '', email }, email);
+  }
+
+  async function ensureProfile(client, userId, email) {
+    const { data: userData } = await client.auth.getUser();
+    const user = userData?.user;
+    if (!user || user.id !== userId) return null;
+
+    const meta = user.user_metadata || {};
+    const row = {
+      id: userId,
+      email: String(email || user.email || '')
+        .trim()
+        .toLowerCase(),
+      full_name: String(meta.full_name || '').trim(),
+      phone: String(meta.phone || '').trim() || null,
+      plan: 'basic',
+      association_member: false,
+      welfare_member: false,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await client
+      .from('profiles')
+      .upsert(row, { onConflict: 'id' })
+      .select(
+        'id,full_name,email,phone,plan,association_member,welfare_member,member_number,member_since,renews_at'
+      )
+      .maybeSingle();
+
+    if (error) {
+      console.warn('ensureProfile failed:', error.message || error);
+      return null;
+    }
+    return data;
   }
 
   /**
@@ -202,8 +248,8 @@
           // Server handle_new_user ignores client plan for non-imported emails
           plan: 'basic'
         },
-        // After confirm, land on dashboard (session tokens / code are handled there)
-        emailRedirectTo: `${window.location.origin}/members/dashboard.html`
+        // After confirm, land on PayID portal until membership is activated
+        emailRedirectTo: `${window.location.origin}/pay/basic.html`
       }
     });
     if (error) throw error;

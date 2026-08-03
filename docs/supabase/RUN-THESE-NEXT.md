@@ -59,5 +59,6 @@ Remove reliance on the bootstrap PIN once committee Auth logins work.
 ## F. Invoices (PayID / bank)
 
 1. Run **`supabase/migrations/020_invoices.sql`** in SQL Editor  
-2. Set PayID / bank env vars on Vercel — see **`docs/supabase/INVOICES.md`**  
-3. Members: Membership → Email me invoice; Admin → Invoices → Mark paid
+2. Run **`supabase/migrations/021_require_paid_basic_membership.sql`** (signup no longer unlocks dashboard until paid)  
+3. Set PayID / bank env vars on Vercel — see **`docs/supabase/INVOICES.md`**  
+4. Members: Membership → Pay $50 via PayID; Admin → Invoices → Mark paid (activates membership)

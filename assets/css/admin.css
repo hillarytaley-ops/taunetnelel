@@ -567,6 +567,16 @@ body[data-page="site-admin"] {
   cursor: pointer;
 }
 
+.admin-actions .admin-btn-danger {
+  border-color: rgba(160, 40, 30, 0.35);
+  color: #8a1f11;
+  background: #fff5f3;
+}
+
+.admin-actions .admin-btn-danger:hover {
+  background: #fdeceb;
+}
+
 .admin-detail {
   margin-top: 0.35rem;
   font-size: 0.78rem;
