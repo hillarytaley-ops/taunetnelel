@@ -22,6 +22,20 @@
 
   let EVENTS = [
     {
+      id: 'men-s-camp-2026-08-01',
+      title: "Men's Camp",
+      start: '2026-08-01T21:00:00+00:00',
+      end: '2026-08-02T21:00:00+00:00',
+      image: 'wp-content/uploads/2025/09/Celebration.jpg',
+      location: 'Victoria',
+      summary: 'Men’s Camp gathering for fellowship, culture, and community.',
+      meta: '1–2 August 2026',
+      badge: 'Recently ended',
+      featured: true,
+      galleryUrl: 'gallery.html',
+      registrationOpen: false
+    },
+    {
       id: 'cultural-week-2026',
       title: 'Winter Cultural Week',
       start: '2026-07-01T10:00:00+10:00',

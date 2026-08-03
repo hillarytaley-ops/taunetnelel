@@ -77,7 +77,11 @@
       if (!remote || !remote.length) return;
 
       const next = enrichFromStatic(remote, staticSnapshot);
-      if (api.setEvents(next)) api.refresh();
+      if (api.setEvents(next)) {
+        api.refresh();
+        // Re-render after paint in case the first pass raced with DOM setup.
+        requestAnimationFrame(() => api.refresh());
+      }
     } catch (error) {
       console.warn('Events Supabase load skipped:', error);
     }
