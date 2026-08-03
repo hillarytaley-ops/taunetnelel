@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  const RECENT_DELAY_DAYS = 1;
+  const RECENT_DELAY_DAYS = 0;
   const RECENT_MONTHS = 2;
 
   function escapeHtml(value) {
@@ -157,8 +157,8 @@
 
   const PHASE_META = {
     upcoming: { label: 'Upcoming Events', icon: '◷', hint: 'Empty until new dates are published', mod: 'upcoming' },
-    present: { label: 'Present Events', icon: '●', hint: 'Live now or just ended', mod: 'present', live: true },
-    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'From 1 day to 2 months after the event', mod: 'recent' },
+    present: { label: 'Present Events', icon: '●', hint: 'Live now until the event end time', mod: 'present', live: true },
+    'most-recent': { label: 'Most Recent', icon: '✦', hint: 'From end time up to 2 months after the event', mod: 'recent' },
     past: { label: 'Past Events', icon: '◷', hint: 'Older than 2 months · photos & memories', mod: 'past' }
   };
 
@@ -242,12 +242,10 @@
     // Upcoming until the event starts.
     if (currentMs < startMs) return 'upcoming';
 
-    // Live during the event, then stay Present for 1 day after it ends.
-    const mostRecentFrom = new Date(endMs);
-    mostRecentFrom.setDate(mostRecentFrom.getDate() + RECENT_DELAY_DAYS);
-    if (currentMs <= mostRecentFrom.getTime()) return 'present';
+    // Present only while the event is in progress (inclusive of end time).
+    if (currentMs <= endMs) return 'present';
 
-    // Most Recent from 1 day after end until 2 months after end.
+    // Most Recent immediately after end, until 2 months after end.
     const pastFrom = new Date(endMs);
     pastFrom.setMonth(pastFrom.getMonth() + RECENT_MONTHS);
     if (currentMs <= pastFrom.getTime()) return 'most-recent';
@@ -315,7 +313,7 @@
     const messages = {
       upcoming: 'No upcoming events yet — this column stays empty until the committee publishes new dates.',
       present: 'No events are running right now.',
-      'most-recent': 'No events in the 1-day to 2-month window yet.',
+      'most-recent': 'No events in the post-event to 2-month window yet.',
       past: 'No past events to display yet.'
     };
     return messages[phase] || 'No events in this category.';
