@@ -556,6 +556,41 @@
     return 'auto';
   }
 
+  function ticketsFromAdminRow(row) {
+    if (Array.isArray(row?.ticket_prices) && row.ticket_prices.length) return row.ticket_prices;
+    if (typeof row?.ticket_prices === 'string') {
+      try {
+        const parsed = JSON.parse(row.ticket_prices);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    try {
+      const url = new URL(String(row?.booking_url || ''), window.location.origin);
+      const raw = url.searchParams.get('t') || '';
+      const tickets = [];
+      raw.split(',').forEach((part) => {
+        const [idRaw, centsRaw] = part.split(':');
+        const id = String(idRaw || '').trim().toLowerCase();
+        const amount = Math.round(Number(centsRaw));
+        if (!id || !Number.isFinite(amount) || amount <= 0) return;
+        tickets.push({
+          id,
+          label: id === 'couple' ? 'Two people' : id === 'single' ? 'Single' : id,
+          amount_cents: amount
+        });
+      });
+      if (tickets.length) return tickets;
+    } catch (_) {
+      /* ignore */
+    }
+    if (Number(row?.fee_cents) > 0) {
+      return [{ id: 'single', label: 'Single', amount_cents: Math.round(Number(row.fee_cents)) }];
+    }
+    return [];
+  }
+
   async function loadEvents() {
     const data = await adminApi('events');
     const body = document.getElementById('admin-events-body');
@@ -597,10 +632,9 @@
                     step="0.01"
                     style="width:5.2rem"
                     value="${(() => {
-                      const tickets = Array.isArray(row.ticket_prices) ? row.ticket_prices : [];
+                      const tickets = ticketsFromAdminRow(row);
                       const single = tickets.find((t) => t.id === 'single') || tickets[0];
-                      const cents = single?.amount_cents ?? row.fee_cents;
-                      return cents != null ? (Number(cents) / 100).toFixed(2) : '';
+                      return single?.amount_cents != null ? (Number(single.amount_cents) / 100).toFixed(2) : '';
                     })()}"
                     data-event-fee-single="${escapeHtml(row.id)}"
                     aria-label="Single ticket AUD"
@@ -614,7 +648,7 @@
                     step="0.01"
                     style="width:5.2rem"
                     value="${(() => {
-                      const tickets = Array.isArray(row.ticket_prices) ? row.ticket_prices : [];
+                      const tickets = ticketsFromAdminRow(row);
                       const couple = tickets.find((t) => t.id === 'couple');
                       return couple?.amount_cents != null ? (Number(couple.amount_cents) / 100).toFixed(2) : '';
                     })()}"
@@ -631,6 +665,7 @@
                 Book &amp; PayID
               </label>
               <button type="button" class="btn btn--ghost btn--sm" data-event-save-prices="${escapeHtml(row.id)}">Save prices</button>
+              <div class="admin-detail" data-event-price-status="${escapeHtml(row.id)}" style="margin-top:0.25rem"></div>
             </div>
           </td>
           <td>${row.is_published ? 'Yes' : 'No'}</td>
@@ -678,11 +713,15 @@
     });
 
     body.querySelectorAll('[data-event-save-prices]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (clickEvent) => {
+        clickEvent.preventDefault();
+        clickEvent.stopPropagation();
         const id = btn.dataset.eventSavePrices;
-        const singleInput = body.querySelector(`[data-event-fee-single="${id}"]`);
-        const coupleInput = body.querySelector(`[data-event-fee-couple="${id}"]`);
-        const payidInput = body.querySelector(`[data-event-payid="${id}"]`);
+        const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"');
+        const singleInput = body.querySelector(`[data-event-fee-single="${esc}"]`);
+        const coupleInput = body.querySelector(`[data-event-fee-couple="${esc}"]`);
+        const payidInput = body.querySelector(`[data-event-payid="${esc}"]`);
+        const statusEl = body.querySelector(`[data-event-price-status="${esc}"]`);
         const singleRaw = String(singleInput?.value || '').trim();
         const coupleRaw = String(coupleInput?.value || '').trim();
         if (singleRaw !== '' && (!Number.isFinite(Number(singleRaw)) || Number(singleRaw) < 0)) {
@@ -693,29 +732,47 @@
           alert('Enter a valid Two people price in AUD (e.g. 150).');
           return;
         }
+
+        const ticket_prices = [];
+        if (singleRaw !== '') {
+          ticket_prices.push({
+            id: 'single',
+            label: 'Single',
+            amount_cents: Math.round(Number(singleRaw) * 100)
+          });
+        }
+        if (coupleRaw !== '') {
+          ticket_prices.push({
+            id: 'couple',
+            label: 'Two people',
+            amount_cents: Math.round(Number(coupleRaw) * 100)
+          });
+        }
+
         btn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Saving…';
         try {
           const result = await adminApi('event-update', {
             method: 'PATCH',
             body: {
               id,
-              fee_single_aud: singleRaw === '' ? '' : Number(singleRaw),
-              fee_couple_aud: coupleRaw === '' ? '' : Number(coupleRaw),
-              ticket_prices:
-                singleRaw === '' && coupleRaw === ''
-                  ? null
-                  : undefined,
+              ticket_prices: ticket_prices.length ? ticket_prices : null,
+              fee_cents: ticket_prices.length ? ticket_prices[0].amount_cents : null,
               enable_payid_booking: Boolean(payidInput?.checked)
             }
           });
-          if (result?.warning) alert(result.warning);
+          if (statusEl) {
+            statusEl.textContent = result?.warning
+              ? `Saved. ${result.warning}`
+              : 'Prices saved.';
+          }
           await loadEvents();
         } catch (err) {
-          alert(
+          const message =
             err.message ||
-              'Could not update prices. Run migration 022 in Supabase for ticket_prices.'
-          );
-          await loadEvents();
+            'Could not update prices. Run migration 022 in Supabase for ticket_prices.';
+          if (statusEl) statusEl.textContent = message;
+          alert(message);
         } finally {
           btn.disabled = false;
         }

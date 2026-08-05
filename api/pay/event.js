@@ -114,6 +114,29 @@ function normalizeTickets(raw, feeCents, title) {
   return list;
 }
 
+function ticketsFromBookingUrl(bookingUrl) {
+  try {
+    const url = new URL(String(bookingUrl || ''), 'https://taunetnelel.local/');
+    const raw = String(url.searchParams.get('t') || '').trim();
+    if (!raw) return null;
+    const tickets = [];
+    raw.split(',').forEach((part) => {
+      const [idRaw, centsRaw] = part.split(':');
+      const id = String(idRaw || '').trim().toLowerCase();
+      const amount = Math.round(Number(centsRaw));
+      if (!id || !Number.isFinite(amount) || amount <= 0) return;
+      tickets.push({
+        id,
+        label: id === 'couple' ? 'Two people' : id === 'single' ? 'Single' : id,
+        amount_cents: amount,
+      });
+    });
+    return tickets.length ? tickets : null;
+  } catch {
+    return null;
+  }
+}
+
 function ticketsToMap(tickets) {
   const map = {};
   tickets.forEach((ticket) => {
@@ -143,7 +166,18 @@ async function loadEventCatalog(eventId) {
       const row = Array.isArray(rows) ? rows[0] : null;
       if (row && row.is_published !== false) {
         const title = row.title || 'Event';
-        const tickets = normalizeTickets(row.ticket_prices, row.fee_cents, title);
+        let ticketSource = row.ticket_prices;
+        if (typeof ticketSource === 'string') {
+          try {
+            ticketSource = JSON.parse(ticketSource);
+          } catch {
+            ticketSource = null;
+          }
+        }
+        let tickets = normalizeTickets(ticketSource, row.fee_cents, title);
+        if (!tickets.length) {
+          tickets = normalizeTickets(ticketsFromBookingUrl(row.booking_url), row.fee_cents, title);
+        }
         if (tickets.length) {
           return {
             id: row.id,

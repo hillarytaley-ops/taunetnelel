@@ -66,7 +66,75 @@ function safeHttpUrl(value) {
   if (!s) return null;
   if (/^https?:\/\//i.test(s)) return s;
   if (s.startsWith('/') || s.startsWith('./') || s.startsWith('../') || s.startsWith('#')) return s;
+  // Allow same-site relative paths used by Events / Gallery / Pay portals.
+  if (/^[a-z0-9][\w./?&=%#+-]*$/i.test(s)) return s;
   return null;
+}
+
+function encodeTicketsQuery(tickets) {
+  if (!Array.isArray(tickets) || !tickets.length) return '';
+  return tickets
+    .map((t) => `${encodeURIComponent(t.id)}:${Math.round(Number(t.amount_cents))}`)
+    .join(',');
+}
+
+function parseTicketsQuery(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return null;
+  const tickets = [];
+  text.split(',').forEach((part) => {
+    const [idRaw, centsRaw] = part.split(':');
+    const id = String(idRaw || '')
+      .trim()
+      .toLowerCase();
+    const amount = Math.round(Number(centsRaw));
+    if (!id || !Number.isFinite(amount) || amount <= 0) return;
+    const label = id === 'couple' ? 'Two people' : id === 'single' ? 'Single' : id;
+    tickets.push({ id, label, amount_cents: amount });
+  });
+  return tickets.length ? tickets : null;
+}
+
+function ticketsFromEventRow(row) {
+  if (Array.isArray(row?.ticket_prices) && row.ticket_prices.length) {
+    return row.ticket_prices;
+  }
+  if (typeof row?.ticket_prices === 'string') {
+    try {
+      const parsed = JSON.parse(row.ticket_prices);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  try {
+    const url = new URL(String(row?.booking_url || ''), 'https://taunetnelel.local/');
+    const fromQuery = parseTicketsQuery(url.searchParams.get('t'));
+    if (fromQuery) return fromQuery;
+  } catch (_) {
+    /* ignore */
+  }
+  if (Number(row?.fee_cents) > 0) {
+    return [{ id: 'single', label: 'Single', amount_cents: Math.round(Number(row.fee_cents)) }];
+  }
+  return [];
+}
+
+function bookingUrlForEvent(eventId, enableBooking, existing, tickets) {
+  if (enableBooking === false) return null;
+  const enabled =
+    enableBooking === true ||
+    enableBooking === '1' ||
+    enableBooking === 1 ||
+    enableBooking == null;
+  if (!enabled && !existing) return null;
+  if (!enabled) return existing || null;
+
+  const params = new URLSearchParams();
+  params.set('event', String(eventId || '').trim());
+  const encoded = encodeTicketsQuery(tickets);
+  if (encoded) params.set('t', encoded);
+  return `pay/event.html?${params.toString()}`;
 }
 
 function timingSafeEqualString(a, b) {
@@ -354,14 +422,6 @@ function parseTicketPrices(body) {
     tickets.push({ id: 'couple', label: 'Two people', amount_cents: couple });
   }
   return tickets.length ? tickets : null;
-}
-
-function bookingUrlForEvent(eventId, enableBooking, existing) {
-  if (enableBooking === false) return existing || null;
-  if (enableBooking === true || enableBooking === '1' || enableBooking === 1) {
-    return `pay/event.html?event=${encodeURIComponent(eventId)}`;
-  }
-  return existing !== undefined ? existing : null;
 }
 
 /**
@@ -1196,7 +1256,7 @@ module.exports = async function handler(req, res) {
               image_path: imagePath,
               booking_url:
                 safeHttpUrl(body.booking_url) ||
-                bookingUrlForEvent(id, enablePayNoFlyer),
+                bookingUrlForEvent(id, enablePayNoFlyer, null, ticketsNoFlyer),
               gallery_url: safeHttpUrl(body.gallery_url),
               start_at: startAt,
               end_at: endAt,
@@ -1254,7 +1314,7 @@ module.exports = async function handler(req, res) {
           meta: String(body.meta || '').trim() || null,
           badge: String(body.badge || '').trim() || null,
           image_path: imagePath,
-          booking_url: safeHttpUrl(body.booking_url) || bookingUrlForEvent(id, enablePay),
+          booking_url: safeHttpUrl(body.booking_url) || bookingUrlForEvent(id, enablePay, null, tickets),
           gallery_url: safeHttpUrl(body.gallery_url),
           start_at: startAt,
           end_at: endAt,
@@ -1595,16 +1655,28 @@ module.exports = async function handler(req, res) {
             patch.fee_cents = feeCents;
             patch.ticket_prices = [{ id: 'single', label: 'Single', amount_cents: feeCents }];
           }
+          const resolvedTickets = patch.ticket_prices || tickets || null;
           if (body.enable_payid_booking != null) {
-            patch.booking_url = bookingUrlForEvent(id, body.enable_payid_booking, patch.booking_url);
+            patch.booking_url = bookingUrlForEvent(
+              id,
+              body.enable_payid_booking,
+              null,
+              resolvedTickets
+            );
             if (body.enable_payid_booking) patch.registration_open = true;
-          } else if (tickets && tickets.length && !patch.booking_url) {
-            patch.booking_url = bookingUrlForEvent(id, true);
+          } else if (resolvedTickets && resolvedTickets.length) {
+            patch.booking_url = bookingUrlForEvent(id, true, null, resolvedTickets);
             patch.registration_open = true;
           }
         }
-        if (body.enable_payid_booking != null && body.fee_cents === undefined && body.ticket_prices === undefined) {
-          patch.booking_url = bookingUrlForEvent(id, body.enable_payid_booking, null);
+        if (
+          body.enable_payid_booking != null &&
+          body.fee_cents === undefined &&
+          body.fee_single_aud === undefined &&
+          body.fee_couple_aud === undefined &&
+          body.ticket_prices === undefined
+        ) {
+          patch.booking_url = bookingUrlForEvent(id, body.enable_payid_booking, null, null);
           if (body.enable_payid_booking) patch.registration_open = true;
         }
         if (body.flyer_data_url) {
@@ -1627,6 +1699,16 @@ module.exports = async function handler(req, res) {
         } catch (err) {
           if (isMissingTicketPricesError(err) && patch.ticket_prices !== undefined) {
             const { ticket_prices, ...withoutTickets } = patch;
+            // Keep prices in booking_url ?t= so Book & Pay still works before migration 022.
+            if (Array.isArray(ticket_prices) && ticket_prices.length) {
+              withoutTickets.booking_url = bookingUrlForEvent(
+                id,
+                body.enable_payid_booking !== false,
+                withoutTickets.booking_url,
+                ticket_prices
+              );
+              withoutTickets.fee_cents = ticket_prices[0].amount_cents;
+            }
             const { data } = await sb(`events?id=eq.${encodeURIComponent(id)}`, {
               method: 'PATCH',
               body: JSON.stringify(withoutTickets)
@@ -1634,7 +1716,7 @@ module.exports = async function handler(req, res) {
             return json(res, 200, {
               rows: data || [],
               warning:
-                'Saved fee without ticket_prices. Run migration 022 in Supabase so Admin can set Single / Two people prices.'
+                'Saved prices on the booking link. Run migration 022 in Supabase for full ticket_prices support.'
             });
           }
           if (!isMissingPhaseOverrideError(err) || requestedPhase === undefined) throw err;
