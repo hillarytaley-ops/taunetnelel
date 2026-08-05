@@ -1,10 +1,9 @@
 /**
  * Public event PayID portal — create event fee invoice + return PayID / bank details.
+ * Ticket prices come from Admin (events.ticket_prices / fee_cents), with catalog fallback.
  *
  * GET  ?event=men-s-camp-2026-08-01
- * POST { event_id, ticket: 'single'|'couple', full_name, email, phone? }
- *
- * Env: PAYID, BANK_*, SUPABASE_*, RESEND_* (same as other pay portals)
+ * POST { event_id, ticket: 'single'|'couple'|…, full_name, email, phone? }
  */
 const {
   createAndEmailInvoice,
@@ -18,25 +17,17 @@ const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const rateBuckets = new Map();
 
-/** Public bookable events (amounts in cents). */
-const EVENT_CATALOG = {
+/** Fallback only when Admin has not set prices in Supabase yet. */
+const EVENT_FALLBACK = {
   'men-s-camp-2026-08-01': {
     id: 'men-s-camp-2026-08-01',
     title: "Men's Camp",
-    subtitle: 'All States Men\'s Camp',
+    subtitle: "All States Men's Camp",
     location: 'Springbrook',
-    tickets: {
-      single: {
-        amount_cents: 10000,
-        label: 'Single',
-        description: "Men's Camp — single ticket (AUD $100)",
-      },
-      couple: {
-        amount_cents: 15000,
-        label: 'Two people',
-        description: "Men's Camp — two people (AUD $150)",
-      },
-    },
+    tickets: [
+      { id: 'single', label: 'Single', amount_cents: 10000 },
+      { id: 'couple', label: 'Two people', amount_cents: 15000 },
+    ],
   },
 };
 
@@ -91,9 +82,92 @@ function readBody(req) {
   });
 }
 
-function resolveCatalog(eventId) {
+function normalizeTickets(raw, feeCents, title) {
+  const list = [];
+  if (Array.isArray(raw)) {
+    raw.forEach((item, index) => {
+      const amount = Math.round(Number(item?.amount_cents));
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      const id = String(item?.id || `ticket-${index + 1}`)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `ticket-${index + 1}`;
+      const label = String(item?.label || id).trim() || id;
+      list.push({
+        id,
+        label,
+        amount_cents: amount,
+        description: `${title} — ${label} (${formatAud(amount)})`,
+      });
+    });
+  }
+  if (!list.length && Number(feeCents) > 0) {
+    const amount = Math.round(Number(feeCents));
+    list.push({
+      id: 'single',
+      label: 'Standard',
+      amount_cents: amount,
+      description: `${title} — event fee (${formatAud(amount)})`,
+    });
+  }
+  return list;
+}
+
+function ticketsToMap(tickets) {
+  const map = {};
+  tickets.forEach((ticket) => {
+    map[ticket.id] = ticket;
+  });
+  return map;
+}
+
+async function loadEventCatalog(eventId) {
   const id = String(eventId || '').trim();
-  return EVENT_CATALOG[id] || null;
+  if (!id) return null;
+
+  if (SUPABASE_URL && SERVICE_KEY) {
+    try {
+      let rows;
+      try {
+        rows = await sb(
+          `events?id=eq.${encodeURIComponent(id)}&select=id,title,location,meta,fee_cents,ticket_prices,booking_url,registration_open,is_published&limit=1`
+        );
+      } catch (err) {
+        const text = String(err?.message || '');
+        if (!/ticket_prices/i.test(text)) throw err;
+        rows = await sb(
+          `events?id=eq.${encodeURIComponent(id)}&select=id,title,location,meta,fee_cents,booking_url,registration_open,is_published&limit=1`
+        );
+      }
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (row && row.is_published !== false) {
+        const title = row.title || 'Event';
+        const tickets = normalizeTickets(row.ticket_prices, row.fee_cents, title);
+        if (tickets.length) {
+          return {
+            id: row.id,
+            title,
+            subtitle: row.meta || null,
+            location: row.location || null,
+            tickets,
+            source: 'database',
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('pay/event loadEventCatalog', err.message || err);
+    }
+  }
+
+  const fallback = EVENT_FALLBACK[id];
+  if (!fallback) return null;
+  const title = fallback.title;
+  return {
+    ...fallback,
+    tickets: normalizeTickets(fallback.tickets, null, title),
+    source: 'fallback',
+  };
 }
 
 async function findProfileIdByEmail(email) {
@@ -109,13 +183,6 @@ async function findProfileIdByEmail(email) {
 }
 
 function catalogPayload(catalog) {
-  const tickets = Object.entries(catalog.tickets).map(([key, ticket]) => ({
-    id: key,
-    label: ticket.label,
-    amount_cents: ticket.amount_cents,
-    amount_label: formatAud(ticket.amount_cents),
-    description: ticket.description,
-  }));
   return {
     event: {
       id: catalog.id,
@@ -123,7 +190,14 @@ function catalogPayload(catalog) {
       subtitle: catalog.subtitle || null,
       location: catalog.location || null,
     },
-    tickets,
+    tickets: catalog.tickets.map((ticket) => ({
+      id: ticket.id,
+      label: ticket.label,
+      amount_cents: ticket.amount_cents,
+      amount_label: formatAud(ticket.amount_cents),
+      description: ticket.description,
+    })),
+    source: catalog.source || null,
   };
 }
 
@@ -139,9 +213,11 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
     const eventId = url.searchParams.get('event') || 'men-s-camp-2026-08-01';
-    const catalog = resolveCatalog(eventId);
+    const catalog = await loadEventCatalog(eventId);
     if (!catalog) {
-      return json(res, 404, { error: 'This event is not open for online booking.' });
+      return json(res, 404, {
+        error: 'This event is not open for online booking, or Admin has not set ticket prices yet.',
+      });
     }
     const pay = getPublicPaymentDetails();
     return json(res, 200, {
@@ -179,11 +255,14 @@ module.exports = async function handler(req, res) {
       .toLowerCase();
     const phone = String(body.phone || '').trim();
 
-    const catalog = resolveCatalog(eventId);
+    const catalog = await loadEventCatalog(eventId);
     if (!catalog) {
-      return json(res, 404, { error: 'This event is not open for online booking.' });
+      return json(res, 404, {
+        error: 'This event is not open for online booking, or Admin has not set ticket prices yet.',
+      });
     }
-    const ticket = catalog.tickets[ticketKey];
+    const ticketMap = ticketsToMap(catalog.tickets);
+    const ticket = ticketMap[ticketKey] || catalog.tickets[0];
     if (!ticket) {
       return json(res, 400, { error: 'Please choose a valid ticket option.' });
     }
@@ -210,9 +289,10 @@ module.exports = async function handler(req, res) {
         source: 'pay_portal_event',
         event_id: catalog.id,
         event_title: catalog.title,
-        ticket: ticketKey,
+        ticket: ticket.id,
         ticket_label: ticket.label,
         phone: phone || null,
+        price_source: catalog.source || null,
       },
     });
 
@@ -225,7 +305,7 @@ module.exports = async function handler(req, res) {
         title: catalog.title,
       },
       ticket: {
-        id: ticketKey,
+        id: ticket.id,
         label: ticket.label,
         amount_cents: ticket.amount_cents,
         amount_label: formatAud(ticket.amount_cents),

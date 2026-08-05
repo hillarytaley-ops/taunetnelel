@@ -588,18 +588,49 @@
                 ${row.is_published ? 'Unpublish' : 'Publish'}
               </button>
             </div>
-            <div class="admin-detail" style="margin-top:0.45rem">
-              Fee $
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                style="width:5.5rem"
-                value="${row.fee_cents != null ? (Number(row.fee_cents) / 100).toFixed(2) : ''}"
-                data-event-fee="${escapeHtml(row.id)}"
-                aria-label="Event fee AUD"
-                placeholder="0"
-              >
+            <div class="admin-detail" style="margin-top:0.45rem" data-event-pricing="${escapeHtml(row.id)}">
+              <div style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.3rem">
+                <label>Single $
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    style="width:5.2rem"
+                    value="${(() => {
+                      const tickets = Array.isArray(row.ticket_prices) ? row.ticket_prices : [];
+                      const single = tickets.find((t) => t.id === 'single') || tickets[0];
+                      const cents = single?.amount_cents ?? row.fee_cents;
+                      return cents != null ? (Number(cents) / 100).toFixed(2) : '';
+                    })()}"
+                    data-event-fee-single="${escapeHtml(row.id)}"
+                    aria-label="Single ticket AUD"
+                    placeholder="100"
+                  >
+                </label>
+                <label>Two $
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    style="width:5.2rem"
+                    value="${(() => {
+                      const tickets = Array.isArray(row.ticket_prices) ? row.ticket_prices : [];
+                      const couple = tickets.find((t) => t.id === 'couple');
+                      return couple?.amount_cents != null ? (Number(couple.amount_cents) / 100).toFixed(2) : '';
+                    })()}"
+                    data-event-fee-couple="${escapeHtml(row.id)}"
+                    aria-label="Two people ticket AUD"
+                    placeholder="150"
+                  >
+                </label>
+              </div>
+              <label style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.3rem">
+                <input type="checkbox" data-event-payid="${escapeHtml(row.id)}"${
+                  String(row.booking_url || '').includes('pay/event.html') ? ' checked' : ''
+                }>
+                Book &amp; PayID
+              </label>
+              <button type="button" class="btn btn--ghost btn--sm" data-event-save-prices="${escapeHtml(row.id)}">Save prices</button>
             </div>
           </td>
           <td>${row.is_published ? 'Yes' : 'No'}</td>
@@ -646,23 +677,47 @@
       });
     });
 
-    body.querySelectorAll('[data-event-fee]').forEach((input) => {
-      input.addEventListener('change', async () => {
-        const raw = String(input.value || '').trim();
-        const feeCents = raw === '' ? null : Math.round(Number(raw) * 100);
-        if (raw !== '' && (!Number.isFinite(feeCents) || feeCents < 0)) {
-          alert('Enter a valid fee in AUD (e.g. 25).');
-          await loadEvents();
+    body.querySelectorAll('[data-event-save-prices]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.eventSavePrices;
+        const singleInput = body.querySelector(`[data-event-fee-single="${id}"]`);
+        const coupleInput = body.querySelector(`[data-event-fee-couple="${id}"]`);
+        const payidInput = body.querySelector(`[data-event-payid="${id}"]`);
+        const singleRaw = String(singleInput?.value || '').trim();
+        const coupleRaw = String(coupleInput?.value || '').trim();
+        if (singleRaw !== '' && (!Number.isFinite(Number(singleRaw)) || Number(singleRaw) < 0)) {
+          alert('Enter a valid Single price in AUD (e.g. 100).');
           return;
         }
+        if (coupleRaw !== '' && (!Number.isFinite(Number(coupleRaw)) || Number(coupleRaw) < 0)) {
+          alert('Enter a valid Two people price in AUD (e.g. 150).');
+          return;
+        }
+        btn.disabled = true;
         try {
-          await adminApi('event-update', {
+          const result = await adminApi('event-update', {
             method: 'PATCH',
-            body: { id: input.dataset.eventFee, fee_cents: feeCents }
+            body: {
+              id,
+              fee_single_aud: singleRaw === '' ? '' : Number(singleRaw),
+              fee_couple_aud: coupleRaw === '' ? '' : Number(coupleRaw),
+              ticket_prices:
+                singleRaw === '' && coupleRaw === ''
+                  ? null
+                  : undefined,
+              enable_payid_booking: Boolean(payidInput?.checked)
+            }
           });
-        } catch (err) {
-          alert(err.message || 'Could not update event fee. Run migration 020 if fee_cents is missing.');
+          if (result?.warning) alert(result.warning);
           await loadEvents();
+        } catch (err) {
+          alert(
+            err.message ||
+              'Could not update prices. Run migration 022 in Supabase for ticket_prices.'
+          );
+          await loadEvents();
+        } finally {
+          btn.disabled = false;
         }
       });
     });
@@ -716,11 +771,8 @@
     const endRaw = fd.get('end_at');
     const flyerInput = form.querySelector('[name="flyer"]');
     const flyerFile = flyerInput?.files?.[0] || null;
-    const feeAudRaw = String(fd.get('fee_aud') || '').trim();
-    const feeCents =
-      feeAudRaw === ''
-        ? null
-        : Math.round(Number(feeAudRaw) * 100);
+    const singleRaw = String(fd.get('fee_single_aud') || '').trim();
+    const coupleRaw = String(fd.get('fee_couple_aud') || '').trim();
     const payload = {
       title: String(fd.get('title') || '').trim(),
       location: String(fd.get('location') || '').trim(),
@@ -730,7 +782,9 @@
       meta: String(fd.get('meta') || '').trim(),
       badge: String(fd.get('badge') || '').trim(),
       phase_override: String(fd.get('phase_override') || 'auto'),
-      fee_cents: Number.isFinite(feeCents) && feeCents >= 0 ? feeCents : null,
+      fee_single_aud: singleRaw === '' ? '' : Number(singleRaw),
+      fee_couple_aud: coupleRaw === '' ? '' : Number(coupleRaw),
+      enable_payid_booking: Boolean(form.querySelector('[name="enable_payid_booking"]')?.checked),
       is_published: form.querySelector('[name="is_published"]')?.checked !== false,
       registration_open: Boolean(form.querySelector('[name="registration_open"]')?.checked),
       featured: Boolean(form.querySelector('[name="featured"]')?.checked)

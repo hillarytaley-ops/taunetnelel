@@ -306,10 +306,15 @@
             <div class="admin-flyer-preview admin-field--wide" id="admin-event-flyer-preview" hidden>
               <img alt="Flyer preview" id="admin-event-flyer-preview-img">
             </div>
-            <label class="admin-field"><span>Fee (AUD)</span>
-              <input name="fee_aud" type="number" min="0" step="0.01" placeholder="0 = no invoice">
-              <span class="admin-field__hint">Optional. Members can request an invoice for this amount.</span>
+            <label class="admin-field"><span>Single ticket (AUD)</span>
+              <input name="fee_single_aud" type="number" min="0" step="0.01" placeholder="e.g. 100">
+              <span class="admin-field__hint">Shown on Book &amp; PayID as “Single”.</span>
             </label>
+            <label class="admin-field"><span>Two people (AUD)</span>
+              <input name="fee_couple_aud" type="number" min="0" step="0.01" placeholder="e.g. 150">
+              <span class="admin-field__hint">Optional second ticket price.</span>
+            </label>
+            <label class="admin-field admin-field--check"><input name="enable_payid_booking" type="checkbox" checked> Book &amp; PayID / bank</label>
             <label class="admin-field admin-field--check"><input name="is_published" type="checkbox" checked> Published</label>
             <label class="admin-field admin-field--check"><input name="registration_open" type="checkbox"> Registration open</label>
             <label class="admin-field admin-field--check"><input name="featured" type="checkbox"> Featured</label>
@@ -508,6 +513,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=26"></script>
+  <script src="../assets/js/admin-dashboard.js?v=27"></script>
 </body>
 </html>

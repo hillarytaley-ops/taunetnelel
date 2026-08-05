@@ -286,13 +286,82 @@ function isMissingFeeCentsError(err) {
   return text.includes('fee_cents');
 }
 
+function isMissingTicketPricesError(err) {
+  const text = `${err?.message || ''} ${JSON.stringify(err?.details || {})}`;
+  return text.includes('ticket_prices');
+}
+
+function audToCents(value) {
+  if (value === undefined || value === null || value === '') return null;
+  // Admin sends AUD dollars (e.g. 100 or 100.00).
+  const asCents = Math.round(Number(value) * 100);
+  if (!Number.isFinite(asCents) || asCents < 0) return null;
+  return asCents;
+}
+
 function parseEventFeeCents(body) {
-  if (body?.fee_cents === undefined || body?.fee_cents === null || body?.fee_cents === '') {
-    return null;
+  if (body?.fee_cents !== undefined && body?.fee_cents !== null && body?.fee_cents !== '') {
+    const cents = Math.round(Number(body.fee_cents));
+    if (!Number.isFinite(cents) || cents < 0) return null;
+    return cents;
   }
-  const cents = Math.round(Number(body.fee_cents));
-  if (!Number.isFinite(cents) || cents < 0) return null;
-  return cents;
+  if (body?.fee_aud !== undefined && body?.fee_aud !== null && body?.fee_aud !== '') {
+    return audToCents(body.fee_aud);
+  }
+  if (body?.fee_single_aud !== undefined && body?.fee_single_aud !== null && body?.fee_single_aud !== '') {
+    return audToCents(body.fee_single_aud);
+  }
+  return null;
+}
+
+/**
+ * Build ticket_prices JSON for Book & PayID.
+ * Accepts ticket_prices array, or fee_single_aud / fee_couple_aud (AUD dollars).
+ */
+function parseTicketPrices(body) {
+  if (body?.ticket_prices === null) return null;
+  if (Array.isArray(body?.ticket_prices)) {
+    const tickets = body.ticket_prices
+      .map((item, index) => {
+        const amount = Math.round(Number(item?.amount_cents));
+        if (!Number.isFinite(amount) || amount <= 0) return null;
+        const id = String(item?.id || `ticket-${index + 1}`)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]+/g, '-')
+          .replace(/^-+|-+$/g, '') || `ticket-${index + 1}`;
+        const label = String(item?.label || id).trim() || id;
+        return { id, label, amount_cents: amount };
+      })
+      .filter(Boolean);
+    return tickets.length ? tickets : null;
+  }
+
+  const tickets = [];
+  const single =
+    body?.fee_single_aud !== undefined
+      ? audToCents(body.fee_single_aud)
+      : body?.fee_aud !== undefined
+        ? audToCents(body.fee_aud)
+        : body?.fee_cents !== undefined && body?.fee_cents !== null && body?.fee_cents !== ''
+          ? Math.round(Number(body.fee_cents))
+          : null;
+  const couple = audToCents(body?.fee_couple_aud);
+  if (Number.isFinite(single) && single > 0) {
+    tickets.push({ id: 'single', label: 'Single', amount_cents: single });
+  }
+  if (Number.isFinite(couple) && couple > 0) {
+    tickets.push({ id: 'couple', label: 'Two people', amount_cents: couple });
+  }
+  return tickets.length ? tickets : null;
+}
+
+function bookingUrlForEvent(eventId, enableBooking, existing) {
+  if (enableBooking === false) return existing || null;
+  if (enableBooking === true || enableBooking === '1' || enableBooking === 1) {
+    return `pay/event.html?event=${encodeURIComponent(eventId)}`;
+  }
+  return existing !== undefined ? existing : null;
 }
 
 /**
@@ -741,22 +810,24 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'events') {
-        let data;
-        try {
-          ({ data } = await sb(
-            'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override,fee_cents&order=start_at.desc&limit=100'
-          ));
-        } catch (_) {
+        const selects = [
+          'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override,fee_cents,ticket_prices',
+          'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,phase_override,fee_cents',
+          'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,fee_cents',
+          'id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published'
+        ];
+        let data = null;
+        let lastErr = null;
+        for (const select of selects) {
           try {
-            ({ data } = await sb(
-              'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published,fee_cents&order=start_at.desc&limit=100'
-            ));
-          } catch (__) {
-            ({ data } = await sb(
-              'events?select=id,title,summary,location,meta,badge,image_path,booking_url,gallery_url,start_at,end_at,featured,registration_open,is_published&order=start_at.desc&limit=100'
-            ));
+            ({ data } = await sb(`events?select=${select}&order=start_at.desc&limit=100`));
+            lastErr = null;
+            break;
+          } catch (err) {
+            lastErr = err;
           }
         }
+        if (lastErr && !data) throw lastErr;
         return json(res, 200, { rows: data || [] });
       }
 
@@ -1109,6 +1180,12 @@ module.exports = async function handler(req, res) {
             const flyerWarning =
               err.message ||
               'Flyer upload failed. Event can still be saved without the flyer image.';
+            const ticketsNoFlyer = parseTicketPrices(body);
+            const feeNoFlyer = ticketsNoFlyer?.[0]?.amount_cents ?? parseEventFeeCents(body);
+            const enablePayNoFlyer =
+              body.enable_payid_booking != null
+                ? Boolean(body.enable_payid_booking)
+                : Boolean(ticketsNoFlyer?.length || feeNoFlyer);
             const row = {
               id,
               title,
@@ -1117,15 +1194,18 @@ module.exports = async function handler(req, res) {
               meta: String(body.meta || '').trim() || null,
               badge: String(body.badge || '').trim() || null,
               image_path: imagePath,
-              booking_url: safeHttpUrl(body.booking_url),
+              booking_url:
+                safeHttpUrl(body.booking_url) ||
+                bookingUrlForEvent(id, enablePayNoFlyer),
               gallery_url: safeHttpUrl(body.gallery_url),
               start_at: startAt,
               end_at: endAt,
               featured: Boolean(body.featured),
-              registration_open: Boolean(body.registration_open),
+              registration_open: Boolean(body.registration_open) || enablePayNoFlyer,
               is_published: body.is_published !== false,
               phase_override: requestedPhase,
-              fee_cents: parseEventFeeCents(body)
+              fee_cents: feeNoFlyer,
+              ticket_prices: ticketsNoFlyer
             };
             try {
               const { data } = await sb('events', {
@@ -1137,8 +1217,14 @@ module.exports = async function handler(req, res) {
                 warning: `Event saved without flyer. ${flyerWarning}`
               });
             } catch (createErr) {
-              if (!isMissingPhaseOverrideError(createErr) && !isMissingFeeCentsError(createErr)) throw createErr;
-              const { phase_override, fee_cents, ...withoutOptional } = row;
+              if (
+                !isMissingPhaseOverrideError(createErr) &&
+                !isMissingFeeCentsError(createErr) &&
+                !isMissingTicketPricesError(createErr)
+              ) {
+                throw createErr;
+              }
+              const { phase_override, fee_cents, ticket_prices, ...withoutOptional } = row;
               if (isMissingPhaseOverrideError(createErr)) {
                 applyPhaseViaDates(withoutOptional, requestedPhase || 'auto');
               }
@@ -1154,6 +1240,12 @@ module.exports = async function handler(req, res) {
           }
         }
 
+        const tickets = parseTicketPrices(body);
+        const feeCents = tickets?.[0]?.amount_cents ?? parseEventFeeCents(body);
+        const enablePay =
+          body.enable_payid_booking != null
+            ? Boolean(body.enable_payid_booking)
+            : Boolean(tickets?.length || feeCents);
         const row = {
           id,
           title,
@@ -1162,15 +1254,16 @@ module.exports = async function handler(req, res) {
           meta: String(body.meta || '').trim() || null,
           badge: String(body.badge || '').trim() || null,
           image_path: imagePath,
-          booking_url: safeHttpUrl(body.booking_url),
+          booking_url: safeHttpUrl(body.booking_url) || bookingUrlForEvent(id, enablePay),
           gallery_url: safeHttpUrl(body.gallery_url),
           start_at: startAt,
           end_at: endAt,
           featured: Boolean(body.featured),
-          registration_open: Boolean(body.registration_open),
+          registration_open: Boolean(body.registration_open) || enablePay,
           is_published: body.is_published !== false,
           phase_override: requestedPhase,
-          fee_cents: parseEventFeeCents(body)
+          fee_cents: feeCents,
+          ticket_prices: tickets
         };
 
         try {
@@ -1180,7 +1273,13 @@ module.exports = async function handler(req, res) {
           });
           return json(res, 200, { rows: data || [row] });
         } catch (err) {
-          if (!isMissingPhaseOverrideError(err) && !isMissingFeeCentsError(err)) throw err;
+          if (
+            !isMissingPhaseOverrideError(err) &&
+            !isMissingFeeCentsError(err) &&
+            !isMissingTicketPricesError(err)
+          ) {
+            throw err;
+          }
           let fallback = { ...row };
           const warnings = [];
           if (isMissingPhaseOverrideError(err)) {
@@ -1195,6 +1294,13 @@ module.exports = async function handler(req, res) {
             const { fee_cents, ...withoutFee } = fallback;
             fallback = withoutFee;
             warnings.push('Saved without fee_cents. Run migration 020 for event invoices.');
+          }
+          if (isMissingTicketPricesError(err)) {
+            const { ticket_prices, ...withoutTickets } = fallback;
+            fallback = withoutTickets;
+            warnings.push(
+              'Saved without ticket_prices. Run migration 022 for Single / Two people Admin pricing.'
+            );
           }
           const { data } = await sb('events', {
             method: 'POST',
@@ -1470,16 +1576,36 @@ module.exports = async function handler(req, res) {
         if (body.featured != null) patch.featured = Boolean(body.featured);
         if (body.registration_open != null) patch.registration_open = Boolean(body.registration_open);
         if (body.is_published != null) patch.is_published = Boolean(body.is_published);
-        if (body.fee_cents !== undefined) {
-          if (body.fee_cents === null || body.fee_cents === '') {
-            patch.fee_cents = null;
-          } else {
-            const cents = Math.round(Number(body.fee_cents));
-            if (!Number.isFinite(cents) || cents < 0) {
-              return json(res, 400, { error: 'fee_cents must be a non-negative number' });
-            }
-            patch.fee_cents = cents;
+        if (
+          body.fee_cents !== undefined ||
+          body.fee_aud !== undefined ||
+          body.fee_single_aud !== undefined ||
+          body.fee_couple_aud !== undefined ||
+          body.ticket_prices !== undefined
+        ) {
+          const tickets = parseTicketPrices(body);
+          const feeCents = parseEventFeeCents(body);
+          if (tickets) {
+            patch.ticket_prices = tickets;
+            patch.fee_cents = tickets[0].amount_cents;
+          } else if (body.ticket_prices === null || body.fee_single_aud === '' || body.fee_cents === null) {
+            patch.ticket_prices = null;
+            patch.fee_cents = feeCents;
+          } else if (feeCents != null) {
+            patch.fee_cents = feeCents;
+            patch.ticket_prices = [{ id: 'single', label: 'Single', amount_cents: feeCents }];
           }
+          if (body.enable_payid_booking != null) {
+            patch.booking_url = bookingUrlForEvent(id, body.enable_payid_booking, patch.booking_url);
+            if (body.enable_payid_booking) patch.registration_open = true;
+          } else if (tickets && tickets.length && !patch.booking_url) {
+            patch.booking_url = bookingUrlForEvent(id, true);
+            patch.registration_open = true;
+          }
+        }
+        if (body.enable_payid_booking != null && body.fee_cents === undefined && body.ticket_prices === undefined) {
+          patch.booking_url = bookingUrlForEvent(id, body.enable_payid_booking, null);
+          if (body.enable_payid_booking) patch.registration_open = true;
         }
         if (body.flyer_data_url) {
           patch.image_path = await uploadFlyerFromDataUrl(id, body.flyer_data_url, body.flyer_name);
@@ -1499,6 +1625,18 @@ module.exports = async function handler(req, res) {
           });
           return json(res, 200, { rows: data || [] });
         } catch (err) {
+          if (isMissingTicketPricesError(err) && patch.ticket_prices !== undefined) {
+            const { ticket_prices, ...withoutTickets } = patch;
+            const { data } = await sb(`events?id=eq.${encodeURIComponent(id)}`, {
+              method: 'PATCH',
+              body: JSON.stringify(withoutTickets)
+            });
+            return json(res, 200, {
+              rows: data || [],
+              warning:
+                'Saved fee without ticket_prices. Run migration 022 in Supabase so Admin can set Single / Two people prices.'
+            });
+          }
           if (!isMissingPhaseOverrideError(err) || requestedPhase === undefined) throw err;
           const { phase_override, ...withoutPhase } = patch;
           if (requestedPhase) {
