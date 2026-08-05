@@ -62,7 +62,15 @@
       if (!local) return event;
       return {
         ...event,
-        calendarUrl: event.calendarUrl || local.calendarUrl
+        calendarUrl: event.calendarUrl || local.calendarUrl,
+        bookingUrl: event.bookingUrl || local.bookingUrl,
+        galleryUrl: event.galleryUrl || local.galleryUrl,
+        feeCents:
+          event.feeCents != null && Number(event.feeCents) > 0
+            ? event.feeCents
+            : local.feeCents,
+        registrationOpen:
+          event.registrationOpen != null ? event.registrationOpen : local.registrationOpen
       };
     });
   }

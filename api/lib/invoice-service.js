@@ -399,14 +399,17 @@ async function createAndEmailInvoice({
         `events?id=eq.${encodeURIComponent(resolvedEventId)}&select=id,title,fee_cents&limit=1`
       );
       const event = Array.isArray(rows) ? rows[0] : null;
-      if (!event) {
-        const err = new Error('Event not found.');
-        err.status = 404;
-        throw err;
-      }
-      if (!finalAmount && event.fee_cents) finalAmount = event.fee_cents;
-      if (!finalDescription) {
-        finalDescription = `Event fee — ${event.title}`;
+      if (event) {
+        if (!finalAmount && event.fee_cents) finalAmount = event.fee_cents;
+        if (!finalDescription) {
+          finalDescription = `Event fee — ${event.title}`;
+        }
+      } else {
+        // Public catalog bookings may invoice before the row exists in events.
+        // Keep the catalog id in meta; leave the FK null to avoid a 404.
+        if (!meta || typeof meta !== 'object') meta = {};
+        meta.catalog_event_id = resolvedEventId;
+        resolvedEventId = null;
       }
     }
     if (!finalAmount || finalAmount <= 0) {

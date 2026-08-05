@@ -27,13 +27,15 @@
       start: '2026-08-01T21:00:00+00:00',
       end: '2026-08-02T21:00:00+00:00',
       image: 'wp-content/uploads/2025/09/Celebration.jpg',
-      location: 'Victoria',
-      summary: 'Men’s Camp gathering for fellowship, culture, and community.',
-      meta: '1–2 August 2026',
+      location: 'Springbrook',
+      summary: 'All States Men’s Camp — book and pay by PayID or bank transfer ($100 single / $150 two people).',
+      meta: '1–2 August 2026 · Springbrook',
       badge: 'Recently ended',
       featured: true,
+      bookingUrl: 'pay/event.html?event=men-s-camp-2026-08-01',
+      feeCents: 10000,
       galleryUrl: 'gallery.html#men-s-camp-2026-08-01',
-      registrationOpen: false
+      registrationOpen: true
     },
     {
       id: 'cultural-week-2026',
@@ -472,12 +474,21 @@
     const phaseLabelText = phase === 'present' ? 'Live now' : phase === 'most-recent' ? 'Recent' : phase === 'upcoming' ? 'Upcoming' : '';
     const title = escapeHtml(event.title);
 
+    const bookHref = booking
+      ? escapeHtml(booking)
+      : event.feeCents > 0
+        ? escapeHtml(safeUrl(assetPath(`pay/event.html?event=${encodeURIComponent(event.id)}`, prefix)) || '')
+        : '';
+    const bookAttrs = booking?.startsWith('http') ? ' target="_blank" rel="noopener"' : '';
+
     let action = '';
-    if (phase === 'upcoming' && booking) {
-      action = `<a href="${escapeHtml(booking)}" class="events-phase-item__action events-phase-item__action--book"${linkAttrs}>Booking →</a>`;
-    } else if ((phase === 'past' || phase === 'most-recent') && event.galleryUrl) {
-      action = `<a href="${href}" class="events-phase-item__action events-phase-item__action--gallery">Gallery →</a>`;
-    } else if (phase === 'present') {
+    if (bookHref && (phase === 'upcoming' || phase === 'present' || phase === 'most-recent')) {
+      action = `<a href="${bookHref}" class="events-phase-item__action events-phase-item__action--book"${bookAttrs}>Book &amp; pay →</a>`;
+    }
+    if ((phase === 'past' || phase === 'most-recent') && event.galleryUrl) {
+      const galleryAction = `<a href="${href}" class="events-phase-item__action events-phase-item__action--gallery">Gallery →</a>`;
+      action = action ? `${action}${galleryAction}` : galleryAction;
+    } else if (!action && phase === 'present') {
       action = `<span class="events-phase-item__action events-phase-item__action--live">Join us today</span>`;
     }
 
