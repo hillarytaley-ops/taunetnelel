@@ -58,7 +58,16 @@
     const { url, anonKey } = getConfig();
     if (!global.supabase?.createClient) return null;
 
-    client = global.supabase.createClient(url, anonKey);
+    // Explicit auth options keep sessions stable after idle (auto-refresh) and
+    // avoid half-dead tokens blocking a later email/password sign-in.
+    client = global.supabase.createClient(url, anonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: global.localStorage,
+      },
+    });
     global.taunetSupabase = client;
     return client;
   }

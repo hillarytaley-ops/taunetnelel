@@ -221,13 +221,58 @@
     return fetchProfile(client, session.user.id, session.user.email);
   }
 
+  function clearLocalAuthStorage() {
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-') && key.includes('auth')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  /**
+   * Drop a stale / revoked local session before password login.
+   * After long idle, a dead refresh token in localStorage can make the next
+   * signInWithPassword fail with "Invalid login credentials" even when the
+   * password is correct.
+   */
+  async function clearLocalSession(client) {
+    if (!client) {
+      clearLocalAuthStorage();
+      return;
+    }
+    try {
+      await Promise.race([
+        client.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 1200)),
+      ]);
+    } catch (_) {
+      /* continue — wipe storage below */
+    }
+    clearLocalAuthStorage();
+  }
+
   async function signIn(email, password) {
     const client = await getClient();
     if (!client) throw new Error('Supabase is not configured.');
 
+    const normalizedEmail = String(email || '')
+      .trim()
+      .toLowerCase();
+    // Trim only leading/trailing whitespace (chat/email paste often adds a newline).
+    const normalizedPassword = String(password || '').replace(/^\s+|\s+$/g, '');
+    if (!normalizedEmail || !normalizedPassword) {
+      throw new Error('Enter your email and password.');
+    }
+
+    await clearLocalSession(client);
+
     const { data, error } = await client.auth.signInWithPassword({
-      email: email.trim(),
-      password
+      email: normalizedEmail,
+      password: normalizedPassword,
     });
     if (error) throw error;
 
@@ -274,33 +319,27 @@
     return { needsEmailConfirmation: false, member };
   }
 
-  async function signOut() {
+  /**
+   * @param {{ global?: boolean }} [options]
+   * Default is local-only. Fire-and-forget global signOut previously raced with
+   * the next login and could revoke a freshly issued refresh token.
+   */
+  async function signOut(options) {
     const client = await getClient();
-    if (!client) return;
-    // Prefer local scope so the UI is never blocked waiting on the network.
+    if (!client) {
+      clearLocalAuthStorage();
+      return;
+    }
+    const scope = options && options.global ? 'global' : 'local';
     try {
       await Promise.race([
-        client.auth.signOut({ scope: 'local' }),
-        new Promise((resolve) => setTimeout(resolve, 1500)),
+        client.auth.signOut({ scope }),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
       ]);
     } catch (_) {
       /* continue — clear storage below */
     }
-    try {
-      // Best-effort revoke on the server; do not block logout on this.
-      void client.auth.signOut({ scope: 'global' });
-    } catch (_) {
-      /* ignore */
-    }
-    try {
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('sb-') && key.includes('auth')) {
-          localStorage.removeItem(key);
-        }
-      });
-    } catch (_) {
-      /* ignore */
-    }
+    clearLocalAuthStorage();
   }
 
   /**
@@ -366,12 +405,30 @@
   async function updatePassword(newPassword) {
     const client = await getClient();
     if (!client) throw new Error('Supabase is not configured.');
-    const password = String(newPassword || '');
+    const password = String(newPassword || '').replace(/^\s+|\s+$/g, '');
     if (password.length < 8) {
       throw new Error('Password must be at least 8 characters.');
     }
     const { data, error } = await client.auth.updateUser({ password });
     if (error) throw error;
+
+    // Confirm the new password works the same way the login form will
+    // (anon-key password grant), so a "saved" password that Auth rejected
+    // cannot look successful in the UI.
+    const email = String(data?.user?.email || '').trim().toLowerCase();
+    if (email) {
+      await clearLocalSession(client);
+      const verify = await client.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (verify.error) {
+        throw new Error(
+          'Password was not accepted by the login service. Choose a different password (at least 8 characters) and try again.'
+        );
+      }
+    }
+
     return data?.user || null;
   }
 

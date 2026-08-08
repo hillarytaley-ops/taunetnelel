@@ -13,16 +13,29 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import string
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+
+
+def _anon_from_config() -> str:
+    """Read anon key from assets/js/supabase-config.js so verify matches the website."""
+    try:
+        cfg = Path(__file__).resolve().parents[2] / "assets" / "js" / "supabase-config.js"
+        text = cfg.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    match = re.search(r"anonKey:\s*'([^']+)'", text)
+    return match.group(1) if match else ""
 
 
 def request(
@@ -100,8 +113,9 @@ def set_password(user_id: str, password: str) -> None:
 
 
 def verify_password_login(email: str, password: str) -> None:
-    # Use anon key if provided; service role also works for password grant on many projects
-    key = ANON_KEY or SERVICE_KEY
+    # Prefer the same anon key the website uses (stale service_role-only checks
+    # can pass while the browser still fails).
+    key = ANON_KEY or _anon_from_config() or SERVICE_KEY
     request(
         "POST",
         "/auth/v1/token?grant_type=password",

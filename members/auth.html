@@ -170,7 +170,12 @@
           </div>
           <div class="form-group">
             <label for="admin-password">Password</label>
-            <input type="password" id="admin-password" name="password" placeholder="Your account password" autocomplete="current-password" required>
+            <div class="input-password">
+              <input type="password" id="admin-password" name="password" placeholder="Your account password" autocomplete="current-password" required>
+              <button type="button" class="input-password__toggle input-password__toggle--dark" aria-label="Show password" data-password-toggle="admin-password">
+                <span class="input-password__icon" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
           <p class="login-form__forgot">
             <a href="#" id="admin-forgot-password">Forgot password?</a>
@@ -186,9 +191,9 @@
 
   <script src="../assets/js/taunet-security.js?v=1"></script>
   <script src="../assets/js/supabase-config.js?v=3"></script>
-  <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=14"></script>
-  <script src="../assets/js/members.js?v=33"></script>
+  <script src="../assets/js/supabase-init.js?v=5"></script>
+  <script src="../assets/js/members-auth.js?v=15"></script>
+  <script src="../assets/js/members.js?v=34"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');
@@ -300,8 +305,8 @@
       });
       adminForm?.addEventListener('submit', async function (e) {
         e.preventDefault();
-        var email = adminForm.querySelector('[name="email"]')?.value?.trim() || '';
-        var password = adminForm.querySelector('[name="password"]')?.value || '';
+        var email = (adminForm.querySelector('[name="email"]')?.value || '').trim().toLowerCase();
+        var password = (adminForm.querySelector('[name="password"]')?.value || '').replace(/^\s+|\s+$/g, '');
         var btn = adminForm.querySelector('button[type="submit"]');
         if (adminStatus) {
           adminStatus.hidden = false;
@@ -322,6 +327,7 @@
             );
           }
           if (!rpc.data) {
+            // Local only — do not revoke other devices / race the next login.
             await authApi.signOut();
             throw new Error(
               'Signed in, but this email is not on the committee admin list.'
@@ -334,7 +340,9 @@
             adminStatus.classList.add('is-error');
             var msg = err.message || 'Could not sign in.';
             if (/invalid login credentials/i.test(msg)) {
-              msg = 'Invalid email or password. Use Forgot password below, or ask IT to reset your account.';
+              msg =
+                'Invalid email or password. Click Show password to check what was typed, ' +
+                'or use Forgot password (browser may have filled an older saved password).';
             }
             adminStatus.textContent = msg;
           }

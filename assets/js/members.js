@@ -243,6 +243,15 @@
       }
       return 'Too many requests right now. Please wait a short while and try again.';
     }
+    if (/invalid login credentials/i.test(raw)) {
+      return (
+        'Invalid email or password. Use Forgot password below if you are unsure, ' +
+        'and make sure your browser is not filling an older saved password.'
+      );
+    }
+    if (/email not confirmed/i.test(raw)) {
+      return 'This email is not confirmed yet. Use Forgot password, or ask IT to confirm your account.';
+    }
     return raw || 'Request failed.';
   }
 
@@ -719,6 +728,30 @@
           await authApi.updatePassword(password);
           const member = await authApi.getSessionMember();
           if (member) setMember(member);
+
+          // Committee accounts are often unpaid members — do not send them to PayID
+          // after a password reset (that looked like "login broke" later).
+          let isAdmin = false;
+          try {
+            const client = await authApi.getClient();
+            const rpc = await client.rpc('is_site_admin');
+            isAdmin = Boolean(rpc?.data) && !rpc?.error;
+          } catch (_) {
+            isAdmin = false;
+          }
+
+          if (isAdmin) {
+            showAuthMessage(
+              resetForm,
+              'Password updated and verified. Opening the committee admin portal…',
+              false
+            );
+            window.setTimeout(() => {
+              window.location.href = '../admin/';
+            }, 600);
+            return;
+          }
+
           showAuthMessage(resetForm, 'Password updated. Opening your dashboard…', false);
           window.setTimeout(() => redirectAfterAuth(), 600);
         } catch (error) {
@@ -1222,7 +1255,7 @@
     clearPreviewMode();
     clearMember();
     try {
-      await window.taunetMembersAuth?.signOut();
+      await window.taunetMembersAuth?.signOut({ global: true });
     } catch (error) {
       console.warn('Sign out error:', error);
     }

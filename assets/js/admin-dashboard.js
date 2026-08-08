@@ -1432,7 +1432,7 @@
       try {
         if (window.taunetSupabaseApi?.isConfigured()) {
           const client = await getClient();
-          await client.auth.signOut();
+          await client.auth.signOut({ scope: 'local' });
         }
       } catch (_) { /* ignore */ }
       window.location.href = authEntryUrl();
@@ -1468,7 +1468,7 @@
       try {
         if (window.taunetSupabaseApi?.isConfigured()) {
           const client = await getClient();
-          await client.auth.signOut();
+          await client.auth.signOut({ scope: 'local' });
         }
       } catch (__) { /* ignore */ }
       window.location.replace(authEntryUrl());

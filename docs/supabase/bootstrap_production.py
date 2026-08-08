@@ -99,15 +99,59 @@ def upsert_site_admins() -> None:
 
 
 def list_auth_users() -> dict[str, dict]:
-    # Admin API paginates; first page is enough for committee setup
-    data = api("GET", "/auth/v1/admin/users?page=1&per_page=200")
-    users = data.get("users") if isinstance(data, dict) else data
+    """Load Auth users across pages (committee emails may not be on page 1)."""
     out: dict[str, dict] = {}
-    for user in users or []:
-        email = (user.get("email") or "").lower()
-        if email:
-            out[email] = user
+    for page in range(1, 21):
+        data = api("GET", f"/auth/v1/admin/users?page={page}&per_page=200")
+        users = data.get("users") if isinstance(data, dict) else data
+        if not users:
+            break
+        for user in users:
+            email = (user.get("email") or "").lower()
+            if email:
+                out[email] = user
+        if len(users) < 200:
+            break
     return out
+
+
+def find_auth_user(email: str, existing: dict[str, dict] | None = None) -> dict | None:
+    email = email.lower().strip()
+    if existing and email in existing:
+        return existing[email]
+    # Direct filter (supported on newer GoTrue)
+    try:
+        from urllib.parse import urlencode
+
+        data = api("GET", f"/auth/v1/admin/users?{urlencode({'email': email})}")
+        users = data.get("users") if isinstance(data, dict) else data
+        for user in users or []:
+            if (user.get("email") or "").lower() == email:
+                return user
+    except RuntimeError:
+        pass
+    return (existing or {}).get(email)
+
+
+def reset_user_password(user_id: str, email: str, full_name: str, password: str) -> None:
+    api(
+        "PUT",
+        f"/auth/v1/admin/users/{user_id}",
+        {
+            "password": password,
+            "email_confirm": True,
+            "ban_duration": "none",
+            "user_metadata": {"full_name": full_name},
+        },
+    )
+    try:
+        api(
+            "POST",
+            "/auth/v1/token?grant_type=password",
+            {"email": email, "password": password},
+        )
+    except RuntimeError as exc:
+        print(f"WARN could not verify login for {email}: {exc}")
 
 
 def ensure_committee_auth(reset_passwords: bool) -> list[tuple[str, str]]:
@@ -115,44 +159,44 @@ def ensure_committee_auth(reset_passwords: bool) -> list[tuple[str, str]]:
     created: list[tuple[str, str]] = []
     for email, full_name in COMMITTEE:
         password = gen_password()
-        if email in existing:
+        user = find_auth_user(email, existing)
+
+        if user:
             if reset_passwords:
-                api(
-                    "PUT",
-                    f"/auth/v1/admin/users/{existing[email]['id']}",
-                    {
-                        "password": password,
-                        "email_confirm": True,
-                        "ban_duration": "none",
-                        "user_metadata": {"full_name": full_name},
-                    },
-                )
-                # Verify password grant actually works before printing it
-                try:
-                    api(
-                        "POST",
-                        "/auth/v1/token?grant_type=password",
-                        {"email": email, "password": password},
-                    )
-                except RuntimeError as exc:
-                    print(f"WARN could not verify login for {email}: {exc}")
+                reset_user_password(user["id"], email, full_name, password)
                 created.append((email, password))
                 print(f"OK  reset password for {email}")
             else:
                 print(f"--  Auth user already exists: {email} (pass --reset-passwords to set a new one)")
             continue
-        api(
-            "POST",
-            "/auth/v1/admin/users",
-            {
-                "email": email,
-                "password": password,
-                "email_confirm": True,
-                "user_metadata": {"full_name": full_name, "plan": "basic"},
-            },
-        )
-        created.append((email, password))
-        print(f"OK  created Auth user {email}")
+
+        try:
+            api(
+                "POST",
+                "/auth/v1/admin/users",
+                {
+                    "email": email,
+                    "password": password,
+                    "email_confirm": True,
+                    "user_metadata": {"full_name": full_name, "plan": "basic"},
+                },
+            )
+            created.append((email, password))
+            print(f"OK  created Auth user {email}")
+        except RuntimeError as exc:
+            # Race / pagination miss: user exists — look up and reset instead
+            if "email_exists" not in str(exc):
+                raise
+            existing = list_auth_users()
+            user = find_auth_user(email, existing)
+            if not user:
+                raise RuntimeError(f"email_exists for {email} but user id not found") from exc
+            if reset_passwords:
+                reset_user_password(user["id"], email, full_name, password)
+                created.append((email, password))
+                print(f"OK  reset password for existing {email}")
+            else:
+                print(f"--  Auth user already exists: {email} (pass --reset-passwords to set a new one)")
     return created
 
 
@@ -252,7 +296,10 @@ def main() -> int:
     parser.add_argument(
         "--reset-passwords",
         action="store_true",
-        help="Set new passwords for existing committee Auth users and print them.",
+        help=(
+            "Set NEW passwords for existing committee Auth users and print them. "
+            "Warning: this immediately invalidates every previous password for those accounts."
+        ),
     )
     args = parser.parse_args()
 
