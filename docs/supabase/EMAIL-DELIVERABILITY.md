@@ -1,21 +1,21 @@
-# Stop Auth emails landing in spam
+# Stop Auth emails landing in spam — do this now
 
-Inbox placement is won by **authenticated sending + a real From address + clean volume**, not by website CSS.  
-Forgot-password on the live site already goes through **Resend API**. Invites now do the same (no more Supabase default “Reset password” template).
+Inbox placement needs **authenticated DNS + branded Resend + member training**.  
+Code alone cannot force every Gmail into Inbox on day one.
 
 ---
 
-## Do these today (order matters)
+## Do this today (order matters)
 
-### 1) Cloudflare — strengthen DMARC (still weak live)
+### 1) Cloudflare — strengthen DMARC (still the #1 gap)
 
-Live DNS today:
+Live DNS often shows only:
 
 ```text
 _dmarc.taunetnelel.org  TXT  v=DMARC1; p=none;
 ```
 
-**Edit** that TXT (DNS only / grey cloud) to:
+**Edit** that TXT (DNS only / grey cloud) on the **live** zone (the one that already has Outlook MX + Resend DKIM) to:
 
 ```text
 v=DMARC1; p=none; rua=mailto:info@taunetnelel.org; fo=1; aspf=r; adkim=r
@@ -23,6 +23,15 @@ v=DMARC1; p=none; rua=mailto:info@taunetnelel.org; fo=1; aspf=r; adkim=r
 
 Keep `p=none` for at least one week while you watch Resend bounces/complaints.  
 Do **not** jump to `p=quarantine` until mail looks clean.
+
+Verify:
+
+```powershell
+cd C:\Users\hilla\Desktop\Taunet
+python docs/supabase/check_email_dns.py
+```
+
+Expect `[OK]: rua reporting present` under DMARC.
 
 ### 2) Cloudflare — keep Resend DNS **DNS only** (not proxied)
 
@@ -34,7 +43,13 @@ Do **not** jump to `p=quarantine` until mail looks clean.
 
 Apex Outlook MX / SPF stays for `info@` inbox. Do **not** replace Outlook MX with Resend.
 
-### 3) Supabase SMTP From = `members@` (not noreply)
+### 3) Resend dashboard
+
+1. Domains → `taunetnelel.org` → **Verified**  
+2. Emails → open a recent send → **Deliverability** (SPF/DKIM/DMARC pass?)  
+3. Fix any domain warnings before more bulk sends  
+
+### 4) Supabase SMTP From = `members@` (not noreply)
 
 https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo/auth/smtp  
 
@@ -47,48 +62,43 @@ https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo/auth/smtp
 | User | `resend` |
 | Password | Resend API key |
 
-`noreply@` is a common spam trigger — remove it everywhere.
+### 5) Supabase — stub Confirm signup template
 
-### 4) Supabase — replace default Auth templates
+Join now also sends a **branded** confirm from Resend (`/api/auth/send-confirm-email`).  
+To avoid a second spammy Supabase email:
 
 https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo/auth/templates  
 
-Any leftover Supabase-sent mail (email confirm on Join) still uses these templates.  
-Change subjects away from generic “Reset password” / “Confirm your signup” if you can, and include:
+**Confirm signup** subject/body → short stub only, e.g.:
 
-- Organisation name **Taunet Nelel**
-- `info@taunetnelel.org`
-- Victoria, Australia
+- Subject: `Taunet Nelel — check your inbox`
+- Body: `Please open the confirmation email from members@taunetnelel.org (check Spam and mark Not spam).`
 
-(Primary Forgot-password + invites already use our branded Resend HTML.)
+Forgot-password + invites already bypass Supabase mailer (Resend only).
 
-### 5) Vercel env (Production + Preview)
+### 6) Vercel env (Production + Preview)
 
 | Name | Value |
 |------|--------|
 | `RESEND_API_KEY` | `re_...` |
 | `RESEND_FROM` | `Taunet Nelel <members@taunetnelel.org>` |
 | `RESEND_REPLY_TO` | `info@taunetnelel.org` |
+| `PUBLIC_SITE_URL` | `https://taunetnelel.vercel.app` (until `.org` cutover) |
 
 Redeploy after changes. Confirm `RESEND_FROM` does **not** contain `noreply@`.
-
-### 6) Resend dashboard
-
-1. Domains → `taunetnelel.org` → **Verified**  
-2. Emails → open a recent send → **Deliverability** (SPF/DKIM/DMARC pass?)  
-3. If domain shows warnings, fix DNS before more bulk sends  
 
 ### 7) Retest (one address only)
 
 1. https://taunetnelel.vercel.app/members/auth.html?tab=signin  
 2. Your Gmail → **Forgot password?**  
 3. Expect **From:** `Taunet Nelel <members@taunetnelel.org>`  
-4. Subject like **Reset your Taunet Nelel member password** (brown button “Choose a new password”)  
-5. If it still hits Spam once → **Not spam** + add `members@taunetnelel.org` to Contacts  
+4. If it still hits Spam once → **Not spam** + add `members@taunetnelel.org` to Contacts  
 
 That one “Not spam” action trains Gmail for your domain.
 
-### 8) WhatsApp / member notice (copy-paste)
+### 8) WhatsApp / member notice
+
+Share `docs/TAUNET-NELEL-EMAIL-INBOX-NOTICE.pdf` (or copy-paste):
 
 > Portal emails come from **members@taunetnelel.org** (Taunet Nelel).  
 > Please add that address to Contacts. If a message is in Spam, tap **Not spam**.  
@@ -100,11 +110,11 @@ That one “Not spam” action trains Gmail for your domain.
 
 | Cause | Fix |
 |--------|-----|
-| `noreply@` From | Use `members@` everywhere |
 | Weak DMARC (`p=none` only) | Add `rua` + alignment flags (step 1) |
-| Supabase default invite/reset HTML | Invites + Forgot password now go **only** via Resend branded mail |
-| Bulk blast (~500) too fast | Slow sends (`--delay 1`+) and pause if spam rate rises |
-| Gmail never saw the domain before | Contacts + Not spam + steady low volume |
+| Supabase default Join confirm HTML | Branded Resend confirm + stub Auth template |
+| `noreply@` From | Use `members@` everywhere |
+| Bulk blast too fast | Slow invites (`--limit 20`, delay ≥ 1s) |
+| Gmail never trusted the domain | Contacts + Not spam + steady volume |
 
 ---
 
@@ -114,31 +124,19 @@ That one “Not spam” action trains Gmail for your domain.
 - Invites: `python docs/invite_members.py --limit 20` then wait; default delay is 1s.  
 - Do **not** re-invite people who already got mail.  
 - Watch Resend for bounces; remove hard bounces from `member_imports`.  
-- After DNS cutover to `www.taunetnelel.org`, keep the same From address (domain reputation carries over).
+- Do **not** re-run `bootstrap_production.py --reset-passwords` unless you intend to wipe passwords.
 
 ---
 
 ## Optional next upgrades
 
-1. **Google Postmaster Tools** — verify `taunetnelel.org` at https://postmaster.google.com (spam rate visibility).  
+1. **Google Postmaster Tools** — verify `taunetnelel.org` at https://postmaster.google.com  
 2. After a clean week, consider DMARC `p=quarantine` (only if SPF/DKIM stay aligned).  
-3. Create a real Outlook mailbox or shared mailbox alias for `members@` if you want replies in the inbox (Reply-To already goes to `info@`).
-
----
-
-## DNS snapshot (checked)
-
-| Record | Status |
-|--------|--------|
-| Apex MX | Outlook — keep |
-| Apex SPF | Outlook + signatures + mailbaby — OK |
-| `send` SPF | `include:amazonses.com` — OK for Resend |
-| `send` MX | SES feedback — OK |
-| DMARC | Weak `p=none` only — **update step 1** |
+3. Create a real Outlook mailbox/alias for `members@` if you want replies in the inbox (Reply-To already goes to `info@`).
 
 ---
 
 ## Honest limit
 
-No app change can force every Gmail into Inbox on day one.  
-What *does* move the needle: authenticated domain + `members@` + DMARC reporting + branded Resend content + members marking **Not spam** + not blasting volume.
+No app change can force every mailbox into Inbox.  
+What *does* move the needle: DMARC reporting + `members@` + branded Resend + members marking **Not spam** + not blasting volume.

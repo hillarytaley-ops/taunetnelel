@@ -279,12 +279,43 @@
     return fetchProfile(client, data.user.id, data.user.email);
   }
 
+  async function sendConfirmEmail(email, fullName) {
+    const trimmed = String(email || '')
+      .trim()
+      .toLowerCase();
+    if (!trimmed) return null;
+
+    const resp = await fetch('/api/auth/send-confirm-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: trimmed,
+        fullName: String(fullName || '').trim(),
+      }),
+    });
+    let payload = {};
+    try {
+      payload = await resp.json();
+    } catch (_) {
+      payload = {};
+    }
+    if (!resp.ok) {
+      console.warn('send-confirm-email failed:', payload.error || resp.status);
+      return null;
+    }
+    return payload;
+  }
+
   async function signUp({ name, email, phone, password, plan }) {
     const client = await getClient();
     if (!client) throw new Error('Supabase is not configured.');
 
+    const normalizedEmail = String(email || '')
+      .trim()
+      .toLowerCase();
+
     const { data, error } = await client.auth.signUp({
-      email: email.trim(),
+      email: normalizedEmail,
       password,
       options: {
         data: {
@@ -293,8 +324,8 @@
           // Server handle_new_user ignores client plan for non-imported emails
           plan: 'basic'
         },
-        // After confirm, land on PayID portal until membership is activated
-        emailRedirectTo: `${window.location.origin}/pay/basic.html`
+        // Branded confirm mail uses portal auth page (scanner-safe token_hash).
+        emailRedirectTo: `${window.location.origin}/members/auth.html?tab=signin&type=signup`
       }
     });
     if (error) throw error;
@@ -310,9 +341,18 @@
       throw err;
     }
 
-    // If email confirmation is required, session may be null
+    // If email confirmation is required, session may be null — send branded Resend mail
+    // (Supabase's default Confirm template should be stubbed in the dashboard).
     if (!data.session || !data.user) {
+      await sendConfirmEmail(normalizedEmail, name);
       return { needsEmailConfirmation: true, member: null };
+    }
+
+    // Some projects auto-confirm; still send branded confirm if user is unconfirmed.
+    if (data.user && !data.user.email_confirmed_at && !data.user.confirmed_at) {
+      await sendConfirmEmail(normalizedEmail, name);
+      const member = await fetchProfile(client, data.user.id, data.user.email);
+      return { needsEmailConfirmation: true, member };
     }
 
     const member = await fetchProfile(client, data.user.id, data.user.email);
@@ -381,25 +421,30 @@
     const hash = String(tokenHash || '').trim();
     if (!hash) throw new Error('Missing reset token. Request a fresh password email.');
 
-    const otpType =
-      String(linkType || 'recovery').toLowerCase() === 'invite' ? 'invite' : 'recovery';
+    const rawType = String(linkType || 'recovery').toLowerCase();
+    let otpType = 'recovery';
+    if (rawType === 'invite') otpType = 'invite';
+    else if (rawType === 'signup' || rawType === 'email' || rawType === 'confirmation') {
+      otpType = 'signup';
+    }
     const { data, error } = await client.auth.verifyOtp({
       token_hash: hash,
       type: otpType
     });
     if (error) {
       const err = new Error(error.message || 'This reset link is no longer valid.');
-      err.authType = 'recovery';
+      err.authType = otpType === 'signup' ? 'signup' : 'recovery';
       err.expired = /invalid|expired|otp_expired/i.test(String(error.message || ''));
       throw err;
     }
 
+    const keepType = otpType === 'signup' ? 'signup' : 'recovery';
     window.history.replaceState(
       {},
       document.title,
-      `${window.location.pathname}?tab=signin&type=recovery`
+      `${window.location.pathname}?tab=signin&type=${keepType}`
     );
-    return { type: 'recovery', session: data?.session || null };
+    return { type: keepType, session: data?.session || null };
   }
 
   async function updatePassword(newPassword) {
@@ -464,6 +509,7 @@
     signUp,
     signOut,
     requestPasswordReset,
+    sendConfirmEmail,
     verifyRecoveryTokenHash,
     updatePassword,
     updateProfile,

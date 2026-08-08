@@ -1,19 +1,21 @@
 /**
- * Member password-reset email (reliable path).
+ * Branded Join / email-confirmation mail via Resend.
  *
- * Creates a Supabase recovery link with the service role, then sends it
- * through Resend so ordinary members get a real email (not only Supabase SMTP).
+ * Creates a Supabase signup confirmation link with the service role, then
+ * sends it through Resend (not the spammy default Supabase Auth template).
  *
  * Vercel env required:
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *   RESEND_API_KEY
  * Optional:
- *   RESEND_FROM  (default: Taunet Nelel <members@taunetnelel.org>)
- *   RESEND_REPLY_TO (default: info@taunetnelel.org)
- *   PUBLIC_SITE_URL  (fallback origin for recovery redirect)
+ *   RESEND_FROM, RESEND_REPLY_TO, PUBLIC_SITE_URL
+ *
+ * In Supabase Auth → Templates → Confirm signup: replace the body with a
+ * short stub (or disable Confirm email if you only use this path) so members
+ * do not get two emails.
  */
-const { sendMemberMail, buildPasswordMail } = require('../lib/member-mail');
+const { sendMemberMail, buildConfirmMail } = require('../lib/member-mail');
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -45,7 +47,7 @@ function rateLimit(key, limit, windowMs) {
   }
   bucket.count += 1;
   if (bucket.count > limit) {
-    const err = new Error('Too many reset requests. Try again in about an hour.');
+    const err = new Error('Too many confirmation requests. Try again in about an hour.');
     err.status = 429;
     throw err;
   }
@@ -87,20 +89,18 @@ function requestOrigin(req) {
 }
 
 /**
- * Prefer a portal link with token_hash so email scanners do not burn the OTP
- * (Supabase /auth/v1/verify links are consumed on first GET).
+ * Prefer a portal link with token_hash so email scanners do not burn the OTP.
  */
-function portalRecoveryLink(linkPayload, origin) {
+function portalConfirmLink(linkPayload, origin) {
   const props = linkPayload?.properties || {};
   const hashed = linkPayload?.hashed_token || props.hashed_token || '';
   if (hashed) {
     const u = new URL(`${origin}/members/auth.html`);
     u.searchParams.set('tab', 'signin');
-    u.searchParams.set('type', 'recovery');
+    u.searchParams.set('type', 'signup');
     u.searchParams.set('token_hash', String(hashed));
     return u.toString();
   }
-  // Fallback: old-style action_link with redirect forced to auth page
   const raw =
     linkPayload?.action_link ||
     props.action_link ||
@@ -111,7 +111,7 @@ function portalRecoveryLink(linkPayload, origin) {
     const u = new URL(raw);
     u.searchParams.set(
       'redirect_to',
-      `${origin}/members/auth.html?tab=signin&type=recovery`
+      `${origin}/members/auth.html?tab=signin&type=signup`
     );
     return u.toString();
   } catch {
@@ -119,8 +119,7 @@ function portalRecoveryLink(linkPayload, origin) {
   }
 }
 
-async function generateRecoveryLink(email, redirectTo) {
-  // Top-level + options: GoTrue versions differ on which field they honour.
+async function generateSignupLink(email, redirectTo) {
   const resp = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
     method: 'POST',
     headers: {
@@ -129,7 +128,7 @@ async function generateRecoveryLink(email, redirectTo) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      type: 'recovery',
+      type: 'signup',
       email,
       redirect_to: redirectTo,
       options: { redirect_to: redirectTo },
@@ -152,11 +151,10 @@ async function generateRecoveryLink(email, redirectTo) {
   return data;
 }
 
-/** Always-safe client message (no account enumeration). */
 const CLIENT_OK = {
   ok: true,
   message:
-    'If that email has a member account, a reset link was sent from members@taunetnelel.org. ' +
+    'If that email needs confirmation, a link was sent from members@taunetnelel.org. ' +
     'Add that address to Contacts, check Inbox first, then Spam — mark Not spam if needed.',
 };
 
@@ -186,6 +184,7 @@ module.exports = async function handler(req, res) {
     const email = String(body.email || '')
       .trim()
       .toLowerCase();
+    const fullName = String(body.fullName || body.full_name || '').trim();
     if (!isValidEmail(email)) {
       return json(res, 400, { error: 'Enter a valid email address.' });
     }
@@ -193,13 +192,12 @@ module.exports = async function handler(req, res) {
     rateLimit(`email:${email}`, 4, 60 * 60 * 1000);
 
     const origin = requestOrigin(req);
-    const redirectTo = `${origin}/members/auth.html?tab=signin&type=recovery`;
+    const redirectTo = `${origin}/members/auth.html?tab=signin&type=signup`;
 
     let linkPayload;
     try {
-      linkPayload = await generateRecoveryLink(email, redirectTo);
+      linkPayload = await generateSignupLink(email, redirectTo);
     } catch (err) {
-      // Unknown user / not found → still pretend success (anti-enumeration)
       const msg = String(err.message || '').toLowerCase();
       if (
         err.status === 404 ||
@@ -210,22 +208,22 @@ module.exports = async function handler(req, res) {
       throw err;
     }
 
-    const actionLink = portalRecoveryLink(linkPayload, origin);
+    const actionLink = portalConfirmLink(linkPayload, origin);
     if (!actionLink) {
       console.error('generate_link missing hashed_token/action_link', linkPayload);
       return json(res, 502, {
-        error: 'Could not create a reset link. Try again or contact IT.',
+        error: 'Could not create a confirmation link. Try again or contact IT.',
       });
     }
 
-    const mail = buildPasswordMail({ actionLink, kind: 'reset' });
+    const mail = buildConfirmMail({ actionLink, fullName });
     await sendMemberMail({ to: email, ...mail });
     return json(res, 200, CLIENT_OK);
   } catch (err) {
     const status = err.status || 500;
-    console.error('request-password-reset', err);
+    console.error('send-confirm-email', err);
     return json(res, status, {
-      error: err.message || 'Could not send password reset email.',
+      error: err.message || 'Could not send confirmation email.',
     });
   }
 };

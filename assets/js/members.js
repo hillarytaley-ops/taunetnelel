@@ -290,7 +290,7 @@
     window.location.href = safe;
   }
 
-  function showResetPasswordPanel(mode) {
+  function showResetPasswordPanel(mode, purpose) {
     const tabs = document.querySelector('.auth-tabs');
     if (tabs) tabs.hidden = true;
     document.querySelectorAll('[data-auth-panel]').forEach((panel) => {
@@ -304,35 +304,55 @@
     const activateForm = document.getElementById('reset-activate-form');
     const title = document.getElementById('reset-panel-title');
     const lead = document.getElementById('reset-panel-lead');
+    const confirmMode = purpose === 'signup' || purpose === 'confirm';
 
     if (setForm) setForm.hidden = mode !== 'set';
     if (requestForm) requestForm.hidden = mode !== 'request';
     if (activateForm) activateForm.hidden = mode !== 'activate';
 
     if (title) {
-      title.textContent =
-        mode === 'set'
-          ? 'Choose a new password'
-          : mode === 'activate'
-            ? 'Reset your password'
-            : 'Reset your password';
+      if (confirmMode && mode === 'activate') title.textContent = 'Confirm your email';
+      else if (mode === 'set') title.textContent = 'Choose a new password';
+      else title.textContent = 'Reset your password';
     }
     if (lead) {
-      lead.textContent =
-        mode === 'set'
-          ? 'Enter a new password for your member account, then continue to the dashboard.'
-          : mode === 'activate'
-            ? 'Tap Continue to open the password form. This step keeps email scanners from using up your link.'
-            : 'Your email link expired or was already used. Enter your email and we will send a fresh reset link.';
+      if (confirmMode && mode === 'activate') {
+        lead.textContent =
+          'Tap Continue to confirm your email. This step keeps email scanners from using up your link.';
+      } else if (mode === 'set') {
+        lead.textContent =
+          'Enter a new password for your member account, then continue to the dashboard.';
+      } else if (mode === 'activate') {
+        lead.textContent =
+          'Tap Continue to open the password form. This step keeps email scanners from using up your link.';
+      } else {
+        lead.textContent =
+          'Your email link expired or was already used. Enter your email and we will send a fresh reset link.';
+      }
     }
-    document.title = 'Reset password | Taunet Nelel';
+    document.title = (confirmMode ? 'Confirm email' : 'Reset password') + ' | Taunet Nelel';
+
+    const activateBtn = activateForm?.querySelector('button[type="submit"]');
+    if (activateBtn && confirmMode && mode === 'activate') {
+      activateBtn.textContent = 'Continue to confirm email';
+    } else if (activateBtn && mode === 'activate') {
+      activateBtn.textContent = 'Continue to choose a new password';
+    }
+  }
+
+  function authLinkType(callbackType) {
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    return String(callbackType || params.get('type') || hash.get('type') || '').toLowerCase();
   }
 
   function isPasswordRecoveryContext(callbackType) {
-    const params = new URLSearchParams(window.location.search);
-    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    const type = String(callbackType || params.get('type') || hash.get('type') || '').toLowerCase();
-    return type === 'recovery';
+    return authLinkType(callbackType) === 'recovery';
+  }
+
+  function isSignupConfirmContext(callbackType) {
+    const type = authLinkType(callbackType);
+    return type === 'signup' || type === 'email' || type === 'confirmation';
   }
 
   async function initAuth() {
@@ -404,7 +424,7 @@
           await authApi.requestPasswordReset(email);
           showAuthMessage(
             loginForm,
-            'If that email has an account, a reset link was sent from members@taunetnelel.org. Check Inbox first; if it is in Spam, tap Not spam and add the address to Contacts.',
+            'If that email has an account, a reset link was sent from members@taunetnelel.org. Add that address to Contacts, check Inbox first, then Spam — mark Not spam if needed.',
             false
           );
         } catch (error) {
@@ -455,7 +475,7 @@
           showAuthMessage(
             registerForm,
             result.needsEmailConfirmation
-              ? 'Account created. Opening PayID payment… (also confirm the email we sent you).'
+              ? 'Account created. Opening PayID payment… Also confirm the email from members@taunetnelel.org (add to Contacts; check Spam).'
               : 'Account created. Opening PayID payment…',
             false
           );
@@ -522,8 +542,12 @@
         }
         if (callback?.pendingVerify && callback?.tokenHash) {
           pendingTokenHash = callback.tokenHash;
-          recoveryMode = true;
-          showResetPasswordPanel('activate');
+          if (isSignupConfirmContext(callback?.type)) {
+            showResetPasswordPanel('activate', 'signup');
+          } else {
+            recoveryMode = true;
+            showResetPasswordPanel('activate');
+          }
         }
         const sessionMember = await authApi.getSessionMember();
 
@@ -654,6 +678,24 @@
           pendingTokenHash = '';
           const member = await authApi.getSessionMember();
           if (member) setMember(member);
+
+          if (isSignupConfirmContext(linkType)) {
+            showAuthMessage(
+              resetActivateForm,
+              'Email confirmed. Opening PayID payment…',
+              false
+            );
+            window.setTimeout(() => {
+              goToMembershipPayment(
+                member || {
+                  email: prefillEmail || '',
+                  name: prefillName || '',
+                }
+              );
+            }, 500);
+            return;
+          }
+
           showResetPasswordPanel('set');
           if (resetForm) {
             showAuthMessage(
@@ -663,15 +705,34 @@
             );
           }
         } catch (error) {
-          showResetPasswordPanel('request');
-          if (resetRequestForm) {
-            showAuthMessage(
-              resetRequestForm,
-              error?.expired || /invalid|expired/i.test(String(error?.message || ''))
-                ? 'That reset link is no longer valid. Enter your email below for a fresh link.'
-                : authErrorMessage(error),
-              true
-            );
+          if (isSignupConfirmContext()) {
+            if (loginForm) {
+              document.querySelectorAll('[data-auth-panel]').forEach((panel) => {
+                const on = panel.getAttribute('data-auth-panel') === 'signin';
+                panel.classList.toggle('is-active', on);
+                panel.hidden = !on;
+              });
+              const tabs = document.querySelector('.auth-tabs');
+              if (tabs) tabs.hidden = false;
+              showAuthMessage(
+                loginForm,
+                error?.expired || /invalid|expired/i.test(String(error?.message || ''))
+                  ? 'That confirmation link is no longer valid. Sign in, or use Forgot password for a fresh link from members@taunetnelel.org.'
+                  : authErrorMessage(error),
+                true
+              );
+            }
+          } else {
+            showResetPasswordPanel('request');
+            if (resetRequestForm) {
+              showAuthMessage(
+                resetRequestForm,
+                error?.expired || /invalid|expired/i.test(String(error?.message || ''))
+                  ? 'That reset link is no longer valid. Enter your email below for a fresh link.'
+                  : authErrorMessage(error),
+                true
+              );
+            }
           }
         } finally {
           authBusy = false;
@@ -695,7 +756,7 @@
           await authApi.requestPasswordReset(email);
           showAuthMessage(
             resetRequestForm,
-            'If that email has an account, a fresh reset link was sent from members@taunetnelel.org. Open it from Inbox (not Spam).',
+            'If that email has an account, a fresh reset link was sent from members@taunetnelel.org. Add that address to Contacts, then open the link from Inbox (mark Not spam if needed).',
             false
           );
         } catch (error) {

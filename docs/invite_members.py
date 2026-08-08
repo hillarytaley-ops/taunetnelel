@@ -243,7 +243,11 @@ def send_resend(email: str, subject: str, text: str, html: str, tag: str) -> Non
         "text": text,
         "reply_to": RESEND_REPLY_TO,
         "tags": [{"name": "category", "value": tag}],
-        "headers": {"X-Entity-Ref-ID": f"taunet-invite-{int(time.time())}"},
+        "headers": {
+            "X-Entity-Ref-ID": f"taunet-invite-{int(time.time())}",
+            "List-Id": "<members.taunetnelel.org>",
+            "X-Auto-Response-Suppress": "OOF, AutoReply",
+        },
     }
     req = urllib.request.Request(
         "https://api.resend.com/emails",
@@ -286,7 +290,8 @@ def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[st
         f"The link stays usable until you set a password (or until it expires — usually up to 24 hours).\n\n"
         f"Questions? info@taunetnelel.org\n"
         f"Taunet Nelel Welfare Association — Victoria, Australia\n"
-        f"https://taunetnelel.org\n"
+        f"https://taunetnelel.vercel.app\n"
+        f"Portal emails come from members@taunetnelel.org — add that address to Contacts.\n"
     )
     html = (
         "<!DOCTYPE html><html><body style='font-family:Arial,Helvetica,sans-serif;"
@@ -300,8 +305,10 @@ def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[st
         f'display:inline-block;font-weight:700;">{cta}</a></p>'
         f"<p style='font-size:13px;color:#555;word-break:break-all;'>{action_link}</p>"
         f"<p style='font-size:13px;color:#666;'>If you did not request this, ignore this email.</p>"
-        f"<p style='font-size:13px;'>Taunet Nelel · Victoria, Australia · "
+        f"<p style='font-size:13px;'>Taunet Nelel Welfare Association · Victoria, Australia · "
         f"<a href='mailto:info@taunetnelel.org'>info@taunetnelel.org</a></p>"
+        f"<p style='font-size:12px;color:#777;'>Portal emails come from "
+        f"<strong>members@taunetnelel.org</strong>. Add that address to Contacts.</p>"
         f"</body></html>"
     )
     return subject, text, html

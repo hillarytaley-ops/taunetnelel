@@ -3,18 +3,10 @@
  */
 
 const { buildInvoicePdf } = require('./invoice-pdf');
+const { sendResendEmail, assertResendConfigured } = require('./member-mail');
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
-const RESEND_FROM = (
-  process.env.RESEND_FROM ||
-  'Taunet Nelel <members@taunetnelel.org>'
-).trim();
-const RESEND_REPLY_TO = (
-  process.env.RESEND_REPLY_TO ||
-  'info@taunetnelel.org'
-).trim();
 
 const ORG_LEGAL_NAME = (process.env.ORG_LEGAL_NAME || 'Taunet Nelel Incorporated').trim();
 const ORG_ABN = (process.env.ORG_ABN || '').trim();
@@ -143,11 +135,7 @@ function buildEmailHtml(invoice) {
 }
 
 async function sendInvoiceEmail(invoice) {
-  if (!RESEND_API_KEY) {
-    const err = new Error('RESEND_API_KEY is not configured on the server.');
-    err.status = 500;
-    throw err;
-  }
+  assertResendConfigured();
   if (!paymentConfigured()) {
     const err = new Error(
       'Payment details are not configured (set PAYID and/or BANK_BSB + BANK_ACCOUNT_NUMBER on Vercel).'
@@ -177,9 +165,8 @@ async function sendInvoiceEmail(invoice) {
     bankAccountName: BANK_ACCOUNT_NAME,
   });
 
-  const payload = {
-    from: RESEND_FROM,
-    to: [invoice.email],
+  return sendResendEmail({
+    to: invoice.email,
     subject: `Payment request ${invoice.invoice_number} — Taunet Nelel`,
     html: buildEmailHtml(invoice),
     text:
@@ -190,8 +177,9 @@ async function sendInvoiceEmail(invoice) {
       `Reference: ${invoice.pay_reference}\n` +
       (PAYID ? `PayID: ${PAYID}\n` : '') +
       `This is not a receipt. You will receive a paid receipt after the Treasurer confirms your payment.\n` +
-      `Questions: info@taunetnelel.org\n`,
-    reply_to: RESEND_REPLY_TO,
+      `Questions: info@taunetnelel.org\n` +
+      `Taunet Nelel Welfare Association · Victoria, Australia\n` +
+      `Portal emails come from members@taunetnelel.org — add that address to Contacts.\n`,
     attachments: [
       {
         filename: `${invoice.invoice_number}-payment-request.pdf`,
@@ -199,25 +187,8 @@ async function sendInvoiceEmail(invoice) {
       },
     ],
     tags: [{ name: 'category', value: 'invoice-request' }],
-    headers: { 'User-Agent': 'taunet-invoices/1.0' },
-  };
-
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'taunet-invoices/1.0',
-    },
-    body: JSON.stringify(payload),
+    refId: `taunet-invoice-${invoice.invoice_number}`,
   });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    const err = new Error(data?.message || 'Resend failed to send invoice email');
-    err.status = 502;
-    throw err;
-  }
-  return data;
 }
 
 function formatDateTime(d) {
@@ -262,11 +233,7 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
     err.status = 400;
     throw err;
   }
-  if (!RESEND_API_KEY) {
-    const err = new Error('RESEND_API_KEY is not configured on the server.');
-    err.status = 500;
-    throw err;
-  }
+  assertResendConfigured();
 
   const paidInvoice = {
     ...invoice,
@@ -294,9 +261,8 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
     bankAccountName: BANK_ACCOUNT_NAME,
   });
 
-  const payload = {
-    from: RESEND_FROM,
-    to: [paidInvoice.email],
+  return sendResendEmail({
+    to: paidInvoice.email,
     subject: `Payment confirmed — ${paidInvoice.invoice_number} — Taunet Nelel`,
     html: buildPaidEmailHtml(paidInvoice),
     text:
@@ -306,8 +272,9 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
       `Amount paid: ${formatAud(paidInvoice.amount_cents)} AUD\n` +
       `Paid: ${formatDateTime(paidInvoice.paid_at)}\n` +
       `Reference: ${paidInvoice.pay_reference || ''}\n` +
-      `Questions: info@taunetnelel.org\n`,
-    reply_to: RESEND_REPLY_TO,
+      `Questions: info@taunetnelel.org\n` +
+      `Taunet Nelel Welfare Association · Victoria, Australia\n` +
+      `Portal emails come from members@taunetnelel.org — add that address to Contacts.\n`,
     attachments: [
       {
         filename: `${paidInvoice.invoice_number}-paid.pdf`,
@@ -315,25 +282,8 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
       },
     ],
     tags: [{ name: 'category', value: 'invoice-paid' }],
-    headers: { 'User-Agent': 'taunet-invoices/1.0' },
-  };
-
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'taunet-invoices/1.0',
-    },
-    body: JSON.stringify(payload),
+    refId: `taunet-paid-${paidInvoice.invoice_number}`,
   });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    const err = new Error(data?.message || 'Resend failed to send paid invoice email');
-    err.status = 502;
-    throw err;
-  }
-  return data;
 }
 
 async function createAndEmailInvoice({
@@ -589,11 +539,7 @@ function buildReminderEmailHtml(invoice, kind) {
 }
 
 async function sendInvoiceReminderEmail(invoice, reminderKind) {
-  if (!RESEND_API_KEY) {
-    const err = new Error('RESEND_API_KEY is not configured on the server.');
-    err.status = 500;
-    throw err;
-  }
+  assertResendConfigured();
 
   const kind = reminderKind === 'due' ? 'due' : 'issue';
   const pdf = buildInvoicePdf({
@@ -621,9 +567,8 @@ async function sendInvoiceReminderEmail(invoice, reminderKind) {
       ? `Reminder: ${invoice.invoice_number} due — Taunet Nelel`
       : `Invoice ${invoice.invoice_number} — installment ready — Taunet Nelel`;
 
-  const payload = {
-    from: RESEND_FROM,
-    to: [invoice.email],
+  return sendResendEmail({
+    to: invoice.email,
     subject,
     html: buildReminderEmailHtml(invoice, kind),
     text:
@@ -631,8 +576,9 @@ async function sendInvoiceReminderEmail(invoice, reminderKind) {
       `${invoice.description}\n` +
       `Amount: ${formatAud(invoice.amount_cents)} AUD\n` +
       `Due: ${formatDate(invoice.due_at)}\n` +
-      `Reference: ${invoice.pay_reference}\n`,
-    reply_to: RESEND_REPLY_TO,
+      `Reference: ${invoice.pay_reference}\n` +
+      `Questions: info@taunetnelel.org\n` +
+      `Portal emails come from members@taunetnelel.org — add that address to Contacts.\n`,
     attachments: [
       {
         filename: `${invoice.invoice_number}.pdf`,
@@ -640,23 +586,8 @@ async function sendInvoiceReminderEmail(invoice, reminderKind) {
       },
     ],
     tags: [{ name: 'category', value: 'invoice-reminder' }],
-  };
-
-  const resp = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    refId: `taunet-reminder-${invoice.invoice_number}-${kind}`,
   });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) {
-    const err = new Error(data?.message || 'Resend failed to send reminder');
-    err.status = 502;
-    throw err;
-  }
-  return data;
 }
 
 /**
