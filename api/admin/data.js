@@ -619,6 +619,28 @@ async function countRows(table, query = '') {
 /** Same rows as supabase/migrations/014_seed_events.sql */
 const SEED_EVENTS = [
   {
+    id: 'men-s-camp-2026-08-01',
+    title: "Men's Camp",
+    summary:
+      'All States Men’s Camp — book and pay by PayID or bank transfer ($100 single / $150 two people).',
+    location: 'Springbrook',
+    meta: '1–2 August 2026 · Springbrook',
+    badge: 'Recently ended',
+    image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
+    booking_url: 'pay/event.html?event=men-s-camp-2026-08-01',
+    gallery_url: 'gallery.html#men-s-camp-2026-08-01',
+    start_at: '2026-08-01T21:00:00+00:00',
+    end_at: '2026-08-02T21:00:00+00:00',
+    featured: true,
+    registration_open: true,
+    is_published: true,
+    fee_cents: 10000,
+    ticket_prices: [
+      { id: 'single', label: 'Single', amount_cents: 10000 },
+      { id: 'couple', label: 'Two people', amount_cents: 15000 }
+    ]
+  },
+  {
     id: 'cultural-week-2026',
     title: 'Winter Cultural Week',
     summary: 'A week of language, culture, and community activities across Victoria.',
@@ -1145,12 +1167,34 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'seed-events') {
-        const { data } = await sb('events?on_conflict=id', {
-          method: 'POST',
-          prefer: 'resolution=merge-duplicates,return=representation',
-          body: JSON.stringify(SEED_EVENTS)
-        });
-        return json(res, 200, { ok: true, count: Array.isArray(data) ? data.length : SEED_EVENTS.length });
+        const postSeed = (rows) =>
+          sb('events?on_conflict=id', {
+            method: 'POST',
+            prefer: 'resolution=merge-duplicates,return=representation',
+            body: JSON.stringify(rows)
+          });
+        try {
+          const { data } = await postSeed(SEED_EVENTS);
+          return json(res, 200, {
+            ok: true,
+            count: Array.isArray(data) ? data.length : SEED_EVENTS.length
+          });
+        } catch (err) {
+          if (!isMissingTicketPricesError(err) && !isMissingFeeCentsError(err)) throw err;
+          const stripped = SEED_EVENTS.map((row) => {
+            const next = { ...row };
+            if (isMissingTicketPricesError(err)) delete next.ticket_prices;
+            if (isMissingFeeCentsError(err)) delete next.fee_cents;
+            return next;
+          });
+          const { data } = await postSeed(stripped);
+          return json(res, 200, {
+            ok: true,
+            count: Array.isArray(data) ? data.length : stripped.length,
+            warning:
+              'Seeded events. Run APPLY-INVOICES.sql (migration 022) so Single / Two people prices save on the event row.'
+          });
+        }
       }
 
       if (resource === 'seed-gallery') {
