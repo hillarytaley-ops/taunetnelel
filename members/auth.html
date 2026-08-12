@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=25">
+  <link rel="stylesheet" href="../assets/css/members.css?v=26">
 </head>
 <body class="login-page auth-unified-page">
   <div class="login-bg" aria-hidden="true"></div>
@@ -113,14 +113,21 @@
         </form>
       </div>
 
-      <!-- Join / register -->
+      <!-- Join / register — always Basic Plan $50, then PayID -->
       <div class="auth-panel" data-auth-panel="join" role="tabpanel" aria-labelledby="tab-join" hidden>
         <div class="login-card__header">
           <h1>Join our community</h1>
-          <p>Celebrate Kalenjin heritage across Australia.</p>
+          <p>Create your account, then pay the <strong>$50 Basic Plan</strong> by PayID. Membership unlocks after the Treasurer confirms your transfer.</p>
         </div>
         <form class="login-form auth-join-form" id="register-form" method="post" action="?tab=join" novalidate>
           <p class="auth-form__message" role="status" hidden></p>
+          <div class="join-fee" aria-label="Membership fee">
+            <div class="join-fee__row">
+              <span class="join-fee__name">Basic Plan</span>
+              <span class="join-fee__price">$50 <span class="join-fee__period">/ year</span></span>
+            </div>
+            <p class="join-fee__note">Annual association membership. Next step is PayID details — not a free signup.</p>
+          </div>
           <div class="auth-join-grid">
             <div class="form-group">
               <label for="join-name">Full name</label>
@@ -146,7 +153,7 @@
             </div>
           </div>
           <input type="hidden" name="plan" value="basic">
-          <button type="submit" class="btn btn--primary login-submit">Create account</button>
+          <button type="submit" class="btn btn--primary login-submit">Create account &amp; pay $50</button>
           <p class="login-form__footer">
             Already a member?
             <button type="button" class="auth-inline-link" data-auth-tab="signin">Sign in</button>
@@ -195,7 +202,7 @@
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=5"></script>
   <script src="../assets/js/members-auth.js?v=16"></script>
-  <script src="../assets/js/members.js?v=35"></script>
+  <script src="../assets/js/members.js?v=36"></script>
   <script>
     (function () {
       sessionStorage.removeItem('taunet_admin_bootstrap_pin');

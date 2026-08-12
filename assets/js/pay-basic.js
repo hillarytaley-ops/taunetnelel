@@ -27,7 +27,10 @@
     statusEl.hidden = false;
     statusEl.classList.remove('is-error');
     statusEl.textContent =
-      'Account created. Enter the same details below to get your $50 PayID invoice. Confirm your email if you received a confirmation link.';
+      'Account created. Preparing your $50 Basic Plan PayID invoice…';
+    if (form?.full_name?.value && form?.email?.value) {
+      window.setTimeout(() => form.requestSubmit(), 250);
+    }
   } else if (params.get('reason') === 'membership' && statusEl && stepForm && !stepForm.hidden) {
     statusEl.hidden = false;
     statusEl.classList.remove('is-error');
