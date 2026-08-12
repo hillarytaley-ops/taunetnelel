@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=24">
+  <link rel="stylesheet" href="../assets/css/members.css?v=25">
 </head>
 <body class="login-page auth-unified-page">
   <div class="login-bg" aria-hidden="true"></div>
@@ -347,8 +347,8 @@
             var msg = err.message || 'Could not sign in.';
             if (/invalid login credentials/i.test(msg)) {
               msg =
-                'Invalid email or password. Click Show password to check what was typed, ' +
-                'or use Forgot password (browser may have filled an older saved password).';
+                'Invalid email or password. Click Show (right of the password box) to check what was typed. ' +
+                'If it still fails, use Forgot password — the browser may have filled an older saved password.';
             }
             adminStatus.textContent = msg;
           }

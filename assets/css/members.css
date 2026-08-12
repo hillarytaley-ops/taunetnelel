@@ -1079,12 +1079,13 @@
 }
 
 .input-password__toggle--dark {
-  color: #f3e6d4;
+  color: #5c2e10;
+  background: rgba(92, 46, 16, 0.08);
 }
 
 .input-password__toggle--dark:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
+  color: #3d1c08;
+  background: rgba(92, 46, 16, 0.16);
 }
 
 .input-password__toggle:hover {
