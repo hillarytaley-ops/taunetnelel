@@ -1045,6 +1045,10 @@
   padding-right: 2.75rem;
 }
 
+.input-password:has(.input-password__toggle--label) input {
+  padding-right: 4.75rem;
+}
+
 .input-password__toggle {
   position: absolute;
   right: 0.65rem;
@@ -1062,6 +1066,25 @@
   color: var(--color-text-muted);
   cursor: pointer;
   transition: color var(--transition), background var(--transition);
+}
+
+.input-password__toggle--label {
+  width: auto;
+  min-width: 3.4rem;
+  padding: 0 0.45rem;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.input-password__toggle--dark {
+  color: #f3e6d4;
+}
+
+.input-password__toggle--dark:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .input-password__toggle:hover {
