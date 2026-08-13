@@ -824,22 +824,46 @@
   function initPageHeroLayout() {
     if (document.body.dataset.page === 'home') return;
 
-    // Center hero copy only — no flanking logo orbs (those made pages look off-center).
+    const sideLogoPages = new Set(['events', 'community']);
+    const addSideLogos = sideLogoPages.has(document.body.dataset.page);
+    const { src: logoSrc, alt: logoAlt } = getLogoAsset();
+
     document.querySelectorAll('.page-hero').forEach((hero) => {
+      // Unwrap any legacy three-column layout so copy stays centered
       const layout = hero.querySelector('.page-hero__layout');
       if (layout) {
-        const content = layout.querySelector('.page-hero__content') || layout.querySelector('.container');
+        const content =
+          layout.querySelector('.page-hero__content') || layout.querySelector('.container');
         layout.querySelectorAll('.page-hero__logo').forEach((logo) => logo.remove());
         if (content) {
           content.classList.add('page-hero__content');
           hero.insertBefore(content, layout);
         }
         layout.remove();
-        return;
       }
 
       const container = hero.querySelector('.container');
       if (container) container.classList.add('page-hero__content');
+
+      if (!addSideLogos) {
+        hero.querySelectorAll('.page-hero__logo').forEach((logo) => logo.remove());
+        return;
+      }
+
+      if (hero.querySelector('.page-hero__logo')) return;
+
+      const left = document.createElement('div');
+      left.className = 'page-hero__logo page-hero__logo--left';
+      left.setAttribute('aria-hidden', 'true');
+      left.innerHTML = createLogoRingMarkup(logoSrc, logoAlt);
+
+      const right = document.createElement('div');
+      right.className = 'page-hero__logo page-hero__logo--right';
+      right.setAttribute('aria-hidden', 'true');
+      right.innerHTML = createLogoRingMarkup(logoSrc, logoAlt);
+
+      hero.appendChild(left);
+      hero.appendChild(right);
     });
   }
 

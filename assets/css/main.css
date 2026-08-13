@@ -2211,13 +2211,29 @@ body[data-page="welfare"] {
   margin-inline: auto;
 }
 
+/* Flanking spinning logos — shown only on pages that opt in via body[data-page] */
 .page-hero__logo {
   display: none;
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%);
+  pointer-events: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-hero__logo--left {
+  left: clamp(0.65rem, 3.2vw, 2.75rem);
+}
+
+.page-hero__logo--right {
+  right: clamp(0.65rem, 3.2vw, 2.75rem);
 }
 
 .page-hero__logo .hero__logo-ring {
-  width: min(120px, 12vw);
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.35));
+  width: min(118px, 13vw);
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.45));
 }
 
 .page-hero__logo .hero__logo-ring::before {
@@ -2232,6 +2248,12 @@ body[data-page="welfare"] {
 
 .page-hero__logo .hero__logo-ring--sm {
   width: min(96px, 10vw);
+}
+
+@media (max-width: 900px) {
+  .page-hero__logo {
+    display: none !important;
+  }
 }
 
 /* Shared spinning logo ring */
@@ -2309,7 +2331,7 @@ body[data-page="welfare"] {
   }
 
   .page-hero__logo {
-    display: none;
+    display: none !important;
   }
 }
 

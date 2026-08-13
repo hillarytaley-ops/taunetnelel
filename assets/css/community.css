@@ -108,6 +108,41 @@ body[data-page="community"] .page-hero--community .page-hero__content {
   width: 100%;
 }
 
+/* Side logos sit in the dark brown gutters beside the centered photo */
+body[data-page="community"] .page-hero--community > .page-hero__logo {
+  display: flex;
+}
+
+body[data-page="community"] .page-hero__logo .hero__logo-ring {
+  width: min(126px, 15vw);
+}
+
+body[data-page="community"] .page-hero__logo .hero__logo-ring::before {
+  inset: -16%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(248, 245, 240, 0.08) 40%,
+    transparent 70%
+  );
+  box-shadow: none;
+}
+
+body[data-page="community"] .page-hero__logo .logo-spinner__img {
+  mix-blend-mode: lighten;
+  filter:
+    drop-shadow(0 4px 14px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 16px rgba(255, 180, 100, 0.35));
+}
+
+body[data-page="community"] .page-hero__logo .hero__orbit--inner {
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+body[data-page="community"] .page-hero__logo .hero__orbit--outer {
+  border-color: rgba(232, 148, 72, 0.95);
+}
+
 body[data-page="community"] .community-hero__card {
   background: transparent;
   border: none;

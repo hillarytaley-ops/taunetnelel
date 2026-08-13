@@ -20,6 +20,41 @@ body[data-page="events"] .page-hero::before {
   );
 }
 
+/* Side logos over busy photo — dark disc so bright florals do not wash them out */
+body[data-page="events"] .page-hero > .page-hero__logo {
+  display: flex;
+}
+
+body[data-page="events"] .page-hero__logo .hero__logo-ring {
+  width: min(108px, 12.5vw);
+}
+
+body[data-page="events"] .page-hero__logo .hero__logo-ring::before {
+  inset: -20%;
+  background: radial-gradient(
+    circle,
+    rgba(18, 10, 4, 0.82) 0%,
+    rgba(18, 10, 4, 0.55) 42%,
+    transparent 72%
+  );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+body[data-page="events"] .page-hero__logo .logo-spinner__img {
+  mix-blend-mode: normal;
+  filter:
+    drop-shadow(0 2px 8px rgba(0, 0, 0, 0.65))
+    drop-shadow(0 0 14px rgba(255, 200, 140, 0.35));
+}
+
+body[data-page="events"] .page-hero__logo .hero__orbit--inner {
+  border-color: rgba(255, 255, 255, 0.92);
+}
+
+body[data-page="events"] .page-hero__logo .hero__orbit--outer {
+  border-color: rgba(232, 148, 72, 0.95);
+}
+
 body[data-page="events"] .page-subnav--links {
   padding: 0;
   background: rgba(255, 255, 255, 0.97);
