@@ -1,6 +1,27 @@
 ﻿-- APPLY INVOICE + MEMBERSHIP GATE + TICKET PRICES
--- Run AFTER docs/supabase/APPLY-REMAINING.sql (needs is_site_admin()).
+-- Prerequisites (run first if this errors with "events does not exist"):
+--   1) supabase/migrations/001_initial_schema.sql
+--   2) docs/supabase/APPLY-REMAINING.sql  (needs is_site_admin())
 -- Supabase → SQL Editor → New query → Paste → Run
+
+-- Safety: invoices alter events; create the table if 001 was never applied.
+create table if not exists public.events (
+  id text primary key,
+  title text not null,
+  summary text,
+  location text,
+  meta text,
+  badge text,
+  image_path text,
+  booking_url text,
+  gallery_url text,
+  start_at timestamptz not null,
+  end_at timestamptz,
+  featured boolean not null default false,
+  registration_open boolean not null default false,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now()
+);
 
 
 -- ===== supabase/migrations/020_invoices.sql =====
@@ -16,7 +37,7 @@ create table if not exists public.invoices (
   user_id uuid references auth.users (id) on delete set null,
   email text not null,
   full_name text not null default '',
-  kind text not null check (kind in ('association', 'welfare', 'event')),
+  kind text not null check (kind in ('association', 'welfare', 'event', 'donation')),
   description text not null,
   amount_cents integer not null check (amount_cents > 0),
   currency text not null default 'AUD',
@@ -219,3 +240,7 @@ select
     select 1 from information_schema.columns
     where table_schema = 'public' and table_name = 'events' and column_name = 'ticket_prices'
   ) as events_ticket_prices;
+
+-- If invoices table already existed before donation support, also run:
+--   docs/supabase/APPLY-DONATION-KIND.sql
+-- (allows kind = 'donation' for PayID gifts)

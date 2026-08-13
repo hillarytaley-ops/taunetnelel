@@ -1226,7 +1226,17 @@
             ${escapeHtml(row.full_name || '—')}
             <div class="admin-detail">${escapeHtml(row.email || '')}</div>
           </td>
-          <td>${escapeHtml(row.kind || '—')}</td>
+          <td>${escapeHtml(
+            row.kind === 'donation'
+              ? 'Donation'
+              : row.kind === 'association'
+                ? 'Association'
+                : row.kind === 'welfare'
+                  ? 'Welfare'
+                  : row.kind === 'event'
+                    ? 'Event'
+                    : row.kind || '—'
+          )}</td>
           <td>${escapeHtml(amount)}</td>
           <td><span class="admin-chip admin-chip--${status === 'paid' ? 'reviewed' : status === 'pending' ? 'new' : ''}">${escapeHtml(status)}</span></td>
           <td class="admin-detail">${escapeHtml(formatDate(row.due_at))}</td>

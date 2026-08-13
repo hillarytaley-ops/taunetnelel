@@ -26,7 +26,15 @@ const KIND_DEFAULTS = {
     amount_cents: 30000,
     description: 'Welfare Association membership fee (AUD $300)',
   },
+  donation: {
+    amount_cents: 5000,
+    description: 'Community donation — Taunet Nelel',
+  },
 };
+
+/** Min/max donation via public PayID portal (AUD cents). */
+const DONATION_MIN_CENTS = 1000; // $10
+const DONATION_MAX_CENTS = 500000; // $5,000
 
 function escapeHtml(s) {
   return String(s)
@@ -305,7 +313,7 @@ async function createAndEmailInvoice({
   }
 
   const normalizedKind = String(kind || '').toLowerCase();
-  if (!['association', 'welfare', 'event'].includes(normalizedKind)) {
+  if (!['association', 'welfare', 'event', 'donation'].includes(normalizedKind)) {
     const err = new Error('Invalid invoice kind.');
     err.status = 400;
     throw err;
@@ -342,6 +350,22 @@ async function createAndEmailInvoice({
         finalAmount === 10000
           ? 'Welfare Plus — installment (AUD $100)'
           : defaults.description;
+    }
+  } else if (normalizedKind === 'donation') {
+    const defaults = KIND_DEFAULTS.donation;
+    finalAmount = Math.round(Number(amountCents));
+    if (!Number.isFinite(finalAmount) || finalAmount < DONATION_MIN_CENTS) {
+      const err = new Error(`Minimum donation is ${formatAud(DONATION_MIN_CENTS)} AUD.`);
+      err.status = 400;
+      throw err;
+    }
+    if (finalAmount > DONATION_MAX_CENTS) {
+      const err = new Error(`Maximum donation via this form is ${formatAud(DONATION_MAX_CENTS)} AUD.`);
+      err.status = 400;
+      throw err;
+    }
+    if (!finalDescription) {
+      finalDescription = `${defaults.description} (${formatAud(finalAmount)})`;
     }
   } else {
     if (resolvedEventId) {
@@ -680,5 +704,7 @@ module.exports = {
   getPublicPaymentDetails,
   formatAud,
   KIND_DEFAULTS,
+  DONATION_MIN_CENTS,
+  DONATION_MAX_CENTS,
   sb,
 };

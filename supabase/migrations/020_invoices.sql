@@ -9,7 +9,7 @@ create table if not exists public.invoices (
   user_id uuid references auth.users (id) on delete set null,
   email text not null,
   full_name text not null default '',
-  kind text not null check (kind in ('association', 'welfare', 'event')),
+  kind text not null check (kind in ('association', 'welfare', 'event', 'donation')),
   description text not null,
   amount_cents integer not null check (amount_cents > 0),
   currency text not null default 'AUD',
