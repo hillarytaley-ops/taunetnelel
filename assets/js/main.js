@@ -814,6 +814,13 @@
     logoLink.innerHTML = createLogoRingMarkup(src, alt);
   }
 
+  function initHomeHeroLogo() {
+    const mount = document.querySelector('[data-home-hero-logo]');
+    if (!mount || mount.querySelector('.hero__logo-ring')) return;
+    const { src, alt } = getLogoAsset();
+    mount.innerHTML = createLogoRingMarkup(src, alt);
+  }
+
   function initPageHeroLayout() {
     if (document.body.dataset.page === 'home') return;
 
@@ -848,6 +855,7 @@
 
   initTribalStrips();
   initHeaderLogo();
+  initHomeHeroLogo();
   initPageHeroLayout();
   initFooterSocial();
 
