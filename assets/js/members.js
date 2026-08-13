@@ -28,7 +28,7 @@
     plan: 'welfare',
     planLabel: 'Association + Welfare',
     welfareRegistered: true,
-    welfarePackage: 'Association + Welfare — Individual',
+    welfarePackage: 'Association + Welfare',
     welfarePackageKey: 'welfare-plus-individual',
     welfareStatus: 'active',
     welfareSince: '2024',
@@ -174,9 +174,7 @@
   }
 
   function packageLabelFromValue(value) {
-    if (value.includes('Family')) return 'Association + Welfare — Family household';
-    if (value.includes('Bereavement')) return 'Welfare Bereavement — Standard';
-    return 'Association + Welfare — Individual';
+    return 'Association + Welfare';
   }
 
   function isAuthPagePath(pathname) {
