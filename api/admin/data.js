@@ -208,6 +208,18 @@ async function requireAdminAccess(req) {
 }
 
 function readBody(req, maxBytes = 4.5e6) {
+  if (req.body != null) {
+    if (typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+      return Promise.resolve(req.body);
+    }
+    if (typeof req.body === 'string') {
+      try {
+        return Promise.resolve(req.body ? JSON.parse(req.body) : {});
+      } catch (_) {
+        return Promise.resolve({});
+      }
+    }
+  }
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (chunk) => {
@@ -1689,6 +1701,21 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      if (resource === 'invoice-delete') {
+        const id = String(body.id || url.searchParams.get('id') || '').trim();
+        if (!id) return json(res, 400, { error: 'Invoice id is required' });
+        const { data: existing } = await sb(
+          `invoices?id=eq.${encodeURIComponent(id)}&select=id,invoice_number`
+        );
+        const row = Array.isArray(existing) ? existing[0] : null;
+        if (!row) return json(res, 404, { error: 'Invoice not found' });
+        await sb(`invoices?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          prefer: 'return=minimal',
+        });
+        return json(res, 200, { ok: true, id, invoice_number: row.invoice_number || null });
+      }
+
       return json(res, 400, { error: 'Unknown POST resource' });
     }
 
@@ -1926,19 +1953,25 @@ module.exports = async function handler(req, res) {
     if (req.method === 'DELETE') {
       const body = await readBody(req);
 
+      if (resource === 'invoice-delete') {
+        const id = String(body.id || url.searchParams.get('id') || '').trim();
+        if (!id) return json(res, 400, { error: 'Invoice id is required' });
+        const { data: existing } = await sb(
+          `invoices?id=eq.${encodeURIComponent(id)}&select=id,invoice_number`
+        );
+        const row = Array.isArray(existing) ? existing[0] : null;
+        if (!row) return json(res, 404, { error: 'Invoice not found' });
+        await sb(`invoices?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          prefer: 'return=minimal',
+        });
+        return json(res, 200, { ok: true, id, invoice_number: row.invoice_number || null });
+      }
+
       if (resource === 'enquiry-delete') {
         const id = String(body.id || '').trim();
         if (!id) return json(res, 400, { error: 'Enquiry id is required' });
         await sb(`form_submissions?id=eq.${encodeURIComponent(id)}`, {
-          method: 'DELETE',
-        });
-        return json(res, 200, { ok: true, id });
-      }
-
-      if (resource === 'invoice-delete') {
-        const id = String(body.id || '').trim();
-        if (!id) return json(res, 400, { error: 'Invoice id is required' });
-        await sb(`invoices?id=eq.${encodeURIComponent(id)}`, {
           method: 'DELETE',
         });
         return json(res, 200, { ok: true, id });

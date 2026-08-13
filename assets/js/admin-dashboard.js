@@ -1543,6 +1543,11 @@
 
     body.querySelectorAll('[data-invoice-delete]').forEach((btn) => {
       btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-invoice-delete') || btn.dataset.invoiceDelete || '';
+        if (!id) {
+          alert('Missing invoice id.');
+          return;
+        }
         if (
           !confirm(
             'Permanently delete this invoice? This cannot be undone. Prefer Void if you only want to cancel it.'
@@ -1550,13 +1555,18 @@
         ) {
           return;
         }
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
         try {
           await adminApi('invoice-delete', {
-            method: 'DELETE',
-            body: { id: btn.dataset.invoiceDelete }
+            method: 'POST',
+            body: { id }
           });
           await loadInvoices();
         } catch (err) {
+          btn.disabled = false;
+          btn.textContent = label;
           alert(err.message || 'Could not delete invoice.');
         }
       });
