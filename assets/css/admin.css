@@ -508,6 +508,8 @@ body[data-page="site-admin"] {
 }
 
 .admin-chip--new { background: rgba(196, 98, 45, 0.18); }
+.admin-chip--open { background: rgba(70, 120, 80, 0.16); color: #2a5234; }
+.admin-chip--closed { background: rgba(100, 100, 100, 0.12); color: #555; }
 .admin-chip--reviewed { background: rgba(70, 120, 80, 0.15); color: #2a5234; }
 .admin-chip--actioned { background: rgba(50, 90, 140, 0.15); color: #1e3d5c; }
 .admin-chip--archived { background: rgba(100, 100, 100, 0.12); color: #555; }
@@ -992,5 +994,134 @@ body[data-page="site-admin"] {
 
   body[data-page="site-admin"].is-admin-nav-open {
     overflow: hidden;
+  }
+}
+
+.ithelp-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  gap: 0.85rem;
+  min-height: min(32rem, 70vh);
+}
+
+.ithelp-threads,
+.ithelp-conversation {
+  background: #fffdf9;
+  border: 1px solid rgba(61, 35, 20, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ithelp-threads {
+  max-height: min(70vh, 38rem);
+  overflow-y: auto;
+}
+
+.ithelp-thread {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  border-bottom: 1px solid rgba(61, 35, 20, 0.08);
+  background: transparent;
+  padding: 0.8rem 0.9rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ithelp-thread:hover,
+.ithelp-thread.is-active {
+  background: rgba(196, 98, 45, 0.08);
+}
+
+.ithelp-thread strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.ithelp-thread .admin-detail {
+  margin-top: 0.2rem;
+}
+
+.ithelp-conversation__head {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(61, 35, 20, 0.1);
+  background: #f7f1e8;
+}
+
+.ithelp-messages {
+  flex: 1;
+  min-height: 14rem;
+  max-height: min(42vh, 22rem);
+  overflow-y: auto;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: #f7f1e8;
+}
+
+.ithelp-bubble {
+  max-width: 88%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ithelp-bubble--member {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid rgba(61, 35, 20, 0.1);
+}
+
+.ithelp-bubble--it {
+  align-self: flex-end;
+  background: #3d2314;
+  color: #f5ebe0;
+}
+
+.ithelp-bubble time {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.ithelp-reply {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid rgba(61, 35, 20, 0.1);
+}
+
+.ithelp-reply textarea {
+  width: 100%;
+  border: 1px solid rgba(61, 35, 20, 0.2);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.ithelp-reply__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 860px) {
+  .ithelp-layout {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .ithelp-threads {
+    max-height: 14rem;
   }
 }

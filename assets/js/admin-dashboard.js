@@ -8,6 +8,7 @@
   const PANELS = [
     'overview',
     'enquiries',
+    'ithelp',
     'members',
     'imports',
     'business',
@@ -31,6 +32,12 @@
     enquiries: [],
     enquiryFilter: 'all',
     enquirySearch: '',
+    itHelpThreads: [],
+    itHelpFilter: 'open',
+    itHelpSelectedId: '',
+    itHelpThread: null,
+    itHelpMessages: [],
+    itHelpPoll: null,
     importFilter: 'all',
     importSearch: '',
     importRows: [],
@@ -106,6 +113,7 @@
     const titles = {
       overview: 'Overview',
       enquiries: 'Enquiries',
+      ithelp: 'IT Help chat',
       members: 'Member profiles',
       imports: 'Association & Welfare',
       business: 'Business Hub',
@@ -120,6 +128,7 @@
     const blurbs = {
       overview: 'Your committee home — counts, alerts, and shortcuts.',
       enquiries: 'Contact, membership, and other form submissions.',
+      ithelp: 'Live portal IT chat. Reply here — members see it in the website chat.',
       members: 'People who have registered or signed in online.',
       imports: 'Association and Welfare membership lists.',
       business: 'Edit business cards, news, and blog posts.',
@@ -134,7 +143,9 @@
     if (title) title.textContent = titles[next] || 'Admin';
     if (blurb) blurb.textContent = blurbs[next] || '';
     history.replaceState(null, '', `#${next}`);
+    if (next !== 'ithelp') stopItHelpPoll();
     if (next === 'enquiries') renderEnquiries();
+    if (next === 'ithelp') renderItHelp();
     setAdminNavOpen(false);
   }
 
@@ -185,6 +196,7 @@
     const params = new URLSearchParams({ resource });
     if (options.filter) params.set('filter', options.filter);
     if (options.status) params.set('status', options.status);
+    if (options.threadId) params.set('thread_id', options.threadId);
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (pin) headers['x-admin-bootstrap-pin'] = pin;
@@ -237,6 +249,7 @@
       const map = {
         'stat-enquiries': data.enquiries,
         'stat-new': data.newEnquiries,
+        'stat-ithelp': data.itHelpOpen,
         'stat-profiles': data.profiles,
         'stat-imports': data.imports,
         'stat-newsletter': data.newsletter
@@ -251,6 +264,12 @@
       const attentionCount = document.getElementById('admin-attention-count');
       if (attentionCount) attentionCount.textContent = String(newCount);
       if (attention) attention.hidden = newCount < 1;
+
+      const itHelpOpen = Number(data.itHelpOpen) || 0;
+      const itHelpBanner = document.getElementById('admin-overview-ithelp');
+      const itHelpCount = document.getElementById('admin-ithelp-count');
+      if (itHelpCount) itHelpCount.textContent = String(itHelpOpen);
+      if (itHelpBanner) itHelpBanner.hidden = itHelpOpen < 1;
 
       const rows = enquiriesData.rows || [];
       state.enquiries = rows;
@@ -382,6 +401,125 @@
         }
       });
     });
+  }
+
+  function stopItHelpPoll() {
+    if (state.itHelpPoll) {
+      clearInterval(state.itHelpPoll);
+      state.itHelpPoll = null;
+    }
+  }
+
+  function startItHelpPoll() {
+    stopItHelpPoll();
+    state.itHelpPoll = setInterval(() => {
+      const active = document.querySelector('[data-admin-panel="ithelp"].is-active');
+      if (!active || !state.isAdmin) {
+        stopItHelpPoll();
+        return;
+      }
+      loadItHelp({ silent: true }).catch(() => {});
+    }, 8000);
+  }
+
+  async function loadItHelp(options = {}) {
+    const status = options.status || state.itHelpFilter || 'open';
+    state.itHelpFilter = status;
+    const data = await adminApi('it-help-threads', { status });
+    state.itHelpThreads = data.rows || [];
+    if (
+      state.itHelpSelectedId &&
+      !state.itHelpThreads.some((row) => row.id === state.itHelpSelectedId)
+    ) {
+      state.itHelpSelectedId = state.itHelpThreads[0]?.id || '';
+      state.itHelpThread = null;
+      state.itHelpMessages = [];
+    }
+    if (state.itHelpSelectedId) {
+      await loadItHelpMessages(state.itHelpSelectedId);
+    }
+    renderItHelp();
+  }
+
+  async function loadItHelpMessages(threadId) {
+    const data = await adminApi('it-help-messages', { threadId });
+    state.itHelpThread = data.thread || null;
+    state.itHelpMessages = data.messages || [];
+  }
+
+  function renderItHelp() {
+    const list = document.getElementById('ithelp-threads');
+    const head = document.getElementById('ithelp-head');
+    const messagesEl = document.getElementById('ithelp-messages');
+    const form = document.getElementById('ithelp-reply-form');
+    const toggle = document.getElementById('ithelp-toggle-status');
+    if (!list) return;
+
+    if (!state.itHelpThreads.length) {
+      list.innerHTML = '<p class="admin-muted">No chats in this filter.</p>';
+    } else {
+      list.innerHTML = state.itHelpThreads
+        .map((row) => {
+          const active = row.id === state.itHelpSelectedId ? ' is-active' : '';
+          return `<button type="button" class="ithelp-thread${active}" data-ithelp-id="${escapeHtml(row.id)}">
+            <span class="admin-chip admin-chip--${escapeHtml(row.status || 'open')}">${escapeHtml(row.status || 'open')}</span>
+            <strong>${escapeHtml(row.full_name || row.email || 'Unknown')}</strong>
+            <div class="admin-detail">${escapeHtml(row.email || '')}<br>${escapeHtml(formatDate(row.last_message_at || row.created_at))}</div>
+          </button>`;
+        })
+        .join('');
+      list.querySelectorAll('[data-ithelp-id]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          state.itHelpSelectedId = btn.dataset.ithelpId;
+          try {
+            await loadItHelpMessages(state.itHelpSelectedId);
+            renderItHelp();
+          } catch (err) {
+            alert(err.message || 'Could not load conversation.');
+          }
+        });
+      });
+    }
+
+    const thread = state.itHelpThread;
+    if (!thread) {
+      if (head) head.innerHTML = '<p class="admin-muted">Select a conversation.</p>';
+      if (messagesEl) messagesEl.innerHTML = '';
+      if (form) form.hidden = true;
+      return;
+    }
+
+    if (head) {
+      head.innerHTML = `<div>
+        <span class="admin-chip admin-chip--${escapeHtml(thread.status)}">${escapeHtml(thread.status)}</span>
+        <strong>${escapeHtml(thread.full_name || thread.email || 'Unknown')}</strong>
+        <div class="admin-detail">${escapeHtml(thread.email || '')}</div>
+      </div>`;
+    }
+
+    if (messagesEl) {
+      const atBottom =
+        messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 64;
+      if (!state.itHelpMessages.length) {
+        messagesEl.innerHTML = '<p class="admin-muted">No messages yet.</p>';
+      } else {
+        messagesEl.innerHTML = state.itHelpMessages
+          .map((m) => {
+            const who = m.sender === 'it' ? 'it' : 'member';
+            const label = who === 'it' ? 'IT' : 'Member';
+            return `<div class="ithelp-bubble ithelp-bubble--${who}">
+              <strong>${label}</strong>
+              <div>${escapeHtml(m.body)}</div>
+              <time>${escapeHtml(formatDate(m.created_at))}</time>
+            </div>`;
+          })
+          .join('');
+        if (atBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+    }
+
+    if (form) form.hidden = false;
+    if (toggle) toggle.textContent = thread.status === 'closed' ? 'Reopen chat' : 'Close chat';
   }
 
   async function loadMembers() {
@@ -1305,6 +1443,8 @@
       return;
     }
 
+    if (id !== 'ithelp') stopItHelpPoll();
+
     if (id === 'overview') {
       try {
         await loadOverview();
@@ -1320,6 +1460,10 @@
     }
     try {
       if (id === 'enquiries') await loadEnquiries();
+      if (id === 'ithelp') {
+        await loadItHelp();
+        startItHelpPoll();
+      }
       if (id === 'members') await loadMembers();
       if (id === 'imports') await loadImports();
       if (id === 'events') await loadEvents();
@@ -1396,6 +1540,51 @@
       renderEnquiries();
     });
 
+    document.getElementById('ithelp-filter')?.addEventListener('change', (e) => {
+      state.itHelpFilter = e.target.value;
+      state.itHelpSelectedId = '';
+      state.itHelpThread = null;
+      state.itHelpMessages = [];
+      if (state.isAdmin) {
+        loadItHelp().catch((err) => alert(err.message || 'Could not load IT Help.'));
+      }
+    });
+
+    document.getElementById('ithelp-reply-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const threadId = state.itHelpSelectedId;
+      const textarea = document.getElementById('ithelp-reply-body');
+      const text = String(textarea?.value || '').trim();
+      if (!threadId) return;
+      if (!text) {
+        alert('Enter a reply.');
+        return;
+      }
+      try {
+        await adminApi('it-help-reply', { method: 'POST', body: { thread_id: threadId, body: text } });
+        if (textarea) textarea.value = '';
+        await loadItHelpMessages(threadId);
+        await loadItHelp({ silent: true });
+      } catch (err) {
+        alert(err.message || 'Could not send reply.');
+      }
+    });
+
+    document.getElementById('ithelp-toggle-status')?.addEventListener('click', async () => {
+      const thread = state.itHelpThread;
+      if (!thread) return;
+      const nextStatus = thread.status === 'closed' ? 'open' : 'closed';
+      try {
+        await adminApi('it-help-close', {
+          method: 'POST',
+          body: { thread_id: thread.id, status: nextStatus }
+        });
+        await loadItHelp();
+      } catch (err) {
+        alert(err.message || 'Could not update chat status.');
+      }
+    });
+
     document.getElementById('imports-filter')?.addEventListener('change', (e) => {
       state.importFilter = e.target.value;
       loadImports();
@@ -1435,6 +1624,7 @@
     bindNav();
 
     els.logoutBtn?.addEventListener('click', async () => {
+      stopItHelpPoll();
       clearBootstrapPin();
       state.isAdmin = false;
       state.user = null;

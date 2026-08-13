@@ -841,7 +841,13 @@ module.exports = async function handler(req, res) {
         } catch (_) {
           newEnquiries = enquiries;
         }
-        return json(res, 200, { enquiries, newEnquiries, profiles, imports, newsletter });
+        let itHelpOpen = 0;
+        try {
+          itHelpOpen = await countRows('it_help_threads', 'status=eq.open');
+        } catch (_) {
+          itHelpOpen = 0;
+        }
+        return json(res, 200, { enquiries, newEnquiries, profiles, imports, newsletter, itHelpOpen });
       }
 
       if (resource === 'enquiries') {
@@ -1037,11 +1043,71 @@ module.exports = async function handler(req, res) {
         });
       }
 
+      if (resource === 'it-help-threads') {
+        const status = url.searchParams.get('status') || 'open';
+        let query =
+          'it_help_threads?select=id,email,full_name,status,last_message_at,created_at&order=last_message_at.desc&limit=100';
+        if (status === 'open' || status === 'closed') {
+          query += `&status=eq.${encodeURIComponent(status)}`;
+        }
+        const { data } = await sb(query);
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'it-help-messages') {
+        const threadId = String(url.searchParams.get('thread_id') || '').trim();
+        if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        const { data: threads } = await sb(
+          `it_help_threads?id=eq.${encodeURIComponent(threadId)}&select=id,email,full_name,status,last_message_at&limit=1`
+        );
+        const thread = Array.isArray(threads) ? threads[0] : null;
+        if (!thread) return json(res, 404, { error: 'Thread not found' });
+        const { data: messages } = await sb(
+          `it_help_messages?thread_id=eq.${encodeURIComponent(threadId)}&select=id,sender,body,created_at&order=created_at.asc&limit=200`
+        );
+        return json(res, 200, { thread, messages: messages || [] });
+      }
+
       return json(res, 400, { error: 'Unknown resource' });
     }
 
     if (req.method === 'POST') {
       const body = await readBody(req);
+
+      if (resource === 'it-help-reply') {
+        const threadId = String(body.thread_id || '').trim();
+        const text = String(body.body || '').trim();
+        if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        if (text.length < 1 || text.length > 2000) {
+          return json(res, 400, { error: 'Enter a reply.' });
+        }
+        await sb('it_help_messages', {
+          method: 'POST',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ thread_id: threadId, sender: 'it', body: text })
+        });
+        await sb(`it_help_threads?id=eq.${encodeURIComponent(threadId)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({
+            status: 'open',
+            last_message_at: new Date().toISOString()
+          })
+        });
+        return json(res, 200, { ok: true });
+      }
+
+      if (resource === 'it-help-close') {
+        const threadId = String(body.thread_id || '').trim();
+        const nextStatus = body.status === 'closed' ? 'closed' : 'open';
+        if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        await sb(`it_help_threads?id=eq.${encodeURIComponent(threadId)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ status: nextStatus })
+        });
+        return json(res, 200, { ok: true, status: nextStatus });
+      }
 
       if (resource === 'business-content-save') {
         const businesses = Array.isArray(body.businesses) ? body.businesses : [];

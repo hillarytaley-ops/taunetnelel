@@ -310,7 +310,8 @@ def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[st
         f"{action_link}\n\n"
         f"Open the link, then tap Continue on the website. "
         f"The link stays usable until you set a password (or until it expires — usually up to 24 hours).\n\n"
-        f"Questions? info@taunetnelel.org\n"
+        f"IT help (live chat): https://www.taunetnelel.org/help.html\n"
+        f"Other questions: info@taunetnelel.org\n"
         f"Taunet Nelel Welfare Association — Victoria, Australia\n"
         f"https://taunetnelel.vercel.app\n"
         f"Portal emails come from members@taunetnelel.org — add that address to Contacts.\n"
@@ -327,7 +328,9 @@ def build_password_mail(action_link: str, full_name: str, kind: str) -> tuple[st
         f'display:inline-block;font-weight:700;">{cta}</a></p>'
         f"<p style='font-size:13px;color:#555;word-break:break-all;'>{action_link}</p>"
         f"<p style='font-size:13px;color:#666;'>If you did not request this, ignore this email.</p>"
-        f"<p style='font-size:13px;'>Taunet Nelel Welfare Association · Victoria, Australia · "
+        f"<p style='font-size:13px;'>Portal IT help: "
+        f"<a href='https://www.taunetnelel.org/help.html'>www.taunetnelel.org/help.html</a> "
+        f"(live chat — IT replies there). Other questions: "
         f"<a href='mailto:info@taunetnelel.org'>info@taunetnelel.org</a></p>"
         f"<p style='font-size:12px;color:#777;'>Portal emails come from "
         f"<strong>members@taunetnelel.org</strong>. Add that address to Contacts.</p>"
@@ -380,7 +383,7 @@ def invite(row: dict, redirect_to: str, *, force_recovery: bool = False) -> str:
             f"Sorry if the first portal invite did not work. Please use this NEW link "
             f"to choose your password (you should see the Choose a new password form):\n\n"
             f"{link}\n\n"
-            f"Ignore the old invite email. Questions: info@taunetnelel.org\n"
+            f"Ignore the old invite email. IT help: https://www.taunetnelel.org/help.html\n"
             f"Taunet Nelel — Victoria, Australia\n"
         )
         html = (
@@ -394,8 +397,8 @@ def invite(row: dict, redirect_to: str, *, force_recovery: bool = False) -> str:
             'color:#fff;text-decoration:none;padding:12px 20px;border-radius:4px;'
             'display:inline-block;font-weight:700;">Choose a new password</a></p>'
             f"<p style='font-size:13px;color:#555;word-break:break-all;'>{link}</p>"
-            "<p style='font-size:13px;'>Ignore the old invite. "
-            "Taunet Nelel · info@taunetnelel.org</p>"
+            "<p style='font-size:13px;'>Ignore the old invite. IT help: "
+            "<a href='https://www.taunetnelel.org/help.html'>www.taunetnelel.org/help.html</a></p>"
         )
     tag = "member_invite" if kind == "set" else "password_reset_rebroadcast"
     send_resend(email, subject, text, html, tag)

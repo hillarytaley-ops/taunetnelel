@@ -1,0 +1,202 @@
+/* Taunet Nelel — public IT Help chat */
+
+.it-help-widget {
+  --it-brown: #3d2314;
+  --it-accent: #c4622d;
+  --it-cream: #f7f1e8;
+  --it-text: #2c1810;
+  font-family: Inter, system-ui, sans-serif;
+  color: var(--it-text);
+}
+
+.it-help-widget--float {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2400;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.it-help-launcher {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  background: var(--it-brown);
+  color: #f5ebe0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  padding: 0.7rem 1.05rem;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(61, 35, 20, 0.28);
+}
+
+.it-help-launcher:hover,
+.it-help-launcher:focus-visible {
+  background: #2a160d;
+  outline: none;
+}
+
+.it-help-panel {
+  width: min(22.5rem, calc(100vw - 1.5rem));
+  max-height: min(34rem, calc(100vh - 6rem));
+  background: #fffdf9;
+  border: 1px solid rgba(61, 35, 20, 0.16);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(44, 24, 16, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.it-help-widget--embed .it-help-launcher {
+  display: none;
+}
+
+.it-help-widget--embed .it-help-panel {
+  width: 100%;
+  max-height: none;
+  min-height: 28rem;
+  box-shadow: none;
+}
+
+.it-help-panel[hidden] {
+  display: none !important;
+}
+
+.it-help-panel__head {
+  background: var(--it-brown);
+  color: #f5ebe0;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.it-help-panel__head strong {
+  display: block;
+  font-family: "DM Sans", sans-serif;
+  font-size: 1rem;
+}
+
+.it-help-panel__head span {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.8;
+  margin-top: 0.15rem;
+}
+
+.it-help-panel__close {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.it-help-widget--embed .it-help-panel__close {
+  display: none;
+}
+
+.it-help-messages {
+  flex: 1;
+  min-height: 12rem;
+  overflow-y: auto;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  background: var(--it-cream);
+}
+
+.it-help-bubble {
+  max-width: 88%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.it-help-bubble--member {
+  align-self: flex-end;
+  background: #fff;
+  border: 1px solid rgba(61, 35, 20, 0.1);
+}
+
+.it-help-bubble--it {
+  align-self: flex-start;
+  background: #3d2314;
+  color: #f5ebe0;
+}
+
+.it-help-bubble time {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.it-help-empty,
+.it-help-status {
+  font-size: 0.85rem;
+  color: #6a5648;
+  margin: 0;
+}
+
+.it-help-status.is-error {
+  color: #8a2b1a;
+}
+
+.it-help-compose {
+  padding: 0.75rem 1rem 0.9rem;
+  display: grid;
+  gap: 0.45rem;
+  background: #fff;
+  border-top: 1px solid rgba(61, 35, 20, 0.1);
+}
+
+.it-help-compose input,
+.it-help-compose textarea {
+  width: 100%;
+  border: 1px solid rgba(61, 35, 20, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+}
+
+.it-help-compose textarea {
+  min-height: 4.2rem;
+  resize: vertical;
+}
+
+.it-help-compose button[type="submit"] {
+  appearance: none;
+  border: none;
+  background: var(--it-accent);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  cursor: pointer;
+}
+
+.it-help-compose button[type="submit"]:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.it-help-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6a5648;
+}
