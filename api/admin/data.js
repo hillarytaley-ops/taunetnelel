@@ -1935,6 +1935,15 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, id });
       }
 
+      if (resource === 'invoice-delete') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Invoice id is required' });
+        await sb(`invoices?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        });
+        return json(res, 200, { ok: true, id });
+      }
+
       return json(res, 400, { error: 'Unknown DELETE resource' });
     }
 

@@ -1456,11 +1456,14 @@
         const actions =
           status === 'pending'
             ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="paid">Mark paid</button>
-               <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="void">Void</button>`
+               <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="void">Void</button>
+               <button type="button" data-invoice-delete="${escapeHtml(row.id)}">Delete</button>`
             : status === 'paid'
               ? `<button type="button" data-invoice-receipt="${escapeHtml(row.id)}">Email paid PDF</button>
-                 <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`
-              : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>`;
+                 <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>
+                 <button type="button" data-invoice-delete="${escapeHtml(row.id)}">Delete</button>`
+              : `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="pending">Reopen</button>
+                 <button type="button" data-invoice-delete="${escapeHtml(row.id)}">Delete</button>`;
         return `<tr>
           <td>
             <strong>${escapeHtml(row.invoice_number || '—')}</strong>
@@ -1534,6 +1537,27 @@
         } finally {
           btn.disabled = false;
           btn.textContent = label;
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-invoice-delete]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (
+          !confirm(
+            'Permanently delete this invoice? This cannot be undone. Prefer Void if you only want to cancel it.'
+          )
+        ) {
+          return;
+        }
+        try {
+          await adminApi('invoice-delete', {
+            method: 'DELETE',
+            body: { id: btn.dataset.invoiceDelete }
+          });
+          await loadInvoices();
+        } catch (err) {
+          alert(err.message || 'Could not delete invoice.');
         }
       });
     });
