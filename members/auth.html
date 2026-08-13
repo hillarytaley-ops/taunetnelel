@@ -22,7 +22,7 @@
       <div class="auth-tabs" role="tablist" aria-label="Account options">
         <button type="button" class="auth-tabs__btn is-active" role="tab" aria-selected="true" data-auth-tab="signin" id="tab-signin">Sign in</button>
         <button type="button" class="auth-tabs__btn" role="tab" aria-selected="false" data-auth-tab="join" id="tab-join">Join</button>
-        <button type="button" class="auth-tabs__btn" role="tab" aria-selected="false" data-auth-tab="admin" id="tab-admin">Committee</button>
+        <button type="button" class="auth-tabs__btn" role="tab" aria-selected="false" data-auth-tab="admin" id="tab-admin">Admin</button>
       </div>
 
       <!-- Member sign in -->
@@ -166,7 +166,7 @@
       <!-- Committee admin (Supabase Auth + site_admins) -->
       <div class="auth-panel" data-auth-panel="admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
         <div class="login-card__header">
-          <h1>Committee admin</h1>
+          <h1>Admin</h1>
           <p>Sign in with your committee email and password. Your account must be on the admin list.</p>
         </div>
         <form class="login-form" id="admin-auth-form" novalidate>
@@ -237,7 +237,7 @@
         var url = new URL(window.location.href);
         url.searchParams.set('tab', tab);
         history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString() + url.hash);
-        document.title = (tab === 'join' ? 'Join' : tab === 'admin' ? 'Committee admin' : 'Sign in') + ' | Taunet Nelel';
+        document.title = (tab === 'join' ? 'Join' : tab === 'admin' ? 'Admin' : 'Sign in') + ' | Taunet Nelel';
       }
 
       document.querySelectorAll('[data-auth-tab]').forEach(function (btn) {
