@@ -97,7 +97,7 @@ module.exports = async function handler(req, res) {
       amount_cents: 5000,
       amount_label: formatAud(5000),
       installments: 1,
-      description: 'Association membership — Basic plan (AUD $50 / year)',
+      description: 'Association membership (AUD $50 / year)',
       payment: {
         configured: pay.configured,
         payid: pay.payid,

@@ -42,9 +42,9 @@
         <div class="dash-card dash-card--welcome">
           <h2>Welcome</h2>
           <p style="font-size:1.25rem;color:var(--color-text);font-weight:600;margin-bottom:0.5rem;">Hello, <span data-member-name>Member</span></p>
-          <p>Membership: <strong data-member-plan>Basic</strong> · Renews <span data-member-renews>—</span></p>
+          <p>Membership: <strong data-member-plan>Association</strong> · Renews <span data-member-renews>—</span></p>
           <p id="welfare-member-summary" class="welfare-member-summary" hidden>Welfare: <strong data-welfare-package>—</strong> · <span class="status-chip status-chip--active" data-welfare-status-chip>Active</span></p>
-          <a href="membership.html?upgrade=welfare" class="btn btn--accent" id="dashboard-upgrade-btn" style="margin-top:1rem;">Upgrade to Welfare Plus</a>
+          <a href="membership.html?upgrade=welfare" class="btn btn--accent" id="dashboard-upgrade-btn" style="margin-top:1rem;">Add Association + Welfare</a>
         </div>
         <div class="dash-card dash-card--actions">
           <h2>Quick Actions</h2>
@@ -96,8 +96,8 @@
                 <label for="welfare-package">Social welfare package</label>
                 <select id="welfare-package" name="welfare_package" required>
                   <option value="">Select a package…</option>
-                  <option value="Welfare Plus — Individual ($300/year)">Welfare Plus — Individual ($300/year)</option>
-                  <option value="Welfare Plus — Family household ($450/year)">Welfare Plus — Family household ($450/year)</option>
+                  <option value="Association + Welfare — Individual ($300/year)">Association + Welfare — Individual ($300/year)</option>
+                  <option value="Association + Welfare — Family household ($450/year)">Association + Welfare — Family household ($450/year)</option>
                   <option value="Welfare Bereavement — Standard cover ($300/year)">Welfare Bereavement — Standard cover ($300/year)</option>
                 </select>
               </div>
@@ -130,7 +130,7 @@
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/events-supabase.js?v=5"></script>
-  <script src="../assets/js/members-auth.js?v=14"></script>
-  <script src="../assets/js/members.js?v=33"></script>
+  <script src="../assets/js/members-auth.js?v=17"></script>
+  <script src="../assets/js/members.js?v=37"></script>
 </body>
 </html>

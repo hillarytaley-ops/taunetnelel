@@ -20,11 +20,11 @@ const INVOICE_DUE_DAYS = Math.max(1, Number(process.env.INVOICE_DUE_DAYS || 14) 
 const KIND_DEFAULTS = {
   association: {
     amount_cents: 5000,
-    description: 'Association membership — Basic plan (AUD $50 / year)',
+    description: 'Association membership (AUD $50 / year)',
   },
   welfare: {
     amount_cents: 30000,
-    description: 'Welfare Association membership fee (AUD $300)',
+    description: 'Association + Welfare membership (AUD $300 / year)',
   },
   donation: {
     amount_cents: 5000,
@@ -348,7 +348,7 @@ async function createAndEmailInvoice({
     if (!finalDescription) {
       finalDescription =
         finalAmount === 10000
-          ? 'Welfare Plus — installment (AUD $100)'
+          ? 'Association + Welfare — installment (AUD $100)'
           : defaults.description;
     }
   } else if (normalizedKind === 'donation') {
@@ -484,7 +484,7 @@ async function createWelfarePayCheckout({
       fullName: name,
       userId,
       amountCents: 30000,
-      description: 'Welfare Plus membership — full year (AUD $300)',
+      description: 'Association + Welfare membership — full year (AUD $300)',
       skipEmail: true,
       meta: {
         source: 'pay_portal_welfare',
@@ -517,7 +517,7 @@ async function createWelfarePayCheckout({
       fullName: name,
       userId,
       amountCents: 10000,
-      description: `Welfare Plus — installment ${n} of 3 (AUD $100)`,
+      description: `Association + Welfare — installment ${n} of 3 (AUD $100)`,
       dueAt: dueDates[i],
       // Installment 1: PayID on screen only. Later installments emailed as payment requests (not receipts).
       skipEmail: true,
@@ -550,8 +550,8 @@ function buildReminderEmailHtml(invoice, kind) {
   <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
   <p>${
     kind === 'due'
-      ? 'This is a friendly reminder that your Welfare Plus installment is still due. This is not a receipt — a paid receipt is emailed only after the Treasurer confirms your payment.'
-      : 'Your next Welfare Plus installment payment request is ready. This is not a receipt — a paid receipt is emailed only after the Treasurer confirms your payment.'
+      ? 'This is a friendly reminder that your Association + Welfare installment is still due. This is not a receipt — a paid receipt is emailed only after the Treasurer confirms your payment.'
+      : 'Your next Association + Welfare installment payment request is ready. This is not a receipt — a paid receipt is emailed only after the Treasurer confirms your payment.'
   }</p>
   <p><strong>${escapeHtml(invoice.description)}</strong><br>
   Amount due: <strong>${amount} AUD</strong><br>

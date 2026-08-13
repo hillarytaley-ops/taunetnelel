@@ -116,7 +116,7 @@ module.exports = async function handler(req, res) {
           amount_cents: 30000,
           amount_label: formatAud(30000),
           installments: 1,
-          description: 'One payment of AUD $300 for the full Welfare Plus year',
+          description: 'One payment of AUD $300 for the full Association + Welfare year',
         },
         {
           id: 'installments',
@@ -209,7 +209,7 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     console.error('pay/welfare', err);
     return json(res, err.status || 500, {
-      error: err.message || 'Could not start Welfare Plus PayID payment.',
+      error: err.message || 'Could not start Association + Welfare PayID payment.',
     });
   }
 };

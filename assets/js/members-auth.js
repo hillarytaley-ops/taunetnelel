@@ -8,7 +8,7 @@
   function planLabel(plan, association, welfare) {
     if (plan === 'both' || (association && welfare)) return 'Association + Welfare';
     if (plan === 'welfare' || welfare) return 'Welfare';
-    return 'Association (Standard)';
+    return 'Association';
   }
 
   function profileToMember(profile, email) {

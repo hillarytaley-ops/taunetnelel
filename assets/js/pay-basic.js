@@ -27,7 +27,7 @@
     statusEl.hidden = false;
     statusEl.classList.remove('is-error');
     statusEl.textContent =
-      'Account created. Preparing your $50 Basic Plan PayID invoice…';
+      'Account created. Preparing your $50 Association PayID invoice…';
     if (form?.full_name?.value && form?.email?.value) {
       window.setTimeout(() => form.requestSubmit(), 250);
     }
@@ -35,7 +35,7 @@
     statusEl.hidden = false;
     statusEl.classList.remove('is-error');
     statusEl.textContent =
-      'Pay the $50 Basic Plan via PayID to unlock your member dashboard. Use the same email you registered with.';
+      'Pay the $50 Association membership via PayID to unlock your member dashboard. Use the same email you registered with.';
   }
 
   function showStatus(message, isError) {

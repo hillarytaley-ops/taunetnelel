@@ -34,19 +34,20 @@
     <main class="members-main">
       <div class="members-topbar">
         <h1>Membership</h1>
-        <span class="status-chip status-chip--active">Active · <span data-member-plan>Basic</span></span>
+        <span class="status-chip status-chip--active">Active · <span data-member-plan>Association</span></span>
       </div>
       <p id="invoice-status" class="auth-form__message" role="status" hidden style="margin:0 0 1rem;"></p>
       <div class="dash-grid">
         <div class="dash-card dash-card--full">
           <h2 id="membership-plans-heading">Current Plan</h2>
           <p id="membership-upgrade-lead" class="muted" hidden style="margin:0.35rem 0 0;">
-            Upgrade to Welfare Plus — register for welfare first, then request your $300 invoice.
+            Add welfare: register first, then request your $300 Association + Welfare invoice.
           </p>
           <div class="plans" id="membership-plans" style="margin-top:1rem;">
             <div class="plan" id="plan-association-card" data-plan-card="association">
-              <h3>Association — Basic</h3>
+              <h3>Association</h3>
               <div class="plan__price">$50 <small>/ year</small></div>
+              <p class="plan__pay-note">Registered member only — no welfare</p>
               <p>Renews on <strong data-member-renews>—</strong></p>
               <ul>
                 <li>Exclusive workshops &amp; webinars</li>
@@ -56,10 +57,11 @@
               <button type="button" class="btn btn--primary" id="invoice-association-btn">Email me $50 invoice</button>
             </div>
             <div class="plan plan--featured" id="plan-welfare-card" data-plan-card="welfare">
-              <h3>Welfare Plus</h3>
+              <h3>Association + Welfare</h3>
               <div class="plan__price">$300 <small>/ year</small></div>
+              <p class="plan__pay-note">Registered member and welfare</p>
               <ul>
-                <li>All Basic benefits</li>
+                <li>All Association benefits</li>
                 <li>Welfare financial support</li>
                 <li>Exclusive welfare portal access</li>
                 <li>Peer support network</li>
@@ -92,7 +94,7 @@
         <div class="dash-card dash-card--full">
           <h2>Plan Comparison</h2>
           <table class="compare-table">
-            <thead><tr><th>Benefit</th><th>Basic</th><th>Welfare Plus</th></tr></thead>
+            <thead><tr><th>Benefit</th><th>Association</th><th>Association + Welfare</th></tr></thead>
             <tbody>
               <tr><td>Exclusive events</td><td class="check">✓</td><td class="check">✓</td></tr>
               <tr><td>Event discounts</td><td class="check">✓</td><td class="check">✓</td></tr>
@@ -106,9 +108,9 @@
   </div>
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
-  <script src="../assets/js/members-auth.js?v=14"></script>
+  <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/invoices.js?v=2"></script>
-  <script src="../assets/js/members.js?v=33"></script>
+  <script src="../assets/js/members.js?v=37"></script>
   <script>
     (function () {
       const statusEl = document.getElementById('invoice-status');
@@ -145,7 +147,7 @@
         const back = document.getElementById('membership-upgrade-back');
         const plans = document.getElementById('membership-plans');
         if (associationCard) associationCard.hidden = true;
-        if (heading) heading.textContent = 'Upgrade to Welfare Plus';
+        if (heading) heading.textContent = 'Add Association + Welfare';
         if (lead) lead.hidden = false;
         if (back) back.hidden = false;
         if (plans) {
@@ -153,7 +155,7 @@
           plans.style.marginInline = 'auto';
           plans.style.gridTemplateColumns = '1fr';
         }
-        document.title = 'Upgrade to Welfare Plus | Taunet Nelel Members';
+        document.title = 'Add Association + Welfare | Taunet Nelel Members';
       }
 
       function showStatus(msg, isError) {

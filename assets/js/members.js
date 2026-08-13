@@ -14,7 +14,7 @@
     email: 'jane.kiprotich@email.com',
     phone: '+61 400 000 000',
     plan: 'basic',
-    planLabel: 'Basic',
+    planLabel: 'Association',
     renews: '12 Aug 2026',
     memberSince: '2024',
     welfareRegistered: false,
@@ -26,9 +26,9 @@
   const DEMO_WELFARE_USER = {
     ...DEMO_USER,
     plan: 'welfare',
-    planLabel: 'Welfare Plus',
+    planLabel: 'Association + Welfare',
     welfareRegistered: true,
-    welfarePackage: 'Welfare Plus — Individual',
+    welfarePackage: 'Association + Welfare — Individual',
     welfarePackageKey: 'welfare-plus-individual',
     welfareStatus: 'active',
     welfareSince: '2024',
@@ -96,6 +96,21 @@
       return member;
     }
 
+    if (
+      member.planLabel === 'Basic' ||
+      member.planLabel === 'Association (Standard)'
+    ) {
+      member.planLabel = 'Association';
+    }
+    if (
+      member.planLabel === 'Welfare Plus' ||
+      String(member.planLabel || '').startsWith('Welfare Plus')
+    ) {
+      member.planLabel = member.associationMember || member.plan === 'both'
+        ? 'Association + Welfare'
+        : 'Welfare';
+    }
+
     // Stale localStorage / admin-approved welfare while plan column still "basic"
     if (
       member.planLabel === 'Association + Welfare' ||
@@ -159,9 +174,9 @@
   }
 
   function packageLabelFromValue(value) {
-    if (value.includes('Family')) return 'Welfare Plus — Family household';
+    if (value.includes('Family')) return 'Association + Welfare — Family household';
     if (value.includes('Bereavement')) return 'Welfare Bereavement — Standard';
-    return 'Welfare Plus — Individual';
+    return 'Association + Welfare — Individual';
   }
 
   function isAuthPagePath(pathname) {
@@ -497,7 +512,7 @@
           if (already) {
             showAuthMessage(
               registerForm,
-              'That email already has an account. Sign in, or continue to PayID if you still need to pay the $50 Basic Plan.',
+              'That email already has an account. Sign in, or continue to PayID if you still need to pay the $50 Association membership.',
               true
             );
             const msg = registerForm.querySelector('.auth-form__message');
@@ -582,7 +597,7 @@
             }
             showAuthMessage(
               loginForm,
-              'You are signed in, but the $50 Basic Plan is still unpaid. Use Pay via PayID below to finish, or Sign out to use a different account.',
+              'You are signed in, but the $50 Association membership is still unpaid. Use Pay via PayID below to finish, or Sign out to use a different account.',
               false
             );
             let actions = document.getElementById('auth-pending-pay-actions');
@@ -1077,7 +1092,7 @@
         if (next === 'membership-welfare') {
           if (msg) {
             msg.textContent =
-              'Registration submitted. Continue to request your $300 Welfare Plus invoice.';
+              'Registration submitted. Continue to request your $300 Association + Welfare invoice.';
           }
           window.setTimeout(() => {
             window.location.href = 'membership.html?upgrade=welfare&ready=1';
