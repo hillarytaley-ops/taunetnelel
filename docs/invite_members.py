@@ -54,6 +54,20 @@ RESEND_KEY = _env("RESEND_API_KEY")
 RESEND_FROM = _env("RESEND_FROM") or "Taunet Nelel <members@taunetnelel.org>"
 RESEND_REPLY_TO = _env("RESEND_REPLY_TO") or "info@taunetnelel.org"
 
+_PLACEHOLDER_MARKERS = (
+    "paste-",
+    "your-service-role",
+    "your-api-key",
+    "re_paste",
+    "xxx",
+    "changeme",
+)
+
+
+def _is_placeholder(value: str) -> bool:
+    low = value.lower()
+    return any(marker in low for marker in _PLACEHOLDER_MARKERS)
+
 
 def api(method: str, path: str, body: dict | None = None) -> dict | list:
     if not URL or not SERVICE_KEY:
@@ -62,6 +76,14 @@ def api(method: str, path: str, body: dict | None = None) -> dict | list:
             "PowerShell example:\n"
             '  $env:SUPABASE_URL = "https://wgecdsdeeirzdvshdfwo.supabase.co"\n'
             '  $env:SUPABASE_SERVICE_ROLE_KEY = "eyJ..."   # one line, no Enter inside quotes'
+        )
+    if _is_placeholder(SERVICE_KEY) or not (
+        SERVICE_KEY.startswith("eyJ") or SERVICE_KEY.startswith("sb_secret_")
+    ):
+        raise SystemExit(
+            "SUPABASE_SERVICE_ROLE_KEY is still a placeholder.\n"
+            "Open Supabase → Project Settings → API Keys → Secret key (sb_secret_...)\n"
+            "or Legacy service_role (eyJ...). Paste one line. Do not leave paste-service-role-here."
         )
     if any(ch in SERVICE_KEY for ch in " \t\r\n"):
         raise SystemExit(
@@ -411,10 +433,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if not RESEND_KEY:
+    if not RESEND_KEY or _is_placeholder(RESEND_KEY) or not RESEND_KEY.startswith("re_"):
         raise SystemExit(
-            "Set RESEND_API_KEY before inviting. "
-            "We no longer send via Supabase default invite mail (spam risk)."
+            "RESEND_API_KEY is missing or still a placeholder.\n"
+            "Open Resend → API Keys → create/copy a Sending key starting with re_.\n"
+            "Do not leave re_paste-resend-key-here."
         )
 
     force_recovery = bool(args.resend_all)
