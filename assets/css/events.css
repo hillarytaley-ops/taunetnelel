@@ -5,9 +5,13 @@ body[data-page="events"] {
 }
 
 body[data-page="events"] .page-hero {
-  background-position: center 35%;
-  min-height: min(48vh, 460px);
-  max-height: 520px;
+  background-color: #1e1208;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+  min-height: min(78vh, 900px);
+  height: min(78vh, 900px);
+  max-height: none;
   padding: clamp(2rem, 4.5vw, 3rem) 0;
 }
 
