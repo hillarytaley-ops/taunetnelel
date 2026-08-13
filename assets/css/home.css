@@ -212,13 +212,14 @@ body[data-page="home"] .hero__actions {
 body[data-page="home"] .hero__visual {
   position: absolute;
   top: 0;
-  right: 0;
+  right: clamp(1rem, 4vw, 2.5rem);
   bottom: 0;
-  left: 42%;
+  left: auto;
   z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: min(168px, 22vw);
   pointer-events: none;
 }
 
@@ -228,24 +229,26 @@ body[data-page="home"] .hero__visual-logo {
   justify-content: center;
   align-items: center;
   pointer-events: none;
+  width: 100%;
 }
 
 body[data-page="home"] .hero__visual .hero__logo-ring {
-  width: min(220px, 28vw);
-  filter: drop-shadow(0 6px 22px rgba(0, 0, 0, 0.4));
+  width: 100%;
+  max-width: 148px;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.4));
 }
 
 body[data-page="home"] .hero__visual .hero__logo-ring::before {
-  inset: -18%;
+  inset: -14%;
   /* Soft glow only — no solid white disc behind the logo */
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.28) 0%, rgba(248, 245, 240, 0.1) 38%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(248, 245, 240, 0.08) 38%, transparent 70%);
   box-shadow: none;
 }
 
 body[data-page="home"] .hero__visual .logo-spinner__img {
   background: transparent;
   mix-blend-mode: lighten;
-  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 18px rgba(255, 255, 255, 0.28));
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.22));
 }
 
 body[data-page="home"] .hero__visual .hero__orbit {
