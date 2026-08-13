@@ -6,10 +6,13 @@ body[data-page="community"] {
 
 body[data-page="community"] .page-hero--community {
   position: relative;
-  min-height: min(78vh, 900px);
-  height: min(78vh, 900px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(64vh, 740px);
+  height: min(64vh, 740px);
   max-height: none;
-  padding: clamp(2rem, 4.5vw, 3rem) 0;
+  padding: 0;
   background-color: #1e1208;
   overflow: hidden;
 }
@@ -104,10 +107,18 @@ body[data-page="community"] .page-hero--community .page-hero__layout {
 }
 
 body[data-page="community"] .page-hero--community .page-hero__content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 1.25rem;
+  box-sizing: border-box;
 }
 
 /* Side logos over photo edges — compact, with dark disc for contrast */
