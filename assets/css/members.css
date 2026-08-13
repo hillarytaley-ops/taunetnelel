@@ -1248,7 +1248,11 @@
 .login-bg {
   position: fixed;
   inset: 0;
-  background: url('../../wp-content/uploads/2026/06/login-hero.png') center / cover no-repeat;
+  background-color: #c4632a;
+  background-image: url('../../wp-content/uploads/2026/06/gallery-hero-gala.png');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: contain;
   z-index: 0;
 }
 
