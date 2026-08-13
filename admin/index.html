@@ -376,7 +376,7 @@
                 <th>When</th>
                 <th>Board</th>
                 <th>Published</th>
-                <th>Photos</th>
+                <th>Bulk upload photos</th>
               </tr>
             </thead>
             <tbody id="admin-events-body">
@@ -443,14 +443,35 @@
 
       <section class="site-admin__panel" data-admin-panel="gallery">
         <p class="admin-muted">
-          Albums from the public site list and the database. Existing event photos live in the site gallery list —
-          use <strong>Sync site albums to DB</strong> if you want publish toggles stored in Supabase.
+          Bulk-upload many photos at once. They appear on the public Gallery. You can also add photos to an existing album in the table below.
         </p>
-        <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
-          <button type="button" class="btn btn--sm btn--primary" id="admin-seed-gallery">Sync site albums to DB</button>
-          <a class="btn btn--sm btn--ghost" href="../gallery.html" target="_blank" rel="noopener">Open public gallery</a>
-          <p id="admin-gallery-status" class="admin-muted" hidden style="margin:0;"></p>
-        </div>
+        <form id="admin-gallery-upload-form" class="admin-card admin-card--flush" style="margin-bottom:1rem">
+          <div class="admin-section-title">
+            <h2>Bulk upload photos</h2>
+          </div>
+          <div class="admin-event-form-grid">
+            <label class="admin-field"><span>Album title</span><input name="title" type="text" required maxlength="160" placeholder="e.g. Sports Day 2026"></label>
+            <label class="admin-field"><span>Date</span><input name="event_date" type="date"></label>
+            <label class="admin-field"><span>Show in</span>
+              <select name="group_id">
+                <option value="recent">Most recent</option>
+                <option value="past">Past</option>
+              </select>
+            </label>
+            <label class="admin-field admin-field--wide">
+              <span>Photos</span>
+              <input name="photos" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple required>
+              <span class="admin-field__hint">Select many images at once (JPG, PNG, WebP · up to 80). Large phone photos are resized automatically.</span>
+            </label>
+          </div>
+          <div class="business-admin__actions">
+            <button type="submit" class="btn btn--primary btn--sm">Upload album</button>
+            <button type="button" class="btn btn--sm btn--ghost" id="admin-seed-gallery">Sync site albums to DB</button>
+            <a class="btn btn--sm btn--ghost" href="../gallery.html" target="_blank" rel="noopener">Open public gallery</a>
+          </div>
+          <p id="admin-gallery-upload-status" class="admin-muted" hidden style="margin-top:0.65rem"></p>
+          <p id="admin-gallery-status" class="admin-muted" hidden style="margin-top:0.35rem"></p>
+        </form>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -459,12 +480,13 @@
                 <th>Date</th>
                 <th>Group</th>
                 <th>Photos</th>
+                <th>Add</th>
                 <th>Source</th>
                 <th>Published</th>
               </tr>
             </thead>
             <tbody id="admin-gallery-body">
-              <tr><td colspan="6" class="admin-empty">Open this tab to load albums.</td></tr>
+              <tr><td colspan="7" class="admin-empty">Open this tab to load albums.</td></tr>
             </tbody>
           </table>
         </div>
@@ -556,6 +578,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=30"></script>
+  <script src="../assets/js/admin-dashboard.js?v=31"></script>
 </body>
 </html>

@@ -135,7 +135,7 @@
       events: 'Published events for the public site and members.',
       invoices: 'PayID / bank invoices — mark paid when the deposit lands.',
       sponsors: 'Sponsor listings for the public sponsorship page.',
-      gallery: 'Album visibility for the public gallery.',
+      gallery: 'Bulk upload photos, create albums, and publish them on the public gallery.',
       newsletter: 'Event update subscribers from the Contact page.',
       announcements: 'Messages shown on the members dashboard.',
       pages: 'Shortcuts to public pages and committee tools.'
@@ -810,9 +810,9 @@
           <td>
             <label class="admin-upload-btn">
               Upload photos
-              <input type="file" accept="image/*" multiple hidden data-event-photos="${escapeHtml(row.id)}">
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden data-event-photos="${escapeHtml(row.id)}">
             </label>
-            <div class="admin-detail" data-event-photo-status="${escapeHtml(row.id)}"></div>
+            <div class="admin-detail" data-event-photo-status="${escapeHtml(row.id)}">Select many at once</div>
           </td>
         </tr>`;
       })
@@ -921,23 +921,20 @@
       input.addEventListener('change', async () => {
         const eventId = input.dataset.eventPhotos;
         const status = document.querySelector(`[data-event-photo-status="${eventId}"]`);
-        const files = Array.from(input.files || []).slice(0, 6);
-        if (!files.length) return;
-        if (status) status.textContent = 'Uploading…';
+        const files = input.files;
+        if (!files || !files.length) return;
         try {
-          const photos = [];
-          for (const file of files) {
-            const dataUrl = await readFileAsDataUrl(file);
-            photos.push({ name: file.name, dataUrl, alt: file.name });
-          }
-          const result = await adminApi('event-photos', {
-            method: 'POST',
-            body: { event_id: eventId, photos, move_to_recent: true }
+          const result = await uploadPhotosBulk({
+            files,
+            eventId,
+            moveToRecent: true,
+            statusEl: status
           });
-          if (status) {
-            status.textContent = `Uploaded ${result.uploaded || photos.length} photo(s). Event moved to Most Recent.`;
+          if (status && result.ok) {
+            status.textContent = `Uploaded ${result.ok} photo(s). Event moved to Most Recent.`;
           }
           await loadEvents();
+          await loadGallery().catch(() => {});
         } catch (err) {
           if (status) status.textContent = err.message || 'Upload failed.';
           else alert(err.message || 'Upload failed.');
@@ -955,6 +952,83 @@
       reader.onerror = () => reject(new Error('Could not read image file'));
       reader.readAsDataURL(file);
     });
+  }
+
+  function compressImageFile(file, maxEdge = 1600, quality = 0.82) {
+    if (!file.type || !file.type.startsWith('image/') || file.type === 'image/gif') {
+      return readFileAsDataUrl(file);
+    }
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        let { width, height } = img;
+        const scale = Math.min(1, maxEdge / Math.max(width, height));
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          readFileAsDataUrl(file).then(resolve, reject);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        readFileAsDataUrl(file).then(resolve, reject);
+      };
+      img.src = objectUrl;
+    });
+  }
+
+  async function uploadPhotosBulk(options) {
+    const files = Array.from(options.files || []).filter((file) =>
+      String(file.type || '').startsWith('image/')
+    );
+    const statusEl = options.statusEl;
+    if (!files.length) throw new Error('Choose one or more photos.');
+    if (files.length > 80) throw new Error('Select up to 80 photos at a time.');
+    let ok = 0;
+    const errors = [];
+    for (let i = 0; i < files.length; i += 1) {
+      if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.classList?.remove?.('is-error');
+        statusEl.textContent = `Uploading ${i + 1} of ${files.length}…`;
+      }
+      try {
+        const dataUrl = await compressImageFile(files[i]);
+        await adminApi('gallery-upload', {
+          method: 'POST',
+          body: {
+            event_id: options.eventId || undefined,
+            album_id: options.albumId || undefined,
+            title: options.title || undefined,
+            event_date: options.eventDate || undefined,
+            group_id: options.groupId || undefined,
+            move_to_recent: options.moveToRecent !== false,
+            photo: { name: files[i].name, dataUrl, alt: files[i].name }
+          }
+        });
+        ok += 1;
+      } catch (err) {
+        errors.push(`${files[i].name}: ${err.message || 'failed'}`);
+      }
+    }
+    if (!ok) {
+      throw new Error(errors[0] || 'Upload failed.');
+    }
+    if (statusEl) {
+      statusEl.textContent = errors.length
+        ? `Uploaded ${ok} of ${files.length}. ${errors.length} failed.`
+        : `Uploaded ${ok} photo(s).`;
+    }
+    return { ok, failed: errors.length, errors };
   }
 
   async function createEventFromForm(event) {
@@ -1125,7 +1199,7 @@
     merged.sort((a, b) => String(b.event_date || '').localeCompare(String(a.event_date || '')));
 
     if (!merged.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No gallery albums found yet.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No gallery albums found yet.</td></tr>`;
       return;
     }
 
@@ -1151,6 +1225,13 @@
           <td>${escapeHtml(row.event_date || '—')}</td>
           <td>${escapeHtml(row.group_id || '—')}</td>
           <td>${escapeHtml(photoLabel)}</td>
+          <td>
+            <label class="admin-upload-btn">
+              Add photos
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden data-album-photos="${escapeHtml(row.id)}" data-album-title="${escapeHtml(row.title || '')}" data-album-date="${escapeHtml(row.event_date || '')}" data-album-group="${escapeHtml(row.group_id || 'past')}">
+            </label>
+            <div class="admin-detail" data-album-photo-status="${escapeHtml(row.id)}"></div>
+          </td>
           <td>${escapeHtml(row.source)}</td>
           <td>${publishCell}</td>
         </tr>`;
@@ -1168,6 +1249,31 @@
         } catch (err) {
           alert(err.message || 'Could not update album.');
           input.checked = !input.checked;
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-album-photos]').forEach((input) => {
+      input.addEventListener('change', async () => {
+        const albumId = input.dataset.albumPhotos;
+        const status = document.querySelector(`[data-album-photo-status="${albumId}"]`);
+        if (!input.files || !input.files.length) return;
+        try {
+          await uploadPhotosBulk({
+            files: input.files,
+            albumId,
+            title: input.dataset.albumTitle,
+            eventDate: input.dataset.albumDate,
+            groupId: input.dataset.albumGroup || 'past',
+            moveToRecent: false,
+            statusEl: status
+          });
+          await loadGallery();
+        } catch (err) {
+          if (status) status.textContent = err.message || 'Upload failed.';
+          else alert(err.message || 'Upload failed.');
+        } finally {
+          input.value = '';
         }
       });
     });
@@ -1618,6 +1724,53 @@
     });
 
     document.getElementById('admin-announcement-form')?.addEventListener('submit', createAnnouncement);
+
+    document.getElementById('admin-gallery-upload-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const status = document.getElementById('admin-gallery-upload-status');
+      const fd = new FormData(form);
+      const title = String(fd.get('title') || '').trim();
+      const eventDate = String(fd.get('event_date') || '').trim();
+      const groupId = String(fd.get('group_id') || 'recent');
+      const fileInput = form.querySelector('[name="photos"]');
+      if (!title) {
+        alert('Enter an album title.');
+        return;
+      }
+      if (!fileInput?.files?.length) {
+        alert('Choose one or more photos.');
+        return;
+      }
+      if (status) {
+        status.hidden = false;
+        status.classList.remove('is-error');
+      }
+      try {
+        const result = await uploadPhotosBulk({
+          files: fileInput.files,
+          title,
+          eventDate,
+          groupId,
+          moveToRecent: groupId === 'recent',
+          statusEl: status
+        });
+        form.reset();
+        form.querySelector('[name="group_id"]').value = 'recent';
+        if (status) {
+          status.textContent = `Uploaded ${result.ok} photo(s) to the gallery.`;
+        }
+        await loadGallery();
+      } catch (err) {
+        if (status) {
+          status.hidden = false;
+          status.classList.add('is-error');
+          status.textContent = err.message || 'Upload failed.';
+        } else {
+          alert(err.message || 'Upload failed.');
+        }
+      }
+    });
   }
 
   async function init() {

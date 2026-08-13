@@ -337,6 +337,68 @@ function decodeDataUrl(dataUrl) {
   };
 }
 
+async function nextGallerySortOrder(albumId) {
+  const { data } = await sb(
+    `gallery_photos?album_id=eq.${encodeURIComponent(albumId)}&select=sort_order&order=sort_order.desc&limit=1`
+  );
+  const last = Array.isArray(data) && data[0] ? Number(data[0].sort_order) : -1;
+  return Number.isFinite(last) ? last + 1 : 0;
+}
+
+async function ensureGalleryAlbumRow(album) {
+  await sb('gallery_albums?on_conflict=id', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=representation',
+    body: JSON.stringify([
+      {
+        id: album.id,
+        title: album.title,
+        description: album.description || null,
+        event_date: album.event_date || null,
+        group_id: album.group_id || 'recent',
+        sort_date: album.event_date || album.sort_date || null,
+        preview_limit: album.preview_limit || 12,
+        is_published: album.is_published !== false
+      }
+    ])
+  });
+}
+
+async function saveGalleryPhoto({ albumId, photo, sortOrder, altFallback }) {
+  const decoded = decodeDataUrl(photo && photo.dataUrl);
+  if (!decoded) {
+    throw Object.assign(new Error('Invalid image data'), { status: 400 });
+  }
+  if (!isAllowedImageType(decoded.contentType)) {
+    throw Object.assign(new Error('Only jpeg, png, webp, or gif uploads are allowed'), { status: 400 });
+  }
+  if (decoded.bytes.length > 3.5e6) {
+    throw Object.assign(new Error('Each photo must be under about 3.5 MB'), { status: 400 });
+  }
+  const ext = decoded.contentType.includes('png')
+    ? 'png'
+    : decoded.contentType.includes('webp')
+      ? 'webp'
+      : decoded.contentType.includes('gif')
+        ? 'gif'
+        : 'jpg';
+  const safeName = slugifyId(photo.name || `photo-${sortOrder + 1}`);
+  const objectPath = `${albumId}/${Date.now()}-${sortOrder}-${safeName}.${ext}`;
+  const publicUrl = await uploadGalleryObject(objectPath, decoded.bytes, decoded.contentType);
+  await sb('gallery_photos', {
+    method: 'POST',
+    body: JSON.stringify({
+      album_id: albumId,
+      storage_path: publicUrl,
+      alt_text: photo.alt || altFallback || safeName,
+      download_name: `${safeName}.${ext}`,
+      sort_order: sortOrder,
+      is_member_only: false
+    })
+  });
+  return publicUrl;
+}
+
 function normalizePhaseOverride(value) {
   const phase = String(value || 'auto').trim();
   if (!phase || phase === 'auto') return null;
@@ -1483,93 +1545,93 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      if (resource === 'event-photos') {
+      if (resource === 'gallery-upload' || resource === 'event-photos') {
         const eventId = String(body.event_id || '').trim();
-        const photos = Array.isArray(body.photos) ? body.photos : [];
-        if (!eventId) return json(res, 400, { error: 'event_id is required' });
+        let albumId = String(body.album_id || '').trim();
+        const photos = Array.isArray(body.photos)
+          ? body.photos
+          : body.photo
+            ? [body.photo]
+            : [];
         if (!photos.length) return json(res, 400, { error: 'Add at least one photo' });
-        if (photos.length > 6) return json(res, 400, { error: 'Upload up to 6 photos at a time' });
+        if (photos.length > 8) {
+          return json(res, 400, { error: 'Send up to 8 photos per request. The admin page uploads in small batches.' });
+        }
 
-        const { data: eventRows } = await sb(
-          `events?id=eq.${encodeURIComponent(eventId)}&select=id,title,gallery_url,end_at,start_at`
+        let event = null;
+        if (eventId) {
+          const { data: eventRows } = await sb(
+            `events?id=eq.${encodeURIComponent(eventId)}&select=id,title,gallery_url,end_at,start_at`
+          );
+          event = Array.isArray(eventRows) ? eventRows[0] : null;
+          if (!event) return json(res, 404, { error: 'Event not found' });
+          albumId = albumId || `event-${eventId}`.slice(0, 80);
+        }
+
+        const title = String(body.title || event?.title || '').trim();
+        if (!albumId) {
+          if (title.length < 2) {
+            return json(res, 400, { error: 'Enter an album title or choose an event.' });
+          }
+          albumId = slugifyId(title).slice(0, 80);
+        }
+
+        const eventDate =
+          String(body.event_date || '').slice(0, 10) ||
+          String(event?.end_at || event?.start_at || '').slice(0, 10) ||
+          null;
+        const groupId = ['recent', 'past'].includes(body.group_id) ? body.group_id : 'recent';
+
+        const { data: existingAlbums } = await sb(
+          `gallery_albums?id=eq.${encodeURIComponent(albumId)}&select=id,title&limit=1`
         );
-        const event = Array.isArray(eventRows) ? eventRows[0] : null;
-        if (!event) return json(res, 404, { error: 'Event not found' });
+        const existingAlbum = Array.isArray(existingAlbums) ? existingAlbums[0] : null;
+        if (!existingAlbum) {
+          await ensureGalleryAlbumRow({
+            id: albumId,
+            title: event ? `${event.title} photos` : title || albumId,
+            description: body.description || (event ? `Photos from ${event.title}` : ''),
+            event_date: eventDate,
+            group_id: groupId,
+            preview_limit: 12,
+            is_published: body.is_published !== false
+          });
+        }
 
-        const albumId = `event-${eventId}`.slice(0, 80);
-        const eventDate = String(event.end_at || event.start_at || '').slice(0, 10) || null;
-        await sb('gallery_albums?on_conflict=id', {
-          method: 'POST',
-          prefer: 'resolution=merge-duplicates,return=representation',
-          body: JSON.stringify([
-            {
-              id: albumId,
-              title: `${event.title} photos`,
-              description: `Photos from ${event.title}`,
-              event_date: eventDate,
-              group_id: 'recent',
-              sort_date: eventDate,
-              preview_limit: 12,
-              is_published: true
-            }
-          ])
-        });
+        let sortOrder =
+          body.sort_order == null || body.sort_order === ''
+            ? await nextGallerySortOrder(albumId)
+            : Number(body.sort_order);
+        if (!Number.isFinite(sortOrder) || sortOrder < 0) {
+          sortOrder = await nextGallerySortOrder(albumId);
+        }
 
         const uploaded = [];
         for (let i = 0; i < photos.length; i += 1) {
-          const photo = photos[i] || {};
-          const decoded = decodeDataUrl(photo.dataUrl);
-          if (!decoded) continue;
-          if (!isAllowedImageType(decoded.contentType)) {
-            return json(res, 400, { error: 'Only jpeg, png, webp, or gif uploads are allowed' });
-          }
-          if (decoded.bytes.length > 3.5e6) {
-            return json(res, 400, { error: 'Each photo must be under about 3.5 MB' });
-          }
-          const ext =
-            decoded.contentType.includes('png')
-              ? 'png'
-              : decoded.contentType.includes('webp')
-                ? 'webp'
-                : decoded.contentType.includes('gif')
-                  ? 'gif'
-                  : 'jpg';
-          const safeName = slugifyId(photo.name || `photo-${i + 1}`);
-          const objectPath = `${albumId}/${Date.now()}-${i}-${safeName}.${ext}`;
-          const publicUrl = await uploadGalleryObject(objectPath, decoded.bytes, decoded.contentType);
-          await sb('gallery_photos', {
-            method: 'POST',
-            body: JSON.stringify({
-              album_id: albumId,
-              storage_path: publicUrl,
-              alt_text: photo.alt || `${event.title} photo ${i + 1}`,
-              download_name: `${safeName}.${ext}`,
-              sort_order: i,
-              is_member_only: false
-            })
+          const publicUrl = await saveGalleryPhoto({
+            albumId,
+            photo: photos[i] || {},
+            sortOrder: sortOrder + i,
+            altFallback: `${title || albumId} photo ${sortOrder + i + 1}`
           });
           uploaded.push(publicUrl);
         }
 
-        if (!uploaded.length) {
-          return json(res, 400, { error: 'No valid image data received' });
-        }
-
         const galleryUrl = `gallery.html#${albumId}`;
-        const eventPatch = { gallery_url: galleryUrl };
-        if (body.move_to_recent !== false) {
-          eventPatch.phase_override = 'most-recent';
-        }
-        try {
-          await sb(`events?id=eq.${encodeURIComponent(eventId)}`, {
-            method: 'PATCH',
-            body: JSON.stringify(eventPatch)
-          });
-        } catch (_) {
-          await sb(`events?id=eq.${encodeURIComponent(eventId)}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ gallery_url: galleryUrl })
-          });
+        if (eventId) {
+          const eventPatch = { gallery_url: galleryUrl };
+          if (body.move_to_recent !== false) eventPatch.phase_override = 'most-recent';
+          try {
+            await sb(`events?id=eq.${encodeURIComponent(eventId)}`, {
+              method: 'PATCH',
+              body: JSON.stringify(eventPatch)
+            });
+          } catch (_) {
+            await sb(`events?id=eq.${encodeURIComponent(eventId)}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ gallery_url: galleryUrl })
+            });
+          }
         }
 
         return json(res, 200, {
