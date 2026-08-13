@@ -163,7 +163,14 @@
   border-top: 1px solid rgba(61, 35, 20, 0.1);
 }
 
+.it-help-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6a5648;
+}
+
 .it-help-compose input,
+.it-help-compose select,
 .it-help-compose textarea {
   width: 100%;
   border: 1px solid rgba(61, 35, 20, 0.2);
@@ -172,6 +179,15 @@
   font: inherit;
   color: inherit;
   background: #fff;
+}
+
+.it-help-compose select {
+  appearance: auto;
+  min-height: 2.5rem;
+}
+
+.it-help-compose [hidden] {
+  display: none !important;
 }
 
 .it-help-compose textarea {

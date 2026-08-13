@@ -156,9 +156,14 @@ module.exports = async function handler(req, res) {
 
     rateLimit(`post:${clientIp(req)}`, 20, 60 * 60 * 1000);
     const body = await readBody(req);
-    const text = String(body.body || body.message || '').trim();
+    let text = String(body.body || body.message || '').trim();
+    const topic = String(body.topic || body.issue || '').trim().slice(0, 120);
     if (text.length < 2 || text.length > 2000) {
       return json(res, 400, { error: 'Enter a message (2–2000 characters).' });
+    }
+    if (topic && !text.toLowerCase().startsWith('issue:')) {
+      text = `Issue: ${topic}\n\n${text}`;
+      if (text.length > 2000) text = text.slice(0, 2000);
     }
 
     let thread = await loadThread(body.threadId, body.guestToken);

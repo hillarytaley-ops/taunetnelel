@@ -7,6 +7,17 @@
   const STORAGE_KEY = 'taunet_it_help';
   const API = '/api/it-help';
   const POLL_MS = 8000;
+  const ISSUE_OPTIONS = [
+    'Invite email not received',
+    'Email landed in Spam / Junk',
+    'Password link not working or expired',
+    'Forgot password email not arriving',
+    'Cannot sign in',
+    'Wrong email or name on the member list',
+    'Page blank or not loading',
+    'Dashboard not opening after payment',
+    'Website or chat error on my phone'
+  ];
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -62,7 +73,14 @@
         <form class="it-help-compose" id="it-help-form">
           <input type="text" name="fullName" autocomplete="name" placeholder="Your name" required>
           <input type="email" name="email" autocomplete="email" placeholder="Email on your invite" required>
-          <textarea name="body" placeholder="Describe the IT issue…" required minlength="2" maxlength="2000"></textarea>
+          <label class="it-help-label" for="it-help-topic">Issue</label>
+          <select name="topic" id="it-help-topic" required aria-label="Issue type">
+            <option value="">Select the issue…</option>
+            ${ISSUE_OPTIONS.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join('')}
+            <option value="other">Other — type your own</option>
+          </select>
+          <input type="text" name="customTopic" id="it-help-custom-topic" maxlength="120" placeholder="Type your issue…" hidden>
+          <textarea name="body" placeholder="Add more detail…" required minlength="2" maxlength="2000"></textarea>
           <button type="submit">Send to IT</button>
           <p class="it-help-note">Do not share your password or password link. IT replies here.</p>
           <p class="it-help-status" role="status" hidden></p>
@@ -78,6 +96,8 @@
     const form = widget.querySelector('#it-help-form');
     const nameInput = form.elements.fullName;
     const emailInput = form.elements.email;
+    const topicSelect = form.elements.topic;
+    const customTopicInput = form.elements.customTopic;
     const bodyInput = form.elements.body;
     const statusEl = widget.querySelector('.it-help-status');
     let pollTimer = null;
@@ -95,6 +115,20 @@
       statusEl.classList.toggle('is-error', Boolean(isError));
     }
 
+    function syncCustomTopic() {
+      const isOther = topicSelect.value === 'other';
+      customTopicInput.hidden = !isOther;
+      customTopicInput.required = isOther;
+      if (!isOther) customTopicInput.value = '';
+    }
+
+    function selectedIssue() {
+      if (topicSelect.value === 'other') {
+        return String(customTopicInput.value || '').trim().slice(0, 120);
+      }
+      return String(topicSelect.value || '').trim();
+    }
+
     function syncIdentityFields() {
       const store = loadStore();
       const hasThread = Boolean(store.threadId && store.guestToken);
@@ -104,6 +138,13 @@
       emailInput.required = !hasThread;
       if (store.fullName) nameInput.value = store.fullName;
       if (store.email) emailInput.value = store.email;
+      if (store.topic && ISSUE_OPTIONS.includes(store.topic)) {
+        topicSelect.value = store.topic;
+      } else if (store.topic) {
+        topicSelect.value = 'other';
+        customTopicInput.value = store.topic;
+      }
+      syncCustomTopic();
     }
 
     function renderMessages(payload) {
@@ -194,16 +235,22 @@
       else closePanel();
     });
     closeBtn.addEventListener('click', closePanel);
+    topicSelect.addEventListener('change', syncCustomTopic);
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const store = loadStore();
+      const issue = selectedIssue();
       const text = String(bodyInput.value || '').trim();
-      if (text.length < 2) {
-        setStatus('Enter a short description of the issue.', true);
+      if (!issue) {
+        setStatus('Select the issue, or choose Other and type your own.', true);
         return;
       }
-      const payload = { body: text };
+      if (text.length < 2) {
+        setStatus('Add a short description of what happened.', true);
+        return;
+      }
+      const payload = { body: text, topic: issue };
       if (store.threadId && store.guestToken) {
         payload.threadId = store.threadId;
         payload.guestToken = store.guestToken;
@@ -226,7 +273,8 @@
           threadId: data.threadId,
           guestToken: data.guestToken,
           email: data.email || payload.email || store.email || '',
-          fullName: data.fullName || payload.fullName || store.fullName || ''
+          fullName: data.fullName || payload.fullName || store.fullName || '',
+          topic: issue
         });
         bodyInput.value = '';
         syncIdentityFields();
