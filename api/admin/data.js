@@ -949,7 +949,7 @@ module.exports = async function handler(req, res) {
       if (resource === 'imports') {
         const filter = url.searchParams.get('filter') || 'all';
         let query =
-          'member_imports?select=member_number,full_name,email,plan,membership_label,status,association_member,welfare_member&order=member_number.asc&limit=600';
+          'member_imports?select=id,member_number,full_name,email,plan,membership_label,status,association_member,welfare_member&order=member_number.asc&limit=600';
         if (filter === 'association') {
           query += '&association_member=eq.true&welfare_member=eq.false';
         } else if (filter === 'welfare') {
@@ -1714,6 +1714,26 @@ module.exports = async function handler(req, res) {
           prefer: 'return=minimal',
         });
         return json(res, 200, { ok: true, id, invoice_number: row.invoice_number || null });
+      }
+
+      if (resource === 'import-delete') {
+        const id = String(body.id || url.searchParams.get('id') || '').trim();
+        if (!id) return json(res, 400, { error: 'Member import id is required' });
+        const { data: existing } = await sb(
+          `member_imports?id=eq.${encodeURIComponent(id)}&select=id,full_name,email`
+        );
+        const row = Array.isArray(existing) ? existing[0] : null;
+        if (!row) return json(res, 404, { error: 'Member not found in Association & Welfare list' });
+        await sb(`member_imports?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          prefer: 'return=minimal',
+        });
+        return json(res, 200, {
+          ok: true,
+          id,
+          email: row.email || null,
+          full_name: row.full_name || null,
+        });
       }
 
       return json(res, 400, { error: 'Unknown POST resource' });

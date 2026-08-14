@@ -641,7 +641,7 @@
     }
 
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No members match this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No members match this filter.</td></tr>`;
       return;
     }
 
@@ -661,9 +661,42 @@
           <td>${escapeHtml(row.status || '—')}</td>
           <td>${row.association_member ? 'Yes' : '—'}</td>
           <td>${row.welfare_member ? 'Yes' : '—'}</td>
+          <td><div class="admin-actions"><button type="button" data-import-delete="${escapeHtml(row.id || '')}" data-import-name="${escapeHtml(row.full_name || row.email || 'this member')}">Delete</button></div></td>
         </tr>`;
       })
       .join('');
+
+    body.querySelectorAll('[data-import-delete]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-import-delete') || '';
+        const name = btn.getAttribute('data-import-name') || 'this member';
+        if (!id) {
+          alert('Missing member id.');
+          return;
+        }
+        if (
+          !confirm(
+            `Remove ${name} from the Association & Welfare list?\n\nThis deletes the import record only — not their login/account if they already signed up.`
+          )
+        ) {
+          return;
+        }
+        const labelText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+        try {
+          await adminApi('import-delete', {
+            method: 'POST',
+            body: { id }
+          });
+          await loadImports();
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = labelText;
+          alert(err.message || 'Could not delete member.');
+        }
+      });
+    });
   }
 
   function toDatetimeLocalValue(value) {
