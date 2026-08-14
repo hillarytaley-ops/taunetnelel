@@ -590,13 +590,15 @@ body[data-page="site-admin"] {
 }
 
 .admin-actions .admin-btn-danger {
-  border-color: rgba(160, 40, 30, 0.35);
-  color: #8a1f11;
-  background: #fff5f3;
+  border-color: rgba(160, 40, 30, 0.45);
+  color: #fff;
+  background: #a3281c;
+  font-weight: 600;
 }
 
 .admin-actions .admin-btn-danger:hover {
-  background: #fdeceb;
+  background: #8a1f11;
+  color: #fff;
 }
 
 .admin-detail {

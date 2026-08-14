@@ -641,7 +641,7 @@
     }
 
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No members match this filter.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No members match this filter.</td></tr>`;
       return;
     }
 
@@ -654,14 +654,21 @@
             : row.welfare_member
               ? 'welfare'
               : '';
+        const deleteId = escapeHtml(row.id || '');
+        const deleteName = escapeHtml(row.full_name || row.email || 'this member');
         return `<tr>
           <td>${escapeHtml(row.member_number || '—')}</td>
-          <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}</div></td>
+          <td>
+            ${escapeHtml(row.full_name || '—')}
+            <div class="admin-detail">${escapeHtml(row.email || '')}</div>
+            <div class="admin-actions" style="margin-top:0.45rem;">
+              <button type="button" class="admin-btn-danger" data-import-delete="${deleteId}" data-import-name="${deleteName}">Delete member</button>
+            </div>
+          </td>
           <td><span class="admin-chip admin-chip--${chip}">${escapeHtml(label)}</span></td>
           <td>${escapeHtml(row.status || '—')}</td>
           <td>${row.association_member ? 'Yes' : '—'}</td>
           <td>${row.welfare_member ? 'Yes' : '—'}</td>
-          <td><div class="admin-actions"><button type="button" data-import-delete="${escapeHtml(row.id || '')}" data-import-name="${escapeHtml(row.full_name || row.email || 'this member')}">Delete</button></div></td>
         </tr>`;
       })
       .join('');
