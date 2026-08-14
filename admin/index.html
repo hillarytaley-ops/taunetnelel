@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=17">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260814a">
 </head>
 <body data-page="site-admin">
 
@@ -221,10 +221,12 @@
 
       <section class="site-admin__panel" data-admin-panel="imports">
         <div id="admin-imports-stats"></div>
+        <p class="admin-muted" id="admin-imports-delete-hint" style="margin:0.75rem 0;padding:0.75rem 1rem;background:#fff5f3;border:1px solid rgba(160,40,30,0.25);border-radius:8px;color:#8a1f11;">
+          <strong>Delete:</strong> each member has a red <strong>Delete member</strong> button under their name.
+        </p>
         <p class="admin-muted">
           Association (ordinary) and Welfare are stored as <strong>separate</strong> memberships.
           Someone on both lists appears under <strong>Both</strong> — they are not collapsed to welfare-only.
-          Use the red <strong>Delete member</strong> button under a name to remove that row from this list.
         </p>
         <div class="admin-toolbar">
           <select id="imports-filter" aria-label="Filter by membership type">
@@ -579,6 +581,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=35"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260814a"></script>
 </body>
 </html>
