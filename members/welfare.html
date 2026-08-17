@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=26">
+  <link rel="stylesheet" href="../assets/css/members.css?v=27">
   <link rel="stylesheet" href="../assets/css/member-invoices.css?v=1">
 </head>
 <body>
@@ -202,6 +202,24 @@
             </form>
           </div>
 
+          <div class="dash-card dash-card--full" id="welfare-inbox-card">
+            <h2>Team inbox</h2>
+            <p class="welfare-record-intro">Message the Welfare Committee in this thread. They reply here. You also get an email (and SMS when that is switched on).</p>
+            <div class="welfare-inbox" id="welfare-inbox">
+              <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
+                <p class="muted">Loading conversation…</p>
+              </div>
+              <form class="site-form welfare-inbox__compose" id="welfare-inbox-form">
+                <label class="visually-hidden" for="welfare-inbox-body">Message</label>
+                <textarea id="welfare-inbox-body" name="body" rows="3" required maxlength="2000" placeholder="Write to the Welfare Committee…"></textarea>
+                <div class="site-form__actions">
+                  <button type="submit" class="btn btn--primary">Send message</button>
+                </div>
+                <p class="inquiry-form__message" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
+              </form>
+            </div>
+          </div>
+
           <div class="dash-card dash-card--full" id="welfare-request">
             <h2>Lodge a welfare claim</h2>
             <p class="welfare-record-intro">Confidential bereavement or hardship claim. The Welfare Committee reviews each request and sets the approved amount. Approved reimbursements are posted to the alerts list with an anonymised member number.</p>
@@ -225,6 +243,11 @@
               <div class="form-group">
                 <label for="welfare-claim-details">Describe your situation (confidential)</label>
                 <textarea id="welfare-claim-details" name="details" required placeholder="Please provide details to help the Welfare Committee assist you…"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="welfare-claim-files">Supporting files (optional)</label>
+                <input type="file" id="welfare-claim-files" name="files" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
+                <p class="site-form__note">Up to 3 JPEG, PNG, WebP, or PDF files, 3.5 MB each.</p>
               </div>
               <div class="site-form__actions">
                 <button type="submit" class="btn btn--primary">Submit claim</button>
@@ -253,6 +276,6 @@
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
   <script src="../assets/js/invoices.js?v=2"></script>
-  <script src="../assets/js/members.js?v=42"></script>
+  <script src="../assets/js/members.js?v=43"></script>
 </body>
 </html>

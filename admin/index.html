@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817g">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817h">
 </head>
 <body data-page="site-admin">
 
@@ -45,6 +45,7 @@
             <button type="button" data-admin-nav="welfare-list">Welfare list</button>
             <button type="button" data-admin-nav="crm">CRM records</button>
             <button type="button" data-admin-nav="followup">Follow-up</button>
+            <button type="button" data-admin-nav="inbox">Team inbox</button>
             <button type="button" data-admin-nav="claims">Claims</button>
             <button type="button" data-admin-nav="welfare-invoices">$300 invoices</button>
           </div>
@@ -104,6 +105,13 @@
           </div>
           <button type="button" class="btn btn--sm btn--primary" data-admin-jump="ithelp">Open chat</button>
         </div>
+        <div class="admin-attention" id="admin-overview-inbox" hidden>
+          <div>
+            <strong id="admin-inbox-count">0</strong>
+            <span>unread Welfare team inbox messages</span>
+          </div>
+          <button type="button" class="btn btn--sm btn--primary" data-admin-jump="inbox">Open inbox</button>
+        </div>
 
         <div class="admin-stats">
           <button type="button" class="admin-stat admin-stat--btn" data-admin-jump="enquiries">
@@ -143,6 +151,7 @@
               <button type="button" data-admin-jump="association-list">Association list</button>
               <button type="button" data-admin-jump="crm">CRM records</button>
               <button type="button" data-admin-jump="followup">Email / SMS / pipeline</button>
+              <button type="button" data-admin-jump="inbox">Welfare team inbox</button>
               <button type="button" data-admin-jump="claims">Welfare claims</button>
               <a href="../index.html">View public site</a>
             </div>
@@ -415,6 +424,7 @@
 
         <div id="followup-sms-view" hidden>
           <p class="admin-muted" id="crm-sms-status">SMS uses Twilio. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM on Vercel to enable sending. Only members with a phone number are included.</p>
+          <p class="admin-muted">Waiting-period reminders (14 days, 7 days, and the day cover starts) and committee inbox replies always send email. They also SMS the member when Twilio is connected and the member has SMS opt-in plus a mobile number. This is not a GoHighLevel campaign clone.</p>
           <form class="site-form crm-field-form" id="crm-sms-form">
             <div class="form-group">
               <label for="crm-sms-audience">Audience</label>
@@ -522,9 +532,40 @@
         </div>
       </section>
 
+      <section class="site-admin__panel" data-admin-panel="inbox">
+        <div class="admin-toolbar">
+          <select id="inbox-filter" aria-label="Filter Welfare inbox">
+            <option value="open">Open</option>
+            <option value="unread">Unread</option>
+            <option value="closed">Closed</option>
+            <option value="all">All</option>
+          </select>
+          <p class="admin-muted">Same thread the member sees on the Welfare tab. Email (and SMS when Twilio is ready) is sent when you reply. This is not a GHL marketing inbox.</p>
+        </div>
+        <div class="ithelp-layout">
+          <div class="ithelp-threads" id="inbox-threads">
+            <p class="admin-muted">Open this tab to load conversations.</p>
+          </div>
+          <div class="ithelp-conversation">
+            <div class="ithelp-conversation__head" id="inbox-head">
+              <p class="admin-muted">Select a conversation.</p>
+            </div>
+            <div class="ithelp-messages" id="inbox-messages"></div>
+            <form class="ithelp-reply" id="inbox-reply-form" hidden>
+              <label class="visually-hidden" for="inbox-reply-body">Reply</label>
+              <textarea id="inbox-reply-body" rows="3" placeholder="Reply to this member…" required maxlength="2000"></textarea>
+              <div class="ithelp-reply__actions">
+                <button type="submit" class="btn btn--sm btn--primary">Send reply</button>
+                <button type="button" class="btn btn--sm btn--ghost" id="inbox-toggle-status">Close conversation</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
       <section class="site-admin__panel" data-admin-panel="claims">
         <p class="admin-muted">
-          Members lodge claims on the Welfare tab. Review here, then <strong>Approve</strong> (anonymised alert goes to all welfare members) or <strong>Decline</strong>.
+          Members lodge claims on the Welfare tab, with optional PDF or photo attachments. Review here, then <strong>Approve</strong> (anonymised alert goes to all welfare members) or <strong>Decline</strong>.
           Use <strong>Mark paid</strong> after the reimbursement is transferred.
         </p>
         <div class="admin-toolbar" style="margin-bottom:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
@@ -919,6 +960,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817g"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817h"></script>
 </body>
 </html>

@@ -853,8 +853,10 @@ async function activateWelfareMembership(invoice) {
       const current = Array.isArray(existingAdmit) ? existingAdmit[0]?.value_text : '';
       if (current) admitted = String(current).slice(0, 10);
     } catch (_) { /* field table may not exist yet */ }
+    const waitingEnds = await ensureWaitingPeriodEnds(profile.id, admitted);
     await upsertCrmValues(profile.id, {
       date_admitted: admitted,
+      waiting_period_ends: waitingEnds,
       payment_status: 'Paid',
       welfare_membership_status: 'Active',
       last_payment_date: today
@@ -863,6 +865,21 @@ async function activateWelfareMembership(invoice) {
     console.error('activate welfare CRM fields', crmErr);
   }
   return Array.isArray(data) ? data[0] : data;
+}
+
+async function ensureWaitingPeriodEnds(profileId, admittedIso) {
+  const { addDaysIso } = require('../lib/waiting-period');
+  let waitingEnds = '';
+  try {
+    const { data: existingWait } = await sb(
+      `crm_field_values?profile_id=eq.${encodeURIComponent(profileId)}&field_key=eq.waiting_period_ends&select=value_text&limit=1`
+    );
+    waitingEnds = Array.isArray(existingWait) ? String(existingWait[0]?.value_text || '').slice(0, 10) : '';
+  } catch (_) { /* ignore */ }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(waitingEnds)) {
+    waitingEnds = addDaysIso(admittedIso, 90);
+  }
+  return waitingEnds;
 }
 
 async function upsertCrmValues(profileId, values) {
@@ -1217,7 +1234,24 @@ module.exports = async function handler(req, res) {
         } catch (_) {
           itHelpOpen = 0;
         }
-        return json(res, 200, { enquiries, newEnquiries, profiles, imports, newsletter, itHelpOpen });
+        let welfareInboxUnread = 0;
+        try {
+          welfareInboxUnread = await countRows(
+            'welfare_inbox_threads',
+            'status=eq.open&unread_for_admin=eq.true'
+          );
+        } catch (_) {
+          welfareInboxUnread = 0;
+        }
+        return json(res, 200, {
+          enquiries,
+          newEnquiries,
+          profiles,
+          imports,
+          newsletter,
+          itHelpOpen,
+          welfareInboxUnread
+        });
       }
 
       if (resource === 'enquiries') {
@@ -1315,7 +1349,28 @@ module.exports = async function handler(req, res) {
         }
         try {
           const { data } = await sb(query);
-          return json(res, 200, { rows: data || [], filter: status });
+          const rows = data || [];
+          const ids = rows.map((row) => row.id).filter(Boolean);
+          let files = [];
+          if (ids.length) {
+            try {
+              const { data: listed } = await sb(
+                `welfare_claim_files?claim_id=in.(${ids.map((id) => encodeURIComponent(id)).join(',')})&select=id,claim_id,file_name,content_type,size_bytes,created_at`
+              );
+              files = Array.isArray(listed) ? listed : [];
+            } catch (_) {
+              files = [];
+            }
+          }
+          const byClaim = {};
+          files.forEach((file) => {
+            if (!byClaim[file.claim_id]) byClaim[file.claim_id] = [];
+            byClaim[file.claim_id].push(file);
+          });
+          return json(res, 200, {
+            rows: rows.map((row) => ({ ...row, files: byClaim[row.id] || [] })),
+            filter: status
+          });
         } catch (err) {
           return json(res, 200, {
             rows: [],
@@ -1528,6 +1583,81 @@ module.exports = async function handler(req, res) {
         });
       }
 
+      if (resource === 'welfare-inbox-threads') {
+        const status = url.searchParams.get('status') || 'open';
+        let query =
+          'welfare_inbox_threads?select=id,profile_id,member_name,member_email,status,unread_for_admin,last_message_at,created_at&order=last_message_at.desc&limit=120';
+        if (status === 'open' || status === 'closed') {
+          query += `&status=eq.${encodeURIComponent(status)}`;
+        } else if (status === 'unread') {
+          query += '&unread_for_admin=eq.true';
+        }
+        try {
+          const { data } = await sb(query);
+          return json(res, 200, { rows: data || [] });
+        } catch (err) {
+          return json(res, 200, {
+            rows: [],
+            warning:
+              err.message ||
+              'Inbox tables missing. Run docs/supabase/APPLY-WELFARE-INBOX.sql in Supabase.'
+          });
+        }
+      }
+
+      if (resource === 'welfare-inbox-messages') {
+        const threadId = String(url.searchParams.get('thread_id') || '').trim();
+        if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        const { data: threads } = await sb(
+          `welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}&select=*&limit=1`
+        );
+        const thread = Array.isArray(threads) ? threads[0] : null;
+        if (!thread) return json(res, 404, { error: 'Conversation not found' });
+        if (thread.unread_for_admin) {
+          await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}`, {
+            method: 'PATCH',
+            prefer: 'return=minimal',
+            body: JSON.stringify({ unread_for_admin: false })
+          });
+          thread.unread_for_admin = false;
+        }
+        const { data: messages } = await sb(
+          `welfare_inbox_messages?thread_id=eq.${encodeURIComponent(threadId)}&select=id,sender,body,created_at&order=created_at.asc&limit=200`
+        );
+        return json(res, 200, { thread, messages: messages || [] });
+      }
+
+      if (resource === 'welfare-claim-file') {
+        const fileId = String(url.searchParams.get('id') || '').trim();
+        if (!fileId) return json(res, 400, { error: 'File id is required' });
+        const { data: files } = await sb(
+          `welfare_claim_files?id=eq.${encodeURIComponent(fileId)}&select=id,storage_path,file_name,content_type&limit=1`
+        );
+        const file = Array.isArray(files) ? files[0] : null;
+        if (!file?.storage_path) return json(res, 404, { error: 'File not found' });
+        const signRes = await fetch(
+          `${SUPABASE_URL}/storage/v1/object/sign/welfare-claims/${file.storage_path}`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SERVICE_KEY,
+              Authorization: `Bearer ${SERVICE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ expiresIn: 180 })
+          }
+        );
+        const signed = await signRes.json().catch(() => ({}));
+        const path = signed.signedURL || signed.signedUrl || '';
+        if (!signRes.ok || !path) {
+          return json(res, 502, { error: 'Could not prepare a download link.' });
+        }
+        const urlSigned = path.startsWith('http')
+          ? path
+          : `${SUPABASE_URL}/storage/v1${path.startsWith('/') ? path : `/${path}`}`;
+        return json(res, 200, { url: urlSigned, file_name: file.file_name });
+      }
+
       if (resource === 'it-help-threads') {
         const status = url.searchParams.get('status') || 'open';
         let query =
@@ -1587,6 +1717,76 @@ module.exports = async function handler(req, res) {
         const nextStatus = body.status === 'closed' ? 'closed' : 'open';
         if (!threadId) return json(res, 400, { error: 'thread_id required' });
         await sb(`it_help_threads?id=eq.${encodeURIComponent(threadId)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ status: nextStatus })
+        });
+        return json(res, 200, { ok: true, status: nextStatus });
+      }
+
+      if (resource === 'welfare-inbox-reply') {
+        const threadId = String(body.thread_id || '').trim();
+        const text = String(body.body || '').trim();
+        if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        if (text.length < 1 || text.length > 2000) {
+          return json(res, 400, { error: 'Enter a reply.' });
+        }
+        const { data: threads } = await sb(
+          `welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}&select=*&limit=1`
+        );
+        const thread = Array.isArray(threads) ? threads[0] : null;
+        if (!thread) return json(res, 404, { error: 'Conversation not found' });
+        const now = new Date().toISOString();
+        await sb('welfare_inbox_messages', {
+          method: 'POST',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ thread_id: threadId, sender: 'committee', body: text })
+        });
+        await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({
+            status: 'open',
+            unread_for_member: true,
+            unread_for_admin: false,
+            last_message_at: now
+          })
+        });
+        let notified = null;
+        try {
+          const { data: profiles } = await sb(
+            `profiles?id=eq.${encodeURIComponent(thread.profile_id)}&select=id,full_name,email,phone&limit=1`
+          );
+          const profile = Array.isArray(profiles) ? profiles[0] : null;
+          if (profile?.email) {
+            const { data: optRows } = await sb(
+              `crm_field_values?profile_id=eq.${encodeURIComponent(profile.id)}&field_key=eq.sms_opt_in&select=value_text&limit=1`
+            );
+            const optValue = Array.isArray(optRows) ? String(optRows[0]?.value_text || '').toLowerCase() : '';
+            const { notifyWelfareMember } = require('../lib/welfare-notify');
+            notified = await notifyWelfareMember({
+              toEmail: profile.email,
+              toPhone: profile.phone,
+              smsOptIn: optValue === 'true' || optValue === 'yes' || optValue === '1',
+              greeting: profile.full_name || thread.member_name || 'Member',
+              subject: 'The Welfare Committee replied',
+              title: 'New welfare message',
+              lead: 'The Welfare Committee replied to your message. Open the Welfare tab to read it and continue the conversation.',
+              ctaLabel: 'Open team inbox',
+              actionPath: '/members/welfare.html#welfare-inbox-card'
+            });
+          }
+        } catch (notifyErr) {
+          console.error('welfare-inbox-reply notify', notifyErr);
+        }
+        return json(res, 200, { ok: true, notified });
+      }
+
+      if (resource === 'welfare-inbox-close') {
+        const threadId = String(body.thread_id || '').trim();
+        const nextStatus = body.status === 'closed' ? 'closed' : 'open';
+        if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}`, {
           method: 'PATCH',
           prefer: 'return=minimal',
           body: JSON.stringify({ status: nextStatus })
@@ -2432,6 +2632,23 @@ module.exports = async function handler(req, res) {
             plan: nextPlan
           })
         });
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          let admitted = today;
+          const { data: existingAdmit } = await sb(
+            `crm_field_values?profile_id=eq.${encodeURIComponent(id)}&field_key=eq.date_admitted&select=value_text&limit=1`
+          );
+          const current = Array.isArray(existingAdmit) ? existingAdmit[0]?.value_text : '';
+          if (current) admitted = String(current).slice(0, 10);
+          const waitingEnds = await ensureWaitingPeriodEnds(id, admitted);
+          await upsertCrmValues(id, {
+            date_admitted: admitted,
+            waiting_period_ends: waitingEnds,
+            welfare_membership_status: 'Active'
+          });
+        } catch (crmErr) {
+          console.error('approve-welfare waiting period', crmErr);
+        }
         return json(res, 200, { rows: data || [] });
       }
 

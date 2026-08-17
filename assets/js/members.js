@@ -1209,6 +1209,131 @@
     }
   }
 
+  async function getMemberAccessToken() {
+    const auth = window.taunetMembersAuth;
+    const client = auth ? await auth.getClient() : await window.taunetSupabaseApi?.ensureClient?.();
+    if (!client) throw new Error('Sign in required.');
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const token = data?.session?.access_token;
+    if (!token) throw new Error('Sign in required.');
+    return token;
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Could not read the file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderWelfareInbox(payload) {
+    const box = document.getElementById('welfare-inbox-messages');
+    if (!box) return;
+    const messages = payload?.messages || [];
+    if (!messages.length) {
+      box.innerHTML = '<p class="muted">No messages yet. Write to the Welfare Committee below.</p>';
+      return;
+    }
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
+    box.innerHTML = messages
+      .map((m) => {
+        const who = m.sender === 'committee' ? 'committee' : 'member';
+        const label = who === 'committee' ? 'Committee' : 'You';
+        return `<div class="welfare-inbox__bubble welfare-inbox__bubble--${who}">
+          <strong>${label}</strong>
+          <div>${escapeHtml(m.body)}</div>
+          <time>${escapeHtml(formatMemberDate(m.createdAt || m.created_at))}</time>
+        </div>`;
+      })
+      .join('');
+    if (atBottom || messages.length) box.scrollTop = box.scrollHeight;
+  }
+
+  async function loadWelfareInbox() {
+    const box = document.getElementById('welfare-inbox-messages');
+    const status = document.getElementById('welfare-inbox-status');
+    if (!box) return;
+    if (sessionStorage.getItem('taunet_preview') === '1') {
+      box.innerHTML = '<p class="muted">Preview — team inbox is not stored.</p>';
+      return;
+    }
+    try {
+      const token = await getMemberAccessToken();
+      const res = await fetch('/api/welfare-inbox', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not load the team inbox.');
+      }
+      renderWelfareInbox(data);
+      if (status && data.thread?.status === 'closed') {
+        status.hidden = false;
+        status.classList.remove('is-error');
+        status.textContent = 'This conversation is closed. Send a message to reopen it.';
+      }
+    } catch (err) {
+      box.innerHTML = `<p class="muted">${escapeHtml(err.message || 'Team inbox will appear after IT runs APPLY-WELFARE-INBOX.sql.')}</p>`;
+    }
+  }
+
+  function initWelfareInbox() {
+    const form = document.getElementById('welfare-inbox-form');
+    if (!form || form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+    loadWelfareInbox();
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const status = document.getElementById('welfare-inbox-status');
+      const textarea = document.getElementById('welfare-inbox-body');
+      const submit = form.querySelector('[type="submit"]');
+      const text = String(textarea?.value || '').trim();
+      if (text.length < 2) {
+        if (status) {
+          status.hidden = false;
+          status.classList.add('is-error');
+          status.textContent = 'Enter a message.';
+        }
+        return;
+      }
+      if (submit) submit.disabled = true;
+      try {
+        const token = await getMemberAccessToken();
+        const res = await fetch('/api/welfare-inbox', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ body: text })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not send the message.');
+        if (textarea) textarea.value = '';
+        renderWelfareInbox(data);
+        if (status) {
+          status.hidden = false;
+          status.classList.remove('is-error');
+          status.textContent = 'Message sent. The Welfare Committee will reply here.';
+        }
+      } catch (err) {
+        if (status) {
+          status.hidden = false;
+          status.classList.add('is-error');
+          status.textContent = err.message || 'Could not send the message yet. Ask IT to run APPLY-WELFARE-INBOX.sql.';
+        }
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    window.setInterval(() => {
+      if (document.getElementById('welfare-inbox-card')) loadWelfareInbox().catch(() => {});
+    }, 15000);
+  }
+
   function initWelfareClaimForm(member) {
     const form = document.getElementById('welfare-claim-form');
     if (!form || !member?.id || form.dataset.bound === '1') return;
@@ -1228,7 +1353,7 @@
         if (amountRaw && (!Number.isFinite(amountCents) || amountCents < 0)) {
           throw new Error('Enter a valid amount, or leave it blank.');
         }
-        const { error } = await client.from('welfare_claims').insert({
+        const { data, error } = await client.from('welfare_claims').insert({
           profile_id: member.id,
           member_name: member.name || null,
           member_email: member.email || null,
@@ -1237,8 +1362,36 @@
           amount_cents: amountCents,
           details: document.getElementById('welfare-claim-details').value.trim(),
           status: 'submitted'
-        });
+        }).select('id').single();
         if (error) throw error;
+        const fileInput = document.getElementById('welfare-claim-files');
+        const files = fileInput?.files ? Array.from(fileInput.files).slice(0, 3) : [];
+        if (files.length && data?.id) {
+          const payloads = [];
+          for (const file of files) {
+            if (file.size > 3_500_000) {
+              throw new Error('Each file must be under 3.5 MB.');
+            }
+            payloads.push({
+              name: file.name,
+              content_type: file.type,
+              data_url: await fileToDataUrl(file)
+            });
+          }
+          const token = await getMemberAccessToken();
+          const uploadRes = await fetch('/api/welfare-claim-files', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ claim_id: data.id, files: payloads })
+          });
+          const uploadData = await uploadRes.json().catch(() => ({}));
+          if (!uploadRes.ok) {
+            throw new Error(uploadData.error || 'Claim saved, but a supporting file could not be attached.');
+          }
+        }
         if (message) {
           message.hidden = false;
           message.classList.remove('is-error');
@@ -1420,6 +1573,7 @@
     loadWelfareInvoices(member);
     loadMyWelfareClaims(member);
     initWelfareClaimForm(member);
+    initWelfareInbox();
     loadWelfareRecord(member);
     initWelfareAppointment(member);
   }

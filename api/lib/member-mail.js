@@ -336,6 +336,7 @@ module.exports = {
   buildPasswordMail,
   buildConfirmMail,
   buildCampaignMail,
+  brandedShell,
   escapeHtml,
   assertResendConfigured,
   deliverabilityHeaders,

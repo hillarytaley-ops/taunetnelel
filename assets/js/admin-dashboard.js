@@ -24,6 +24,7 @@
     'welfare-list': { panel: 'imports', group: 'welfare', scope: 'welfare' },
     crm: { panel: 'crm', group: 'welfare' },
     followup: { panel: 'followup', group: 'welfare' },
+    inbox: { panel: 'inbox', group: 'welfare' },
     claims: { panel: 'claims', group: 'welfare' },
     'welfare-invoices': { panel: 'invoices', group: 'welfare', scope: 'welfare' },
     'association-members': { panel: 'members', group: 'association', scope: 'association' },
@@ -46,6 +47,7 @@
     'welfare-list': 'Welfare list',
     crm: 'CRM records',
     followup: 'Follow-up',
+    inbox: 'Team inbox',
     claims: 'Welfare claims',
     'welfare-invoices': 'Welfare invoices',
     'association-members': 'Association members',
@@ -68,7 +70,8 @@
     'welfare-list': 'Imported Social Welfare membership list.',
     crm: 'Welfare register. Sensitive bank, income, and ID fields stay Admin-only.',
     followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
-    claims: 'Bereavement and hardship claims lodged on the Welfare tab.',
+    inbox: 'Committee conversations with Social Welfare members. Replies email the member, and SMS them when Twilio is ready.',
+    claims: 'Bereavement and hardship claims lodged on the Welfare tab, including supporting files.',
     'welfare-invoices': '$300 Association + Welfare invoices — mark paid when the deposit lands.',
     'association-members': 'Signed-in Association members who are not on Social Welfare.',
     'association-list': 'Imported Association (ordinary) membership list.',
@@ -94,6 +97,12 @@
     itHelpThread: null,
     itHelpMessages: [],
     itHelpPoll: null,
+    inboxThreads: [],
+    inboxFilter: 'open',
+    inboxSelectedId: '',
+    inboxThread: null,
+    inboxMessages: [],
+    inboxPoll: null,
     importFilter: 'all',
     importSearch: '',
     importRows: [],
@@ -217,8 +226,10 @@
 
     history.replaceState(null, '', `#${nav.navId}`);
     if (nav.panel !== 'ithelp') stopItHelpPoll();
+    if (nav.panel !== 'inbox') stopInboxPoll();
     if (nav.panel === 'enquiries') renderEnquiries();
     if (nav.panel === 'ithelp') renderItHelp();
+    if (nav.panel === 'inbox') renderInbox();
     setAdminNavOpen(false);
   }
 
@@ -271,6 +282,7 @@
     if (options.status) params.set('status', options.status);
     if (options.threadId) params.set('thread_id', options.threadId);
     if (options.profileId) params.set('profile_id', options.profileId);
+    if (options.id) params.set('id', options.id);
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (pin) headers['x-admin-bootstrap-pin'] = pin;
@@ -344,6 +356,12 @@
       const itHelpCount = document.getElementById('admin-ithelp-count');
       if (itHelpCount) itHelpCount.textContent = String(itHelpOpen);
       if (itHelpBanner) itHelpBanner.hidden = itHelpOpen < 1;
+
+      const inboxUnread = Number(data.welfareInboxUnread) || 0;
+      const inboxBanner = document.getElementById('admin-overview-inbox');
+      const inboxCount = document.getElementById('admin-inbox-count');
+      if (inboxCount) inboxCount.textContent = String(inboxUnread);
+      if (inboxBanner) inboxBanner.hidden = inboxUnread < 1;
 
       const rows = enquiriesData.rows || [];
       state.enquiries = rows;
@@ -594,6 +612,130 @@
 
     if (form) form.hidden = false;
     if (toggle) toggle.textContent = thread.status === 'closed' ? 'Reopen chat' : 'Close chat';
+  }
+
+  function stopInboxPoll() {
+    if (state.inboxPoll) {
+      clearInterval(state.inboxPoll);
+      state.inboxPoll = null;
+    }
+  }
+
+  function startInboxPoll() {
+    stopInboxPoll();
+    state.inboxPoll = setInterval(() => {
+      const active = document.querySelector('[data-admin-panel="inbox"].is-active');
+      if (!active || !state.isAdmin) {
+        stopInboxPoll();
+        return;
+      }
+      loadInbox({ silent: true }).catch(() => {});
+    }, 8000);
+  }
+
+  async function loadInbox(options = {}) {
+    const status = options.status || state.inboxFilter || 'open';
+    state.inboxFilter = status;
+    const data = await adminApi('welfare-inbox-threads', { status });
+    state.inboxThreads = data.rows || [];
+    state.inboxWarning = data.warning || '';
+    if (
+      state.inboxSelectedId &&
+      !state.inboxThreads.some((row) => row.id === state.inboxSelectedId)
+    ) {
+      state.inboxSelectedId = state.inboxThreads[0]?.id || '';
+      state.inboxThread = null;
+      state.inboxMessages = [];
+    }
+    if (state.inboxSelectedId) {
+      await loadInboxMessages(state.inboxSelectedId);
+    }
+    renderInbox();
+  }
+
+  async function loadInboxMessages(threadId) {
+    const data = await adminApi('welfare-inbox-messages', { threadId });
+    state.inboxThread = data.thread || null;
+    state.inboxMessages = data.messages || [];
+  }
+
+  function renderInbox() {
+    const list = document.getElementById('inbox-threads');
+    const head = document.getElementById('inbox-head');
+    const messagesEl = document.getElementById('inbox-messages');
+    const form = document.getElementById('inbox-reply-form');
+    const toggle = document.getElementById('inbox-toggle-status');
+    if (!list) return;
+
+    if (!state.inboxThreads.length) {
+      list.innerHTML = `<p class="admin-muted">${escapeHtml(state.inboxWarning || 'No conversations in this filter.')}</p>`;
+    } else {
+      list.innerHTML = state.inboxThreads
+        .map((row) => {
+          const active = row.id === state.inboxSelectedId ? ' is-active' : '';
+          const unread = row.unread_for_admin
+            ? '<span class="admin-chip admin-chip--new">unread</span>'
+            : '';
+          return `<button type="button" class="ithelp-thread${active}" data-inbox-id="${escapeHtml(row.id)}">
+            <span class="admin-chip admin-chip--${escapeHtml(row.status || 'open')}">${escapeHtml(row.status || 'open')}</span>
+            ${unread}
+            <strong>${escapeHtml(row.member_name || row.member_email || 'Unknown')}</strong>
+            <div class="admin-detail">${escapeHtml(row.member_email || '')}<br>${escapeHtml(formatDate(row.last_message_at || row.created_at))}</div>
+          </button>`;
+        })
+        .join('');
+      list.querySelectorAll('[data-inbox-id]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          state.inboxSelectedId = btn.dataset.inboxId;
+          try {
+            await loadInboxMessages(state.inboxSelectedId);
+            renderInbox();
+          } catch (err) {
+            alert(err.message || 'Could not load conversation.');
+          }
+        });
+      });
+    }
+
+    const thread = state.inboxThread;
+    if (!thread) {
+      if (head) head.innerHTML = '<p class="admin-muted">Select a conversation.</p>';
+      if (messagesEl) messagesEl.innerHTML = '';
+      if (form) form.hidden = true;
+      return;
+    }
+
+    if (head) {
+      head.innerHTML = `<div>
+        <span class="admin-chip admin-chip--${escapeHtml(thread.status)}">${escapeHtml(thread.status)}</span>
+        <strong>${escapeHtml(thread.member_name || thread.member_email || 'Unknown')}</strong>
+        <div class="admin-detail">${escapeHtml(thread.member_email || '')}</div>
+      </div>`;
+    }
+
+    if (messagesEl) {
+      const atBottom =
+        messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 64;
+      if (!state.inboxMessages.length) {
+        messagesEl.innerHTML = '<p class="admin-muted">No messages yet.</p>';
+      } else {
+        messagesEl.innerHTML = state.inboxMessages
+          .map((m) => {
+            const who = m.sender === 'committee' ? 'it' : 'member';
+            const label = who === 'it' ? 'Committee' : 'Member';
+            return `<div class="ithelp-bubble ithelp-bubble--${who}">
+              <strong>${label}</strong>
+              <div>${escapeHtml(m.body)}</div>
+              <time>${escapeHtml(formatDate(m.created_at))}</time>
+            </div>`;
+          })
+          .join('');
+        if (atBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+    }
+
+    if (form) form.hidden = false;
+    if (toggle) toggle.textContent = thread.status === 'closed' ? 'Reopen conversation' : 'Close conversation';
   }
 
   async function loadMembers() {
@@ -1787,6 +1929,13 @@
           actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="in_review">Reopen</button>`);
         }
         const details = String(row.details || '').slice(0, 180);
+        const files = Array.isArray(row.files) ? row.files : [];
+        const fileButtons = files
+          .map(
+            (file) =>
+              `<button type="button" class="btn btn--sm btn--ghost" data-claim-file="${escapeHtml(file.id)}">${escapeHtml(file.file_name || 'Attachment')}</button>`
+          )
+          .join('');
         return `<tr>
           <td class="admin-detail">${escapeHtml(formatDate(row.created_at))}</td>
           <td>
@@ -1797,7 +1946,7 @@
           <td>${escapeHtml(claimTypeLabel(row.claim_type))}</td>
           <td>${escapeHtml(amount)}</td>
           <td><span class="admin-chip admin-chip--${status === 'approved' || status === 'paid' ? 'reviewed' : status === 'declined' ? '' : 'new'}">${escapeHtml(status.replace('_', ' '))}</span></td>
-          <td class="admin-detail">${escapeHtml(details)}${row.admin_notes ? `<div><em>Note: ${escapeHtml(row.admin_notes)}</em></div>` : ''}</td>
+          <td class="admin-detail">${escapeHtml(details)}${fileButtons ? `<div class="admin-actions" style="margin-top:0.4rem;">${fileButtons}</div>` : ''}${row.admin_notes ? `<div><em>Note: ${escapeHtml(row.admin_notes)}</em></div>` : ''}</td>
           <td><div class="admin-actions">${actions.join('')}</div></td>
         </tr>`;
       })
@@ -1831,6 +1980,17 @@
           await loadClaims();
         } catch (err) {
           alert(err.message || 'Could not update claim.');
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-claim-file]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          const data = await adminApi('welfare-claim-file', { id: btn.dataset.claimFile });
+          if (data.url) window.open(data.url, '_blank', 'noopener');
+        } catch (err) {
+          alert(err.message || 'Could not open the attachment.');
         }
       });
     });
@@ -2420,6 +2580,7 @@
     }
 
     if (panelId !== 'ithelp') stopItHelpPoll();
+    if (panelId !== 'inbox') stopInboxPoll();
 
     if (panelId === 'overview') {
       try {
@@ -2440,6 +2601,10 @@
         await loadItHelp();
         startItHelpPoll();
       }
+      if (panelId === 'inbox') {
+        await loadInbox();
+        startInboxPoll();
+      }
       if (panelId === 'members') await loadMembers();
       if (panelId === 'crm') await loadCrm();
       if (panelId === 'followup') await loadFollowup();
@@ -2458,8 +2623,8 @@
         status.hidden = false;
         status.classList.add('is-error');
         status.textContent =
-          panelId === 'crm' || panelId === 'followup' || panelId === 'claims'
-            ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
+          panelId === 'crm' || panelId === 'followup' || panelId === 'claims' || panelId === 'inbox'
+            ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-INBOX.sql (inbox/attachments) or APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
             : err.message ||
               'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
       }
@@ -2563,6 +2728,51 @@
         await loadItHelp();
       } catch (err) {
         alert(err.message || 'Could not update chat status.');
+      }
+    });
+
+    document.getElementById('inbox-filter')?.addEventListener('change', (e) => {
+      state.inboxFilter = e.target.value;
+      state.inboxSelectedId = '';
+      state.inboxThread = null;
+      state.inboxMessages = [];
+      if (state.isAdmin) {
+        loadInbox().catch((err) => alert(err.message || 'Could not load team inbox.'));
+      }
+    });
+
+    document.getElementById('inbox-reply-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const threadId = state.inboxSelectedId;
+      const textarea = document.getElementById('inbox-reply-body');
+      const text = String(textarea?.value || '').trim();
+      if (!threadId) return;
+      if (!text) {
+        alert('Enter a reply.');
+        return;
+      }
+      try {
+        await adminApi('welfare-inbox-reply', { method: 'POST', body: { thread_id: threadId, body: text } });
+        if (textarea) textarea.value = '';
+        await loadInboxMessages(threadId);
+        await loadInbox({ silent: true });
+      } catch (err) {
+        alert(err.message || 'Could not send reply.');
+      }
+    });
+
+    document.getElementById('inbox-toggle-status')?.addEventListener('click', async () => {
+      const thread = state.inboxThread;
+      if (!thread) return;
+      const nextStatus = thread.status === 'closed' ? 'open' : 'closed';
+      try {
+        await adminApi('welfare-inbox-close', {
+          method: 'POST',
+          body: { thread_id: thread.id, status: nextStatus }
+        });
+        await loadInbox();
+      } catch (err) {
+        alert(err.message || 'Could not update conversation status.');
       }
     });
 
