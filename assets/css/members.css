@@ -590,6 +590,15 @@
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
+#welfare-appointment-form .form-group input,
+#welfare-appointment-form .form-group select,
+#welfare-appointment-form .form-group textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Profile */
 .profile-grid {
   display: grid;

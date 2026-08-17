@@ -1811,11 +1811,14 @@
         const client = await window.taunetSupabaseApi?.ensureClient?.();
         if (!client) throw new Error('Could not connect.');
         const local = document.getElementById('welfare-appt-start').value;
+        const meet = document.getElementById('welfare-appt-location')?.value.trim() || '';
+        const place = document.getElementById('welfare-appt-place')?.value.trim() || '';
+        const location = [meet, place].filter(Boolean).join(' — ') || null;
         const { error } = await client.from('crm_calendar_events').insert({
           title: 'Welfare appointment request',
           details: document.getElementById('welfare-appt-details').value.trim(),
           starts_at: local ? new Date(local).toISOString() : null,
-          location: document.getElementById('welfare-appt-location').value.trim() || null,
+          location,
           event_type: 'appointment',
           status: 'requested',
           profile_id: member.id,

@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=32">
+  <link rel="stylesheet" href="../assets/css/members.css?v=33">
   <link rel="stylesheet" href="../assets/css/member-invoices.css?v=1">
 </head>
 <body>
@@ -197,15 +197,22 @@
                 <h2>Book a welfare appointment</h2>
                 <p class="welfare-record-intro">Request a time with the Welfare Committee. They will confirm it on the committee calendar.</p>
                 <form class="site-form" id="welfare-appointment-form">
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label for="welfare-appt-start">Preferred date and time</label>
-                      <input type="datetime-local" id="welfare-appt-start" name="starts_at" required>
-                    </div>
-                    <div class="form-group">
-                      <label for="welfare-appt-location">Phone or in person</label>
-                      <input type="text" id="welfare-appt-location" name="location" placeholder="Phone, Zoom, or suburb">
-                    </div>
+                  <div class="form-group">
+                    <label for="welfare-appt-start">Preferred date and time</label>
+                    <input type="datetime-local" id="welfare-appt-start" name="starts_at" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-appt-location">How you will meet</label>
+                    <select id="welfare-appt-location" name="location">
+                      <option value="">Choose phone, in person, or Zoom…</option>
+                      <option value="Phone">Phone</option>
+                      <option value="In person">In person</option>
+                      <option value="Zoom">Zoom</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-appt-place">Suburb or phone number (optional)</label>
+                    <input type="text" id="welfare-appt-place" name="place" placeholder="e.g. Dandenong or 04xx xxx xxx">
                   </div>
                   <div class="form-group">
                     <label for="welfare-appt-details">What you need to discuss</label>
@@ -303,6 +310,6 @@
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
   <script src="../assets/js/invoices.js?v=2"></script>
-  <script src="../assets/js/members.js?v=46"></script>
+  <script src="../assets/js/members.js?v=47"></script>
 </body>
 </html>
