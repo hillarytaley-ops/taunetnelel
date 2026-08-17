@@ -3677,6 +3677,7 @@ body.nav-open { overflow: hidden; }
 /* Footer */
 .site-footer {
   position: relative;
+  z-index: 1100;
   background: var(--team-surface-gradient);
   padding-top: 4rem;
   color: rgba(255, 255, 255, 0.88);
@@ -3709,9 +3710,10 @@ body.nav-open { overflow: hidden; }
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 2.5rem;
+  grid-template-columns: minmax(14rem, 1.7fr) repeat(3, minmax(9rem, 1fr));
+  gap: 2rem 1.5rem;
   padding-bottom: 3rem;
+  align-items: start;
 }
 
 .footer-brand img { height: 64px; margin-bottom: 1rem; }
@@ -3726,7 +3728,7 @@ body.nav-open { overflow: hidden; }
 }
 
 .footer-col ul { list-style: none; }
-.footer-col li { margin-bottom: 0.5rem; }
+.footer-col li { margin-bottom: 0.55rem; }
 .footer-col a { color: rgba(255, 255, 255, 0.82); font-size: 0.9rem; }
 .footer-col a:hover { color: var(--color-white); }
 
@@ -3803,7 +3805,12 @@ body.nav-open { overflow: hidden; }
 }
 
 .footer-contact-list { list-style: none; }
-.footer-contact-list li { margin-bottom: 0.5rem; font-size: 0.9rem; color: rgba(255, 255, 255, 0.82); }
+.footer-contact-list li {
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.82);
+}
 .footer-contact-list a { color: rgba(255, 255, 255, 0.82); }
 .footer-contact-list a:hover { color: var(--color-white); }
 
@@ -4014,7 +4021,6 @@ body.nav-open { overflow: hidden; }
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .footer-grid { grid-template-columns: 1fr 1fr; }
   .about-split { grid-template-columns: 1fr; }
   .values-grid { grid-template-columns: repeat(2, 1fr); }
   .team-grid--four { grid-template-columns: repeat(2, 1fr); }
@@ -4030,6 +4036,16 @@ body.nav-open { overflow: hidden; }
 @media (max-width: 1100px) {
   .main-nav > ul > li > a { padding: 0.5rem 0.5rem; font-size: 0.74rem; }
   .header-actions .btn { padding: 0.55rem 0.9rem; font-size: 0.8rem; }
+}
+
+@media (max-width: 960px) {
+  .footer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .footer-brand {
+    grid-column: 1 / -1;
+    max-width: 36rem;
+  }
 }
 
 @media (max-width: 768px) {
