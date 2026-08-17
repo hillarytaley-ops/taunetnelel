@@ -732,7 +732,7 @@
 .welfare-status-meta {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1rem;
   padding: 1rem 0;
   border-top: 1px solid rgba(0, 0, 0, 0.06);

@@ -12,6 +12,7 @@
     'members',
     'crm',
     'followup',
+    'claims',
     'imports',
     'business',
     'events',
@@ -1641,6 +1642,99 @@
     });
   }
 
+  function claimTypeLabel(type) {
+    const labels = {
+      bereavement: 'Bereavement',
+      hardship: 'Hardship',
+      family_emergency: 'Family emergency',
+      other: 'Other'
+    };
+    return labels[type] || type || '—';
+  }
+
+  async function loadClaims() {
+    const body = document.getElementById('admin-claims-body');
+    if (!body) return;
+    const statusFilter = document.getElementById('admin-claim-filter')?.value || 'open';
+    body.innerHTML = `<tr><td colspan="7" class="admin-empty">Loading…</td></tr>`;
+    const data = await adminApi('welfare-claims', { status: statusFilter });
+    const rows = data.rows || [];
+    if (data.warning && !rows.length) {
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">${escapeHtml(data.warning)}</td></tr>`;
+      return;
+    }
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No claims for “${escapeHtml(statusFilter)}”.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
+      .map((row) => {
+        const amount = row.amount_cents == null ? '—' : `$${(Number(row.amount_cents) / 100).toFixed(2)}`;
+        const status = String(row.status || 'submitted');
+        const actions = [];
+        if (status === 'submitted') {
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="in_review">In review</button>`);
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="approved">Approve</button>`);
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="declined">Decline</button>`);
+        } else if (status === 'in_review') {
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="approved">Approve</button>`);
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="declined">Decline</button>`);
+        } else if (status === 'approved') {
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="paid">Mark paid</button>`);
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="declined">Decline</button>`);
+        } else if (status === 'declined') {
+          actions.push(`<button type="button" data-claim-status="${escapeHtml(row.id)}" data-next="in_review">Reopen</button>`);
+        }
+        const details = String(row.details || '').slice(0, 180);
+        return `<tr>
+          <td class="admin-detail">${escapeHtml(formatDate(row.created_at))}</td>
+          <td>
+            ${escapeHtml(row.member_name || '—')}
+            <div class="admin-detail">${escapeHtml(row.member_email || '')}${row.member_number ? ' · #' + escapeHtml(row.member_number) : ''}</div>
+            <div class="admin-detail">${escapeHtml(row.public_ref || '')}</div>
+          </td>
+          <td>${escapeHtml(claimTypeLabel(row.claim_type))}</td>
+          <td>${escapeHtml(amount)}</td>
+          <td><span class="admin-chip admin-chip--${status === 'approved' || status === 'paid' ? 'reviewed' : status === 'declined' ? '' : 'new'}">${escapeHtml(status.replace('_', ' '))}</span></td>
+          <td class="admin-detail">${escapeHtml(details)}${row.admin_notes ? `<div><em>Note: ${escapeHtml(row.admin_notes)}</em></div>` : ''}</td>
+          <td><div class="admin-actions">${actions.join('')}</div></td>
+        </tr>`;
+      })
+      .join('');
+
+    body.querySelectorAll('[data-claim-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const next = btn.dataset.next;
+        const payload = { id: btn.dataset.claimStatus, status: next };
+        if (next === 'approved' || next === 'paid') {
+          const dollars = window.prompt('Approved amount in AUD (e.g. 2500). Leave blank to keep the member amount.');
+          if (dollars === null) return;
+          if (String(dollars).trim()) payload.amount = Number(dollars);
+        }
+        if (next === 'declined') {
+          const note = window.prompt('Optional note for the member (why declined):', '');
+          if (note === null) return;
+          payload.admin_notes = note;
+        }
+        const confirmLabel =
+          next === 'approved'
+            ? 'Approve this claim? An anonymised alert will appear on the Welfare tab.'
+            : next === 'paid'
+              ? 'Mark this reimbursement as paid?'
+              : next === 'declined'
+                ? 'Decline this claim?'
+                : 'Update this claim?';
+        if (!confirm(confirmLabel)) return;
+        try {
+          await adminApi('welfare-claim-update', { method: 'PATCH', body: payload });
+          await loadClaims();
+        } catch (err) {
+          alert(err.message || 'Could not update claim.');
+        }
+      });
+    });
+  }
+
   function setCrmTab(tab) {
     state.crmTab = tab === 'fields' ? 'fields' : 'records';
     document.querySelectorAll('[data-crm-tab]').forEach((btn) => {
@@ -2245,6 +2339,7 @@
       if (id === 'imports') await loadImports();
       if (id === 'events') await loadEvents();
       if (id === 'invoices') await loadInvoices();
+      if (id === 'claims') await loadClaims();
       if (id === 'sponsors') await loadSponsors();
       if (id === 'gallery') await loadGallery();
       if (id === 'newsletter') await loadNewsletter();
@@ -2256,8 +2351,8 @@
         status.hidden = false;
         status.classList.add('is-error');
         status.textContent =
-          id === 'crm' || id === 'followup'
-            ? `${err.message || 'Could not load follow-up tools.'} If tables are missing, run docs/supabase/APPLY-CRM-FOLLOWUP.sql in the Supabase SQL Editor, then refresh.`
+          id === 'crm' || id === 'followup' || id === 'claims'
+            ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
             : err.message ||
               'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
       }
@@ -2390,6 +2485,12 @@
     });
     document.getElementById('admin-invoices-refresh')?.addEventListener('click', () => {
       if (state.isAdmin) loadInvoices().catch((err) => alert(err.message || 'Could not load invoices.'));
+    });
+    document.getElementById('admin-claim-filter')?.addEventListener('change', () => {
+      if (state.isAdmin) loadClaims().catch((err) => alert(err.message || 'Could not load claims.'));
+    });
+    document.getElementById('admin-claims-refresh')?.addEventListener('click', () => {
+      if (state.isAdmin) loadClaims().catch((err) => alert(err.message || 'Could not load claims.'));
     });
 
     document.getElementById('admin-newsletter-export')?.addEventListener('click', () => {

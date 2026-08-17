@@ -7,7 +7,8 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=25">
+  <link rel="stylesheet" href="../assets/css/members.css?v=26">
+  <link rel="stylesheet" href="../assets/css/member-invoices.css?v=1">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -68,9 +69,12 @@
               </div>
             </div>
             <ul class="welfare-status-meta">
-              <li><span>Member since</span><strong data-welfare-since>2024</strong></li>
+              <li><span>Membership no.</span><strong data-member-number>—</strong></li>
+              <li><span>Date admitted</span><strong data-welfare-admitted>—</strong></li>
+              <li><span>Member since</span><strong data-welfare-since>—</strong></li>
               <li><span>Renews</span><strong data-member-renews>—</strong></li>
               <li><span>Cover type</span><strong data-welfare-cover>Bereavement &amp; hardship</strong></li>
+              <li><span>$300 payment</span><strong data-welfare-payment>—</strong></li>
             </ul>
             <p class="welfare-status-note" id="welfare-status-note">Your social welfare membership is active. You are eligible for bereavement support and community reimbursements.</p>
           </div>
@@ -88,6 +92,17 @@
               </div>
               <p class="inquiry-form__message" id="welfare-record-message" role="status" aria-live="polite" hidden></p>
             </form>
+          </div>
+
+          <div class="dash-card dash-card--full" id="welfare-payments-card">
+            <h2>$300 contribution / invoices</h2>
+            <p class="welfare-record-intro">Your Association + Welfare invoices. Request a new invoice from Membership if you do not see one yet.</p>
+            <div id="welfare-invoice-history">
+              <p class="muted">Loading…</p>
+            </div>
+            <p style="margin-top:0.85rem;font-size:0.92rem;">
+              <a href="membership.html?upgrade=welfare">Request or pay the $300 invoice</a>
+            </p>
           </div>
 
           <div class="dash-card dash-card--full" id="welfare-appointment-card">
@@ -126,27 +141,7 @@
             </div>
             <p class="welfare-alerts-intro">When the Welfare Committee approves a bereavement or hardship reimbursement, all enrolled social welfare members are notified here. Member names are anonymised for privacy.</p>
             <ul class="welfare-alert-list" id="welfare-alert-list" aria-live="polite">
-              <li class="welfare-alert-item welfare-alert-item--new" data-alert-id="a1">
-                <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
-                <div class="welfare-alert-item__body">
-                  <p class="welfare-alert-item__title">Bereavement reimbursement — $2,500</p>
-                  <p class="welfare-alert-item__meta">Member #1042 · 28 Jun 2026 · <span class="status-chip status-chip--active">Approved</span> <span class="welfare-alert-item__new">New</span></p>
-                </div>
-              </li>
-              <li class="welfare-alert-item" data-alert-id="a2">
-                <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
-                <div class="welfare-alert-item__body">
-                  <p class="welfare-alert-item__title">Hardship support — $800</p>
-                  <p class="welfare-alert-item__meta">Member #0987 · 12 Jun 2026 · <span class="status-chip status-chip--active">Approved</span></p>
-                </div>
-              </li>
-              <li class="welfare-alert-item" data-alert-id="a3">
-                <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
-                <div class="welfare-alert-item__body">
-                  <p class="welfare-alert-item__title">Bereavement reimbursement — $2,500</p>
-                  <p class="welfare-alert-item__meta">Member #0911 · 30 May 2026 · <span class="status-chip status-chip--active">Approved</span></p>
-                </div>
-              </li>
+              <li class="welfare-alert-list__empty">Loading reimbursement alerts…</li>
             </ul>
           </div>
 
@@ -208,38 +203,40 @@
           </div>
 
           <div class="dash-card dash-card--full" id="welfare-request">
-            <h2>Request Support</h2>
-            <p style="margin-bottom:1.5rem;">Confidential welfare assistance for members facing personal or family hardship. All requests are reviewed by the Welfare Committee.</p>
-            <form class="site-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Welfare support request">
-              <input type="hidden" name="_subject" value="Welfare support request from Taunet Nelel member">
-              <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/welfare.html?sent=1#welfare-request">
-              <input type="hidden" name="_template" value="table">
-              <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
-              <div class="form-group">
-                <label for="welfare-type">Type of support</label>
-                <select id="welfare-type" name="support_type" required>
-                  <option value="">Select...</option>
-                  <option value="Financial hardship">Financial hardship</option>
-                  <option value="Family emergency">Family emergency</option>
-                  <option value="Peer support / counselling referral">Peer support / counselling referral</option>
-                  <option value="Other">Other</option>
-                </select>
+            <h2>Lodge a welfare claim</h2>
+            <p class="welfare-record-intro">Confidential bereavement or hardship claim. The Welfare Committee reviews each request and sets the approved amount. Approved reimbursements are posted to the alerts list with an anonymised member number.</p>
+            <form class="site-form" id="welfare-claim-form" aria-label="Welfare claim">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="welfare-claim-type">Type of claim</label>
+                  <select id="welfare-claim-type" name="claim_type" required>
+                    <option value="">Select…</option>
+                    <option value="bereavement">Bereavement reimbursement</option>
+                    <option value="hardship">Hardship support</option>
+                    <option value="family_emergency">Family emergency</option>
+                    <option value="other">Other welfare support</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="welfare-claim-amount">Amount requested (AUD, optional)</label>
+                  <input type="number" id="welfare-claim-amount" name="amount" min="0" step="0.01" placeholder="Leave blank if unknown">
+                </div>
               </div>
               <div class="form-group">
-                <label for="welfare-message">Describe your situation (confidential)</label>
-                <textarea id="welfare-message" name="message" required placeholder="Please provide details to help us assist you..."></textarea>
+                <label for="welfare-claim-details">Describe your situation (confidential)</label>
+                <textarea id="welfare-claim-details" name="details" required placeholder="Please provide details to help the Welfare Committee assist you…"></textarea>
               </div>
               <div class="site-form__actions">
-                <button type="submit" class="btn btn--primary">Submit request</button>
-                <p class="site-form__note">A welfare officer will contact you within 48 hours.</p>
+                <button type="submit" class="btn btn--primary">Submit claim</button>
+                <p class="site-form__note">A welfare officer will contact you within 48 hours. You can track status under My claims.</p>
               </div>
-              <p class="inquiry-form__message" role="status" aria-live="polite" hidden data-success="Your request has been submitted. A welfare officer will contact you within 48 hours."></p>
+              <p class="inquiry-form__message" id="welfare-claim-message" role="status" aria-live="polite" hidden></p>
             </form>
           </div>
           <div class="dash-card dash-card--events">
-            <h2>My Requests</h2>
-            <ul class="dash-list">
-              <li><span>No active requests</span></li>
+            <h2>My claims</h2>
+            <ul class="dash-list" id="welfare-my-claims">
+              <li><span>Loading…</span></li>
             </ul>
           </div>
           <div class="dash-card dash-card--announce">
@@ -255,6 +252,7 @@
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/members.js?v=41"></script>
+  <script src="../assets/js/invoices.js?v=2"></script>
+  <script src="../assets/js/members.js?v=42"></script>
 </body>
 </html>

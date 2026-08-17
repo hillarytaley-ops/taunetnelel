@@ -184,7 +184,7 @@ from jsonb_array_elements($crm_seed$
   {"field_key":"welfare_notes_member","label":"Notes for the Welfare Committee","field_type":"textarea","field_group":"welfare","sort_order":530},
   {"field_key":"welfare_membership_status","label":"Welfare membership status","field_type":"select","field_group":"welfare","options":["Active","Pending","Lapsed","Suspended","Not enrolled"],"visibility":"admin","member_editable":false,"sort_order":540},
   {"field_key":"welfare_package","label":"Welfare package","field_type":"select","field_group":"welfare","options":["Association + Welfare ($300)","Welfare only"],"visibility":"admin","member_editable":false,"sort_order":550},
-  {"field_key":"date_admitted","label":"Date admitted to welfare","field_type":"date","field_group":"welfare","visibility":"admin","member_editable":false,"is_system":true,"sort_order":560},
+  {"field_key":"date_admitted","label":"Date admitted to welfare","field_type":"date","field_group":"welfare","visibility":"member","member_editable":false,"is_system":true,"sort_order":560},
   {"field_key":"waiting_period_ends","label":"Waiting period ends","field_type":"date","field_group":"welfare","visibility":"admin","member_editable":false,"sort_order":570},
   {"field_key":"contribution_amount","label":"Contribution amount","field_type":"money","field_group":"welfare","visibility":"admin","member_editable":false,"sort_order":580},
   {"field_key":"payment_status","label":"Payment status","field_type":"select","field_group":"welfare","options":["Paid","Instalments","Overdue","Unpaid"],"visibility":"admin","member_editable":false,"is_system":true,"sort_order":590},

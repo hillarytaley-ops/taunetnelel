@@ -33,7 +33,27 @@
     welfareStatus: 'active',
     welfareSince: '2024',
     welfareCover: 'Bereavement & hardship',
-    welfareAlertsEnabled: true
+    welfareAlertsEnabled: true,
+    memberNumber: '1042',
+    welfareAdmitted: '2024-01-15',
+    welfarePaymentStatus: 'Paid'
+  };
+
+  let latestWelfareAlertId = '';
+
+  const CLAIM_TYPE_LABELS = {
+    bereavement: 'Bereavement reimbursement',
+    hardship: 'Hardship support',
+    family_emergency: 'Family emergency',
+    other: 'Welfare support'
+  };
+
+  const CLAIM_STATUS_LABELS = {
+    submitted: 'Submitted',
+    in_review: 'In review',
+    approved: 'Approved',
+    declined: 'Declined',
+    paid: 'Paid'
   };
 
   function applyPreviewMode() {
@@ -838,11 +858,69 @@
     }
   }
 
+  function formatMemberDate(value) {
+    if (!value) return '—';
+    const text = String(value).trim();
+    if (/^\d{4}$/.test(text)) return text;
+    const dayOnly = text.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dayOnly)) {
+      const parsed = new Date(`${dayOnly}T00:00:00`);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    }
+    const parsed = new Date(text);
+    if (Number.isNaN(parsed.getTime())) return text;
+    return parsed.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  function formatClaimAmount(cents) {
+    if (cents == null || cents === '') return 'Amount pending review';
+    const n = Number(cents);
+    if (!Number.isFinite(n)) return 'Amount pending review';
+    return `$${(n / 100).toFixed(2)}`;
+  }
+
+  function claimTypeLabel(type) {
+    return CLAIM_TYPE_LABELS[type] || type || 'Welfare support';
+  }
+
+  function claimStatusLabel(status) {
+    return CLAIM_STATUS_LABELS[status] || status || 'Submitted';
+  }
+
+  function welfarePaymentLabel(invoices) {
+    const rows = (invoices || []).filter((row) => row.kind === 'welfare' && row.status !== 'void');
+    if (!rows.length) return 'No $300 invoice yet';
+    const paid = rows.filter((row) => row.status === 'paid');
+    const pending = rows.filter((row) => row.status === 'pending');
+    if (paid.length && !pending.length) return 'Paid';
+    if (paid.length && pending.length) return 'Instalments';
+    if (pending.length) {
+      const overdue = pending.some((row) => row.due_at && new Date(row.due_at) < new Date());
+      return overdue ? 'Overdue' : 'Invoice pending';
+    }
+    return '—';
+  }
+
   function populateMemberFields(member) {
     document.querySelectorAll('[data-member-name]').forEach((el) => { el.textContent = member.name; });
     document.querySelectorAll('[data-member-email]').forEach((el) => { el.textContent = member.email; });
     document.querySelectorAll('[data-member-plan]').forEach((el) => { el.textContent = member.planLabel; });
-    document.querySelectorAll('[data-member-renews]').forEach((el) => { el.textContent = member.renews; });
+    document.querySelectorAll('[data-member-renews]').forEach((el) => {
+      el.textContent = formatMemberDate(member.renews);
+    });
+    document.querySelectorAll('[data-member-number]').forEach((el) => {
+      el.textContent = member.memberNumber ? String(member.memberNumber) : '—';
+    });
     document.querySelectorAll('[data-member-name-field]').forEach((el) => { el.value = member.name; });
     document.querySelectorAll('[data-member-email-field]').forEach((el) => { el.value = member.email; });
 
@@ -852,12 +930,18 @@
     if (member.welfarePackage) {
       document.querySelectorAll('[data-welfare-package]').forEach((el) => { el.textContent = member.welfarePackage; });
     }
-    if (member.welfareSince) {
-      document.querySelectorAll('[data-welfare-since]').forEach((el) => { el.textContent = member.welfareSince; });
-    }
+    document.querySelectorAll('[data-welfare-since]').forEach((el) => {
+      el.textContent = formatMemberDate(member.welfareSince || member.memberSince);
+    });
+    document.querySelectorAll('[data-welfare-admitted]').forEach((el) => {
+      el.textContent = formatMemberDate(member.welfareAdmitted || member.welfareSince || member.memberSince);
+    });
     if (member.welfareCover) {
       document.querySelectorAll('[data-welfare-cover]').forEach((el) => { el.textContent = member.welfareCover; });
     }
+    document.querySelectorAll('[data-welfare-payment]').forEach((el) => {
+      el.textContent = member.welfarePaymentStatus || '—';
+    });
   }
 
   function renderWelfareStatus(member) {
@@ -905,7 +989,7 @@
     }
   }
 
-  function renderWelfareAlerts(member) {
+  function renderWelfareAlerts(member, alerts) {
     const list = document.getElementById('welfare-alert-list');
     const toggle = document.getElementById('welfare-alerts-enabled');
     const liveAlert = document.getElementById('welfare-live-alert');
@@ -916,43 +1000,59 @@
     if (toggle) toggle.checked = enabled;
 
     const alertsSection = document.getElementById('welfare-alerts');
-    const alertsList = document.getElementById('welfare-alert-list');
+    const rows = Array.isArray(alerts) ? alerts : [];
 
     if (!enabled) {
       if (liveAlert) liveAlert.hidden = true;
-      if (alertsList) {
-        alertsList.innerHTML = '<li class="welfare-alert-list__empty">Alerts are turned off. Turn on the toggle above to receive reimbursement notifications.</li>';
-      }
+      list.innerHTML = '<li class="welfare-alert-list__empty">Alerts are turned off. Turn on the toggle above to receive reimbursement notifications.</li>';
       return;
     }
 
     if (alertsSection) alertsSection.hidden = false;
 
-    const latest = WELFARE_ALERTS[0];
-    const dismissed = sessionStorage.getItem('taunet_welfare_alert_dismissed') === latest.id;
+    if (!rows.length) {
+      if (liveAlert) liveAlert.hidden = true;
+      list.innerHTML = '<li class="welfare-alert-list__empty">No approved reimbursements yet. When the committee approves a claim, it will appear here with an anonymised member number.</li>';
+      return;
+    }
+
+    const latest = rows[0];
+    latestWelfareAlertId = String(latest.id || '');
+    const dismissed = sessionStorage.getItem('taunet_welfare_alert_dismissed') === latestWelfareAlertId;
 
     if (liveAlert && liveAlertText && !dismissed) {
       liveAlert.hidden = false;
-      liveAlertText.textContent = `A social welfare member (${latest.member}) received a ${latest.type.toLowerCase()} of ${latest.amount} on ${latest.date}.`;
+      liveAlertText.textContent = `A social welfare member (${latest.member}) received a ${String(latest.type || 'reimbursement').toLowerCase()} of ${latest.amount} on ${latest.date}.`;
     } else if (liveAlert) {
       liveAlert.hidden = true;
     }
 
-    if (list.children.length === 0) {
-      WELFARE_ALERTS.forEach((alert, index) => {
-        const item = document.createElement('li');
-        item.className = `welfare-alert-item${index === 0 ? ' welfare-alert-item--new' : ''}`;
-        item.dataset.alertId = alert.id;
-        item.innerHTML = `
-          <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
-          <div class="welfare-alert-item__body">
-            <p class="welfare-alert-item__title">${alert.type} — ${alert.amount}</p>
-            <p class="welfare-alert-item__meta">${alert.member} · ${alert.date} · <span class="status-chip status-chip--active">${alert.status}</span>${index === 0 ? ' <span class="welfare-alert-item__new">New</span>' : ''}</p>
-          </div>
-        `;
-        list.appendChild(item);
-      });
-    }
+    list.innerHTML = '';
+    rows.forEach((alert, index) => {
+      const item = document.createElement('li');
+      const statusClass = alert.status === 'Declined' ? 'status-chip--pending' : 'status-chip--active';
+      item.className = `welfare-alert-item${index === 0 ? ' welfare-alert-item--new' : ''}`;
+      item.dataset.alertId = alert.id;
+      item.innerHTML = `
+        <div class="welfare-alert-item__icon" aria-hidden="true">&#9888;</div>
+        <div class="welfare-alert-item__body">
+          <p class="welfare-alert-item__title">${escapeHtml(alert.type)} — ${escapeHtml(alert.amount)}</p>
+          <p class="welfare-alert-item__meta">${escapeHtml(alert.member)} · ${escapeHtml(alert.date)} · <span class="status-chip ${statusClass}">${escapeHtml(alert.status)}</span>${index === 0 ? ' <span class="welfare-alert-item__new">New</span>' : ''}</p>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function mapClaimAlert(row) {
+    return {
+      id: row.id,
+      member: row.public_ref || row.member || 'A welfare member',
+      type: claimTypeLabel(row.claim_type || row.type),
+      amount: row.amount || formatClaimAmount(row.amount_cents),
+      status: claimStatusLabel(row.status),
+      date: row.date || formatMemberDate(row.published_at || row.decided_at)
+    };
   }
 
   function initWelfareLiveAlert() {
@@ -960,7 +1060,201 @@
     const liveAlert = document.getElementById('welfare-live-alert');
     dismiss?.addEventListener('click', () => {
       if (liveAlert) liveAlert.hidden = true;
-      sessionStorage.setItem('taunet_welfare_alert_dismissed', WELFARE_ALERTS[0].id);
+      if (latestWelfareAlertId) {
+        sessionStorage.setItem('taunet_welfare_alert_dismissed', latestWelfareAlertId);
+      }
+    });
+  }
+
+  async function loadWelfareAlerts(member) {
+    if (sessionStorage.getItem('taunet_preview') === '1') {
+      renderWelfareAlerts(member, WELFARE_ALERTS.map(mapClaimAlert));
+      return;
+    }
+    try {
+      const client = await window.taunetSupabaseApi?.ensureClient?.();
+      if (!client) {
+        renderWelfareAlerts(member, []);
+        return;
+      }
+      const { data, error } = await client
+        .from('welfare_claim_alerts')
+        .select('id,public_ref,claim_type,amount_cents,status,published_at')
+        .order('published_at', { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      renderWelfareAlerts(member, (data || []).map(mapClaimAlert));
+    } catch (_) {
+      renderWelfareAlerts(member, []);
+    }
+  }
+
+  async function loadWelfareInvoices(member) {
+    const host = document.getElementById('welfare-invoice-history');
+    if (!host) return;
+    if (sessionStorage.getItem('taunet_preview') === '1') {
+      host.innerHTML = '<p class="muted">Preview — live invoices appear after you sign in.</p>';
+      populateMemberFields(member);
+      return;
+    }
+    try {
+      const invoices = window.taunetInvoices;
+      if (!invoices?.listMyInvoices) {
+        host.innerHTML = '<p class="muted">Invoice history is not available yet.</p>';
+        return;
+      }
+      const rows = await invoices.listMyInvoices();
+      const welfare = (rows || []).filter((row) => row.kind === 'welfare');
+      const payment = welfarePaymentLabel(rows || []);
+      const updated = { ...getMember(), ...member, welfarePaymentStatus: payment };
+      setMember(updated);
+      populateMemberFields(updated);
+
+      if (!welfare.length) {
+        host.innerHTML = '<p class="muted">No $300 welfare invoices yet. Request one from Membership, or pay by bank transfer.</p>';
+        return;
+      }
+      host.innerHTML =
+        '<div class="member-invoice-list">' +
+        welfare
+          .map((row) => {
+            const statusClass =
+              row.status === 'paid'
+                ? 'is-paid'
+                : row.status === 'void'
+                  ? 'is-pending'
+                  : 'is-pending';
+            return `<article class="member-invoice">
+              <header class="member-invoice__head">
+                <h3>${escapeHtml(row.description || 'Welfare contribution')}</h3>
+                <span class="member-invoice__status ${statusClass}">${escapeHtml((row.status || 'pending').toUpperCase())}</span>
+              </header>
+              <div class="member-invoice__meta">
+                <div><span>Invoice</span><strong>${escapeHtml(row.invoice_number || '—')}</strong></div>
+                <div><span>Issued</span><strong>${escapeHtml(invoices.formatDate(row.issued_at))}</strong></div>
+                <div><span>${row.status === 'paid' ? 'Paid' : 'Due'}</span><strong>${escapeHtml(invoices.formatDate(row.status === 'paid' ? row.paid_at : row.due_at))}</strong></div>
+              </div>
+              <div class="member-invoice__amount">
+                <span>Amount</span>
+                <strong>${escapeHtml(invoices.formatAud(row.amount_cents))} <small>AUD</small></strong>
+              </div>
+              <div class="member-invoice__actions">
+                <button type="button" class="btn btn--primary btn--sm" data-download-invoice="${escapeHtml(row.id)}">Download PDF</button>
+                ${row.pay_reference ? `<span class="member-invoice__ref">Ref: ${escapeHtml(row.pay_reference)}</span>` : ''}
+              </div>
+            </article>`;
+          })
+          .join('') +
+        '</div>';
+      host.querySelectorAll('[data-download-invoice]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const label = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = 'Preparing…';
+          try {
+            await invoices.downloadPdf(btn.getAttribute('data-download-invoice'));
+          } catch (err) {
+            btn.textContent = err.message || 'Could not download';
+          } finally {
+            btn.disabled = false;
+            btn.textContent = label;
+          }
+        });
+      });
+    } catch (_) {
+      host.innerHTML = '<p class="muted">Could not load invoices yet. If this is the first time, ask IT to confirm the invoices table is applied.</p>';
+    }
+  }
+
+  function renderMyWelfareClaims(rows) {
+    const list = document.getElementById('welfare-my-claims');
+    if (!list) return;
+    if (!rows?.length) {
+      list.innerHTML = '<li><span>No claims yet</span></li>';
+      return;
+    }
+    list.innerHTML = rows
+      .map((row) => {
+        const chip =
+          row.status === 'approved' || row.status === 'paid'
+            ? 'status-chip--active'
+            : row.status === 'declined'
+              ? 'status-chip--pending'
+              : 'status-chip--pending';
+        return `<li><span>${escapeHtml(claimTypeLabel(row.claim_type))} · ${escapeHtml(formatClaimAmount(row.amount_cents))}<br><span class="meta">${escapeHtml(formatMemberDate(row.created_at))}</span></span><span class="status-chip ${chip}">${escapeHtml(claimStatusLabel(row.status))}</span></li>`;
+      })
+      .join('');
+  }
+
+  async function loadMyWelfareClaims(member) {
+    const list = document.getElementById('welfare-my-claims');
+    if (!list || !member?.id) return;
+    if (sessionStorage.getItem('taunet_preview') === '1') {
+      list.innerHTML = '<li><span>Preview — sample claims are not stored</span></li>';
+      return;
+    }
+    try {
+      const client = await window.taunetSupabaseApi?.ensureClient?.();
+      if (!client) return;
+      const { data, error } = await client
+        .from('welfare_claims')
+        .select('id,claim_type,amount_cents,status,created_at,admin_notes')
+        .eq('profile_id', member.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      renderMyWelfareClaims(data || []);
+    } catch (_) {
+      list.innerHTML = '<li><span>Claims will appear here after IT runs APPLY-WELFARE-CLAIMS.sql</span></li>';
+    }
+  }
+
+  function initWelfareClaimForm(member) {
+    const form = document.getElementById('welfare-claim-form');
+    if (!form || !member?.id || form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('welfare-claim-message');
+      const submit = form.querySelector('[type="submit"]');
+      if (submit) submit.disabled = true;
+      try {
+        const client = await window.taunetSupabaseApi?.ensureClient?.();
+        if (!client) throw new Error('Could not connect.');
+        const amountRaw = document.getElementById('welfare-claim-amount')?.value;
+        const amountCents = amountRaw
+          ? Math.round(Number(amountRaw) * 100)
+          : null;
+        if (amountRaw && (!Number.isFinite(amountCents) || amountCents < 0)) {
+          throw new Error('Enter a valid amount, or leave it blank.');
+        }
+        const { error } = await client.from('welfare_claims').insert({
+          profile_id: member.id,
+          member_name: member.name || null,
+          member_email: member.email || null,
+          member_number: member.memberNumber || null,
+          claim_type: document.getElementById('welfare-claim-type').value,
+          amount_cents: amountCents,
+          details: document.getElementById('welfare-claim-details').value.trim(),
+          status: 'submitted'
+        });
+        if (error) throw error;
+        if (message) {
+          message.hidden = false;
+          message.classList.remove('is-error');
+          message.textContent = 'Claim submitted. The Welfare Committee will review it and update the status here.';
+        }
+        form.reset();
+        await loadMyWelfareClaims(member);
+      } catch (error) {
+        if (message) {
+          message.hidden = false;
+          message.classList.add('is-error');
+          message.textContent = error.message || 'Could not submit the claim yet. Ask IT to run APPLY-WELFARE-CLAIMS.sql in Supabase.';
+        }
+      } finally {
+        if (submit) submit.disabled = false;
+      }
     });
   }
 
@@ -1116,12 +1410,16 @@
     toggle?.addEventListener('change', () => {
       const updated = { ...getMember(), welfareAlertsEnabled: toggle.checked };
       setMember(updated);
-      renderWelfareAlerts(updated);
+      loadWelfareAlerts(updated);
     });
 
     initWelfareLiveAlert();
     renderWelfareStatus(member);
-    renderWelfareAlerts(member);
+    populateMemberFields(member);
+    loadWelfareAlerts(member);
+    loadWelfareInvoices(member);
+    loadMyWelfareClaims(member);
+    initWelfareClaimForm(member);
     loadWelfareRecord(member);
     initWelfareAppointment(member);
   }
@@ -1160,6 +1458,14 @@
       (values || []).forEach((row) => {
         valueMap[row.field_key] = row.value_text || '';
       });
+      if (valueMap.cover_type) {
+        member.welfareCover = valueMap.cover_type;
+      }
+      if (valueMap.date_admitted) {
+        member.welfareAdmitted = valueMap.date_admitted;
+      }
+      setMember({ ...getMember(), ...member });
+      populateMemberFields(member);
       host.innerHTML = renderer.renderForm(fields, valueMap, { namePrefix: 'crm', openGroup: 'beneficiary' });
       renderer.enhanceForm?.(form);
       form._crmFields = fields;

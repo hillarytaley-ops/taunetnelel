@@ -843,7 +843,44 @@ async function activateWelfareMembership(invoice) {
     method: 'PATCH',
     body: JSON.stringify(patch),
   });
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    let admitted = today;
+    try {
+      const { data: existingAdmit } = await sb(
+        `crm_field_values?profile_id=eq.${encodeURIComponent(profile.id)}&field_key=eq.date_admitted&select=value_text&limit=1`
+      );
+      const current = Array.isArray(existingAdmit) ? existingAdmit[0]?.value_text : '';
+      if (current) admitted = String(current).slice(0, 10);
+    } catch (_) { /* field table may not exist yet */ }
+    await upsertCrmValues(profile.id, {
+      date_admitted: admitted,
+      payment_status: 'Paid',
+      welfare_membership_status: 'Active',
+      last_payment_date: today
+    });
+  } catch (crmErr) {
+    console.error('activate welfare CRM fields', crmErr);
+  }
   return Array.isArray(data) ? data[0] : data;
+}
+
+async function upsertCrmValues(profileId, values) {
+  const now = new Date().toISOString();
+  const rows = Object.entries(values || {})
+    .filter(([, value]) => value != null && String(value).trim() !== '')
+    .map(([key, value]) => ({
+      profile_id: profileId,
+      field_key: key,
+      value_text: String(value).trim().slice(0, 8000),
+      updated_at: now
+    }));
+  if (!rows.length) return;
+  await sb('crm_field_values?on_conflict=profile_id,field_key', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    body: JSON.stringify(rows)
+  });
 }
 
 /** When phase_override column is missing, nudge dates so Auto placement still matches. */
@@ -1267,6 +1304,28 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { rows: data || [] });
       }
 
+      if (resource === 'welfare-claims') {
+        const status = url.searchParams.get('status') || 'open';
+        let query =
+          'welfare_claims?select=id,profile_id,member_name,member_email,member_number,public_ref,claim_type,amount_cents,details,status,admin_notes,decided_at,created_at,updated_at&order=created_at.desc&limit=200';
+        if (status === 'open') {
+          query += '&status=in.(submitted,in_review)';
+        } else if (['submitted', 'in_review', 'approved', 'declined', 'paid'].includes(status)) {
+          query += `&status=eq.${encodeURIComponent(status)}`;
+        }
+        try {
+          const { data } = await sb(query);
+          return json(res, 200, { rows: data || [], filter: status });
+        } catch (err) {
+          return json(res, 200, {
+            rows: [],
+            warning:
+              err.message ||
+              'Claims table missing. Run docs/supabase/APPLY-WELFARE-CLAIMS.sql in Supabase.'
+          });
+        }
+      }
+
       if (resource === 'crm-funnel') {
         const [
           welfareEnquiries,
@@ -1274,14 +1333,16 @@ module.exports = async function handler(req, res) {
           associationMembers,
           pendingWelfareInvoices,
           paidWelfareInvoices,
-          appointments
+          appointments,
+          pendingClaims
         ] = await Promise.all([
           countRows('form_submissions', 'form_type=eq.welfare').catch(() => 0),
           countRows('profiles', 'welfare_member=eq.true').catch(() => 0),
           countRows('profiles', 'association_member=eq.true').catch(() => 0),
           countRows('invoices', 'kind=eq.welfare&status=eq.pending').catch(() => 0),
           countRows('invoices', 'kind=eq.welfare&status=eq.paid').catch(() => 0),
-          countRows('crm_calendar_events', 'status=eq.requested').catch(() => 0)
+          countRows('crm_calendar_events', 'status=eq.requested').catch(() => 0),
+          countRows('welfare_claims', 'status=in.(submitted,in_review)').catch(() => 0)
         ]);
         return json(res, 200, {
           steps: [
@@ -1290,7 +1351,8 @@ module.exports = async function handler(req, res) {
             { key: 'paid', label: 'Welfare invoices paid', count: paidWelfareInvoices },
             { key: 'active', label: 'Active welfare members', count: welfareMembers },
             { key: 'association', label: 'Association members (for upgrade)', count: associationMembers },
-            { key: 'appointments', label: 'Appointment requests waiting', count: appointments }
+            { key: 'appointments', label: 'Appointment requests waiting', count: appointments },
+            { key: 'claims', label: 'Welfare claims awaiting review', count: pendingClaims }
           ]
         });
       }
@@ -2371,6 +2433,71 @@ module.exports = async function handler(req, res) {
           })
         });
         return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'welfare-claim-update') {
+        const id = String(body.id || '').trim();
+        const status = String(body.status || '').trim();
+        const allowed = new Set(['submitted', 'in_review', 'approved', 'declined', 'paid']);
+        if (!id) return json(res, 400, { error: 'Claim id is required' });
+        if (!allowed.has(status)) return json(res, 400, { error: 'Invalid claim status' });
+        const { data: existingRows } = await sb(
+          `welfare_claims?id=eq.${encodeURIComponent(id)}&select=id,profile_id,claim_type,amount_cents,status,admin_notes&limit=1`
+        );
+        const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+        if (!existing) return json(res, 404, { error: 'Claim not found' });
+
+        let amountCents = existing.amount_cents;
+        if (body.amount_cents != null && body.amount_cents !== '') {
+          const n = Number(body.amount_cents);
+          if (!Number.isFinite(n) || n < 0) {
+            return json(res, 400, { error: 'Amount must be a number of cents' });
+          }
+          amountCents = Math.round(n);
+        } else if (body.amount != null && body.amount !== '') {
+          const n = Number(body.amount);
+          if (!Number.isFinite(n) || n < 0) {
+            return json(res, 400, { error: 'Amount must be a dollar value' });
+          }
+          amountCents = Math.round(n * 100);
+        }
+        if ((status === 'approved' || status === 'paid') && (amountCents == null || amountCents < 0)) {
+          return json(res, 400, { error: 'Set an approved amount before approving or marking paid.' });
+        }
+
+        const now = new Date().toISOString();
+        const patch = {
+          status,
+          amount_cents: amountCents,
+          admin_notes:
+            body.admin_notes != null
+              ? String(body.admin_notes).trim().slice(0, 2000)
+              : existing.admin_notes,
+          updated_at: now
+        };
+        if (status === 'approved' || status === 'declined' || status === 'paid') {
+          patch.decided_at = now;
+        }
+        const { data } = await sb(`welfare_claims?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(patch)
+        });
+        const row = Array.isArray(data) ? data[0] : data;
+        if (existing.profile_id) {
+          try {
+            const claimValues = {
+              last_claim_date: now.slice(0, 10),
+              last_claim_type: existing.claim_type,
+              last_claim_amount: amountCents != null ? (amountCents / 100).toFixed(2) : '',
+              claim_in_progress: status === 'submitted' || status === 'in_review' ? 'true' : 'false',
+              previous_welfare_claim: status === 'approved' || status === 'paid' ? 'true' : undefined
+            };
+            await upsertCrmValues(existing.profile_id, claimValues);
+          } catch (crmErr) {
+            console.error('welfare-claim-update CRM fields', crmErr);
+          }
+        }
+        return json(res, 200, { rows: data || [], row });
       }
 
       if (resource === 'crm-field-update') {
