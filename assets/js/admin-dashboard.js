@@ -1171,7 +1171,7 @@
         setButtonBusy(btn, true, { busy: 'Adding…' });
         try {
           const data = await inviteSiteAdmin({ fullName, email, refreshList: false });
-          setButtonBusy(btn, false, { done: 'Admin added' });
+          setButtonBusy(btn, false, { done: 'Admin added', stay: true });
           alert(data.message || `Invitation sent to ${email}.`);
         } catch (err) {
           setButtonBusy(btn, false, { fail: 'Not added' });
@@ -3234,7 +3234,7 @@
       try {
         const data = await inviteSiteAdmin({ fullName, email });
         form.reset();
-        setButtonBusy(submit, false, { done: 'Invitation sent' });
+        setButtonBusy(submit, false, { done: 'Invitation sent', stay: true });
         setInviteStatus(data.message || `Invitation sent to ${email}.`, false);
       } catch (err) {
         setButtonBusy(submit, false, { fail: 'Not sent' });

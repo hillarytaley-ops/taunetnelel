@@ -88,15 +88,21 @@
     const idle = btn.dataset.idleLabel || options.idle || '';
     const applyIdle = () => {
       btn.classList.remove('is-done', 'is-fail');
+      if (btn.dataset.stayDone === '1') {
+        btn.classList.add('is-done');
+        btn.classList.remove('btn--ghost');
+      }
       if (btn.tagName === 'INPUT') btn.value = idle;
       else if (idle) btn.textContent = idle;
     };
     if (options.done) {
       btn.classList.add('is-done');
+      btn.classList.remove('btn--ghost');
       if (btn.tagName === 'INPUT') btn.value = options.done;
       else btn.textContent = options.done;
       if (options.stay) {
         btn.dataset.idleLabel = options.done;
+        btn.dataset.stayDone = '1';
         return;
       }
       window.setTimeout(applyIdle, options.hold || 2200);
