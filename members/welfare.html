@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=23">
+  <link rel="stylesheet" href="../assets/css/members.css?v=24">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -73,6 +73,21 @@
               <li><span>Cover type</span><strong data-welfare-cover>Bereavement &amp; hardship</strong></li>
             </ul>
             <p class="welfare-status-note" id="welfare-status-note">Your social welfare membership is active. You are eligible for bereavement support and community reimbursements.</p>
+          </div>
+
+          <div class="dash-card dash-card--full" id="welfare-record-card">
+            <h2>Welfare record</h2>
+            <p class="welfare-record-intro">Keep next of kin, beneficiary, and household details up to date. The Welfare Committee uses this register for bereavement support. Bank, income, and ID details are held by the committee only and are not shown here.</p>
+            <form class="site-form" id="welfare-record-form" aria-label="Social welfare record">
+              <div id="welfare-record-fields">
+                <p class="welfare-record-loading">Loading your record…</p>
+              </div>
+              <div class="site-form__actions">
+                <button type="submit" class="btn btn--primary">Save welfare record</button>
+                <p class="site-form__note">Required for the Welfare Association membership register.</p>
+              </div>
+              <p class="inquiry-form__message" id="welfare-record-message" role="status" aria-live="polite" hidden></p>
+            </form>
           </div>
 
           <div class="dash-card dash-card--full" id="welfare-alerts">
@@ -213,6 +228,7 @@
   <script src="../assets/js/supabase-config.js?v=3"></script>
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/members-auth.js?v=17"></script>
-  <script src="../assets/js/members.js?v=38"></script>
+  <script src="../assets/js/crm-fields.js?v=1"></script>
+  <script src="../assets/js/members.js?v=39"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817b">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817c">
 </head>
 <body data-page="site-admin">
 
@@ -40,6 +40,7 @@
         <button type="button" data-admin-nav="enquiries">Enquiries</button>
         <button type="button" data-admin-nav="ithelp">IT Help chat</button>
         <button type="button" data-admin-nav="members">Member profiles</button>
+        <button type="button" data-admin-nav="crm">CRM records</button>
         <button type="button" data-admin-nav="imports">Association &amp; Welfare</button>
         <button type="button" data-admin-nav="business">Business Hub</button>
         <button type="button" data-admin-nav="events">Events</button>
@@ -119,6 +120,7 @@
               <button type="button" data-admin-jump="events">Manage events</button>
               <button type="button" data-admin-jump="business">Edit Business Hub</button>
               <button type="button" data-admin-jump="imports">Association &amp; Welfare</button>
+              <button type="button" data-admin-jump="crm">CRM records</button>
               <a href="../index.html">View public site</a>
             </div>
           </div>
@@ -200,7 +202,7 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="members">
-        <p class="admin-muted">People who have registered / signed in. Use <strong>Approve welfare</strong> after reviewing a welfare registration enquiry.</p>
+        <p class="admin-muted">People who have registered / signed in. Use <strong>Approve welfare</strong> after reviewing a welfare registration enquiry. Open <strong>CRM record</strong> for next of kin, beneficiary, and committee-only fields.</p>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
@@ -210,12 +212,121 @@
                 <th>Association</th>
                 <th>Welfare</th>
                 <th>Joined</th>
+                <th>CRM</th>
               </tr>
             </thead>
             <tbody id="admin-members-body">
-              <tr><td colspan="5" class="admin-empty">Open this tab to load profiles.</td></tr>
+              <tr><td colspan="6" class="admin-empty">Open this tab to load profiles.</td></tr>
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section class="site-admin__panel" data-admin-panel="crm">
+        <div class="admin-crm-tabs" role="tablist" aria-label="CRM sections">
+          <button type="button" class="is-active" data-crm-tab="records">Member records</button>
+          <button type="button" data-crm-tab="fields">Field library</button>
+        </div>
+
+        <div id="crm-records-view">
+          <p class="admin-muted">
+            Full Mambo Mob-style register. <strong>Income, employer, bank, and ID details are Admin-only</strong>
+            and never appear on the member Welfare tab. Members can update contact, household, and beneficiary details themselves.
+          </p>
+          <div class="admin-toolbar">
+            <input type="search" id="crm-member-search" placeholder="Search member name or email…" aria-label="Search CRM members">
+            <select id="crm-member-select" aria-label="Select member">
+              <option value="">Select a member…</option>
+            </select>
+          </div>
+          <div id="crm-record-host" class="admin-card crm-record-host">
+            <p class="admin-muted">Select a signed-in member to view or edit their CRM record.</p>
+          </div>
+        </div>
+
+        <div id="crm-fields-view" hidden>
+          <p class="admin-muted">
+            Add, hide, or edit fields. Seeded fields match the Mambo Mob custom-field list (contact, welfare, beneficiary, bank).
+            System fields (next of kin / beneficiary) cannot be deleted.
+          </p>
+          <form class="site-form crm-field-form" id="crm-field-form">
+            <input type="hidden" id="crm-field-id" name="id" value="">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="crm-field-label">Field label</label>
+                <input type="text" id="crm-field-label" name="label" required placeholder="e.g. Next of kin phone">
+              </div>
+              <div class="form-group">
+                <label for="crm-field-type">Type</label>
+                <select id="crm-field-type" name="field_type">
+                  <option value="text">Text</option>
+                  <option value="textarea">Long text</option>
+                  <option value="number">Number</option>
+                  <option value="money">Money</option>
+                  <option value="date">Date</option>
+                  <option value="select">Dropdown</option>
+                  <option value="phone">Phone</option>
+                  <option value="email">Email</option>
+                  <option value="toggle">Yes / No</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="crm-field-group">Group</label>
+                <select id="crm-field-group" name="field_group">
+                  <option value="contact">Contact</option>
+                  <option value="personal">Personal</option>
+                  <option value="welfare">Welfare membership</option>
+                  <option value="beneficiary">Next of kin &amp; beneficiary</option>
+                  <option value="employment">Employment</option>
+                  <option value="financial">Bank &amp; identification</option>
+                  <option value="communications">Communications</option>
+                  <option value="committee">Committee only</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="crm-field-visibility">Who can see it</label>
+                <select id="crm-field-visibility" name="visibility">
+                  <option value="member">Member Welfare tab + Admin</option>
+                  <option value="admin">Admin only</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="crm-field-options">Dropdown options (comma separated)</label>
+              <input type="text" id="crm-field-options" name="options" placeholder="Active, Pending, Lapsed">
+            </div>
+            <div class="form-group">
+              <label for="crm-field-help">Help text</label>
+              <input type="text" id="crm-field-help" name="help_text" placeholder="Shown under the field">
+            </div>
+            <div class="crm-field-form__checks">
+              <label><input type="checkbox" id="crm-field-sensitive" name="is_sensitive"> Sensitive (forces Admin only — income, bank, ID)</label>
+              <label><input type="checkbox" id="crm-field-editable" name="member_editable" checked> Member can edit on Welfare tab</label>
+            </div>
+            <div class="site-form__actions">
+              <button type="submit" class="btn btn--primary" id="crm-field-submit">Add field</button>
+              <button type="button" class="btn btn--ghost" id="crm-field-cancel" hidden>Cancel edit</button>
+            </div>
+          </form>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Group</th>
+                  <th>Type</th>
+                  <th>Visibility</th>
+                  <th>Active</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="crm-fields-body">
+                <tr><td colspan="6" class="admin-empty">Open this tab to load fields.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -558,6 +669,7 @@
           <a href="../membership.html">Membership<span>Public join page</span></a>
           <a href="../sponsorship.html">Sponsorship<span>Public sponsors page</span></a>
           <a href="../welfare.html">Welfare<span>Public welfare page</span></a>
+          <a href="../members/welfare.html">Member Welfare tab<span>Beneficiary / welfare record</span></a>
           <a href="../events.html">Events<span>Public events</span></a>
           <a href="../gallery.html">Gallery<span>Public albums</span></a>
           <a href="../help.html">IT Help chat<span>Public member IT chat</span></a>
@@ -577,6 +689,7 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817a"></script>
+  <script src="../assets/js/crm-fields.js?v=1"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817b"></script>
 </body>
 </html>

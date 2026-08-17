@@ -17,6 +17,13 @@ const ADMIN_BOOTSTRAP_PIN = String(
 ).trim();
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const ENQUIRY_STATUSES = new Set(['new', 'reviewed', 'actioned', 'archived']);
+const CRM_FIELD_TYPES = new Set([
+  'text', 'textarea', 'number', 'date', 'select', 'phone', 'email', 'toggle', 'money'
+]);
+const CRM_FIELD_GROUPS = new Set([
+  'contact', 'personal', 'welfare', 'beneficiary', 'employment',
+  'financial', 'communications', 'committee'
+]);
 const rateBuckets = new Map();
 
 let sendPaidInvoiceReceiptEmail;
@@ -106,6 +113,78 @@ function parseTicketsQuery(raw) {
     tickets.push({ id, label, amount_cents: amount });
   });
   return tickets.length ? tickets : null;
+}
+
+function slugifyFieldKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 60);
+}
+
+function parseCrmOptions(raw, fieldType) {
+  if (fieldType !== 'select') return [];
+  if (Array.isArray(raw)) {
+    return raw.map((item) => String(item).trim()).filter(Boolean).slice(0, 40);
+  }
+  return String(raw || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 40);
+}
+
+function normalizeCrmFieldInput(body, existing) {
+  const label = String(body.label || existing?.label || '').trim().slice(0, 120);
+  if (!label) {
+    const err = new Error('Field label is required');
+    err.status = 400;
+    throw err;
+  }
+  const fieldType = String(body.field_type || existing?.field_type || 'text').trim();
+  if (!CRM_FIELD_TYPES.has(fieldType)) {
+    const err = new Error('Invalid field type');
+    err.status = 400;
+    throw err;
+  }
+  const fieldGroup = String(body.field_group || existing?.field_group || 'contact').trim();
+  if (!CRM_FIELD_GROUPS.has(fieldGroup)) {
+    const err = new Error('Invalid field group');
+    err.status = 400;
+    throw err;
+  }
+  let visibility = String(body.visibility || existing?.visibility || 'member').trim();
+  if (visibility !== 'admin') visibility = 'member';
+  let isSensitive = body.is_sensitive != null ? Boolean(body.is_sensitive) : Boolean(existing?.is_sensitive);
+  let memberEditable =
+    body.member_editable != null ? Boolean(body.member_editable) : existing?.member_editable !== false;
+  if (isSensitive) {
+    visibility = 'admin';
+    memberEditable = false;
+  }
+  if (visibility === 'admin') memberEditable = false;
+  const fieldKey = existing?.field_key || slugifyFieldKey(body.field_key || label) || `field_${Date.now()}`;
+  if (!/^[a-z][a-z0-9_]{1,62}$/.test(fieldKey)) {
+    const err = new Error('Invalid field key');
+    err.status = 400;
+    throw err;
+  }
+  const sortOrder = Number(body.sort_order);
+  return {
+    field_key: fieldKey,
+    label,
+    help_text: String(body.help_text != null ? body.help_text : existing?.help_text || '').trim().slice(0, 300) || null,
+    field_type: fieldType,
+    field_group: fieldGroup,
+    options: parseCrmOptions(body.options != null ? body.options : existing?.options, fieldType),
+    visibility,
+    member_editable: memberEditable,
+    is_sensitive: isSensitive,
+    is_active: body.is_active != null ? Boolean(body.is_active) : existing?.is_active !== false,
+    sort_order: Number.isFinite(sortOrder) ? Math.round(sortOrder) : Number(existing?.sort_order) || 0,
+    updated_at: new Date().toISOString()
+  };
 }
 
 function ticketsFromEventRow(row) {
@@ -1012,6 +1091,36 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { rows: data || [] });
       }
 
+      if (resource === 'crm-fields') {
+        const { data } = await sb(
+          'crm_custom_fields?select=id,field_key,label,help_text,field_type,field_group,options,visibility,member_editable,is_sensitive,is_active,is_system,sort_order,updated_at&order=sort_order.asc&order=label.asc'
+        );
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-record') {
+        const profileId = String(url.searchParams.get('profile_id') || '').trim();
+        if (!profileId) return json(res, 400, { error: 'profile_id is required' });
+        const [{ data: profileRows }, { data: fields }, { data: values }] = await Promise.all([
+          sb(
+            `profiles?id=eq.${encodeURIComponent(profileId)}&select=id,full_name,email,phone,plan,association_member,welfare_member,member_number,member_since,renews_at,created_at&limit=1`
+          ),
+          sb(
+            'crm_custom_fields?select=id,field_key,label,help_text,field_type,field_group,options,visibility,member_editable,is_sensitive,is_active,is_system,sort_order&is_active=eq.true&order=sort_order.asc'
+          ),
+          sb(
+            `crm_field_values?profile_id=eq.${encodeURIComponent(profileId)}&select=field_key,value_text,updated_at`
+          )
+        ]);
+        const profile = Array.isArray(profileRows) ? profileRows[0] : null;
+        if (!profile) return json(res, 404, { error: 'Member profile not found' });
+        const valueMap = {};
+        (values || []).forEach((row) => {
+          valueMap[row.field_key] = row.value_text || '';
+        });
+        return json(res, 200, { profile, fields: fields || [], values: valueMap });
+      }
+
       if (resource === 'imports') {
         const filter = url.searchParams.get('filter') || 'all';
         let query =
@@ -1808,6 +1917,47 @@ module.exports = async function handler(req, res) {
         });
       }
 
+      if (resource === 'crm-field-create') {
+        const payload = normalizeCrmFieldInput(body);
+        const { data } = await sb('crm_custom_fields', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-record-save') {
+        const profileId = String(body.profile_id || '').trim();
+        const values = body.values && typeof body.values === 'object' ? body.values : {};
+        if (!profileId) return json(res, 400, { error: 'profile_id is required' });
+        const { data: profileRows } = await sb(
+          `profiles?id=eq.${encodeURIComponent(profileId)}&select=id&limit=1`
+        );
+        if (!Array.isArray(profileRows) || !profileRows[0]) {
+          return json(res, 404, { error: 'Member profile not found' });
+        }
+        const { data: fields } = await sb(
+          'crm_custom_fields?select=field_key,field_type&is_active=eq.true'
+        );
+        const allowed = new Set((fields || []).map((field) => field.field_key));
+        const now = new Date().toISOString();
+        const rows = Object.keys(values)
+          .filter((key) => allowed.has(key))
+          .map((key) => ({
+            profile_id: profileId,
+            field_key: key,
+            value_text: String(values[key] ?? '').trim().slice(0, 8000),
+            updated_at: now
+          }));
+        if (!rows.length) return json(res, 200, { ok: true, saved: 0 });
+        const { data } = await sb('crm_field_values?on_conflict=profile_id,field_key', {
+          method: 'POST',
+          prefer: 'resolution=merge-duplicates,return=representation',
+          body: JSON.stringify(rows)
+        });
+        return json(res, 200, { ok: true, saved: (data || rows).length });
+      }
+
       return json(res, 400, { error: 'Unknown POST resource' });
     }
 
@@ -1841,6 +1991,23 @@ module.exports = async function handler(req, res) {
             association_member: row.association_member !== false,
             plan: nextPlan
           })
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-field-update') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Field id is required' });
+        const { data: existingRows } = await sb(
+          `crm_custom_fields?id=eq.${encodeURIComponent(id)}&select=id,field_key,label,help_text,field_type,field_group,options,visibility,member_editable,is_sensitive,is_active,is_system,sort_order`
+        );
+        const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+        if (!existing) return json(res, 404, { error: 'Field not found' });
+        const payload = normalizeCrmFieldInput(body, existing);
+        delete payload.field_key;
+        const { data } = await sb(`crm_custom_fields?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload)
         });
         return json(res, 200, { rows: data || [] });
       }
@@ -2078,6 +2245,24 @@ module.exports = async function handler(req, res) {
         if (!id) return json(res, 400, { error: 'Enquiry id is required' });
         await sb(`form_submissions?id=eq.${encodeURIComponent(id)}`, {
           method: 'DELETE',
+        });
+        return json(res, 200, { ok: true, id });
+      }
+
+      if (resource === 'crm-field-delete') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Field id is required' });
+        const { data: existingRows } = await sb(
+          `crm_custom_fields?id=eq.${encodeURIComponent(id)}&select=id,is_system,label`
+        );
+        const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+        if (!existing) return json(res, 404, { error: 'Field not found' });
+        if (existing.is_system) {
+          return json(res, 400, { error: 'System fields (beneficiary / next of kin) cannot be deleted' });
+        }
+        await sb(`crm_custom_fields?id=eq.${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          prefer: 'return=minimal'
         });
         return json(res, 200, { ok: true, id });
       }

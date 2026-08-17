@@ -1122,6 +1122,86 @@
     initWelfareLiveAlert();
     renderWelfareStatus(member);
     renderWelfareAlerts(member);
+    loadWelfareRecord(member);
+  }
+
+  async function loadWelfareRecord(member) {
+    const host = document.getElementById('welfare-record-fields');
+    const form = document.getElementById('welfare-record-form');
+    if (!host || !form) return;
+
+    const renderer = window.taunetCrmFields;
+    const fallback = '<p class="welfare-record-loading">Your welfare record is not available yet. The committee is finishing CRM setup in Supabase.</p>';
+
+    try {
+      const client = await window.taunetSupabaseApi?.ensureClient?.();
+      if (!client || !member?.id || !renderer) {
+        host.innerHTML = fallback;
+        return;
+      }
+      const { data: fields, error: fieldError } = await client
+        .from('crm_custom_fields')
+        .select('id,field_key,label,help_text,field_type,field_group,options,visibility,member_editable,is_sensitive,is_system,sort_order')
+        .eq('is_active', true)
+        .eq('visibility', 'member')
+        .order('sort_order', { ascending: true });
+      if (fieldError) throw fieldError;
+      if (!fields?.length) {
+        host.innerHTML = fallback;
+        return;
+      }
+      const { data: values, error: valueError } = await client
+        .from('crm_field_values')
+        .select('field_key,value_text')
+        .eq('profile_id', member.id);
+      if (valueError) throw valueError;
+      const valueMap = {};
+      (values || []).forEach((row) => {
+        valueMap[row.field_key] = row.value_text || '';
+      });
+      host.innerHTML = renderer.renderForm(fields, valueMap, { namePrefix: 'crm' });
+      form._crmFields = fields;
+      if (form.dataset.bound === '1') return;
+      form.dataset.bound = '1';
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = document.getElementById('welfare-record-message');
+        const submit = form.querySelector('[type="submit"]');
+        if (submit) submit.disabled = true;
+        try {
+          const currentFields = form._crmFields || fields;
+          const nextValues = renderer.readFormValues(form, currentFields, 'crm');
+          const rows = Object.keys(nextValues).map((key) => ({
+            profile_id: member.id,
+            field_key: key,
+            value_text: nextValues[key],
+            updated_at: new Date().toISOString()
+          }));
+          if (rows.length) {
+            const { error } = await client
+              .from('crm_field_values')
+              .upsert(rows, { onConflict: 'profile_id,field_key' });
+            if (error) throw error;
+          }
+          if (message) {
+            message.hidden = false;
+            message.classList.remove('is-error');
+            message.textContent = 'Welfare record saved. Thank you for keeping the register up to date.';
+          }
+        } catch (error) {
+          if (message) {
+            message.hidden = false;
+            message.classList.add('is-error');
+            message.textContent = error.message || 'Could not save your welfare record. Try again, or contact Support.';
+          }
+        } finally {
+          if (submit) submit.disabled = false;
+        }
+      });
+    } catch (error) {
+      console.warn('Welfare record load skipped:', error);
+      host.innerHTML = fallback;
+    }
   }
 
   function showWelfareSection(member) {

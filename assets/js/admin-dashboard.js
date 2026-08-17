@@ -10,6 +10,7 @@
     'enquiries',
     'ithelp',
     'members',
+    'crm',
     'imports',
     'business',
     'events',
@@ -41,6 +42,11 @@
     importFilter: 'all',
     importSearch: '',
     importRows: [],
+    crmTab: 'records',
+    crmProfileId: '',
+    crmMembers: [],
+    crmFields: [],
+    crmBound: false,
     businessEditor: null
   };
 
@@ -115,6 +121,7 @@
       enquiries: 'Enquiries',
       ithelp: 'IT Help chat',
       members: 'Member profiles',
+      crm: 'CRM records',
       imports: 'Association & Welfare',
       business: 'Business Hub',
       events: 'Events',
@@ -130,6 +137,7 @@
       enquiries: 'Contact, membership, and other form submissions.',
       ithelp: 'Live portal IT chat. Reply here — members see it in the website chat.',
       members: 'People who have registered or signed in online.',
+      crm: 'Mambo Mob-style member register. Sensitive bank, income, and ID fields stay Admin-only.',
       imports: 'Association and Welfare membership lists.',
       business: 'Edit business cards, news, and blog posts.',
       events: 'Published events for the public site and members.',
@@ -197,6 +205,7 @@
     if (options.filter) params.set('filter', options.filter);
     if (options.status) params.set('status', options.status);
     if (options.threadId) params.set('thread_id', options.threadId);
+    if (options.profileId) params.set('profile_id', options.profileId);
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (pin) headers['x-admin-bootstrap-pin'] = pin;
@@ -528,7 +537,7 @@
     const body = document.getElementById('admin-members-body');
     if (!body) return;
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No profiles yet.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No profiles yet.</td></tr>`;
       return;
     }
     body.innerHTML = rows
@@ -544,6 +553,7 @@
             ${!row.welfare_member ? `<div class="admin-actions" style="margin-top:0.35rem"><button type="button" data-approve-welfare="${escapeHtml(row.id)}">Approve welfare</button></div>` : ''}
           </td>
           <td class="admin-detail">${escapeHtml(formatDate(row.created_at))}</td>
+          <td><div class="admin-actions"><button type="button" data-open-crm="${escapeHtml(row.id)}">CRM record</button></div></td>
         </tr>`;
       })
       .join('');
@@ -560,6 +570,13 @@
         } catch (err) {
           alert(err.message || 'Could not approve welfare.');
         }
+      });
+    });
+    body.querySelectorAll('[data-open-crm]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.crmProfileId = btn.dataset.openCrm;
+        state.crmTab = 'records';
+        jumpToPanel('crm');
       });
     });
   }
@@ -1618,6 +1635,264 @@
     });
   }
 
+  function setCrmTab(tab) {
+    state.crmTab = tab === 'fields' ? 'fields' : 'records';
+    document.querySelectorAll('[data-crm-tab]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.crmTab === state.crmTab);
+    });
+    const records = document.getElementById('crm-records-view');
+    const fields = document.getElementById('crm-fields-view');
+    if (records) records.hidden = state.crmTab !== 'records';
+    if (fields) fields.hidden = state.crmTab !== 'fields';
+  }
+
+  function fillCrmMemberSelect(rows, query) {
+    const select = document.getElementById('crm-member-select');
+    if (!select) return;
+    const q = String(query || '').trim().toLowerCase();
+    const filtered = (rows || []).filter((row) => {
+      if (!q) return true;
+      return `${row.full_name || ''} ${row.email || ''}`.toLowerCase().includes(q);
+    });
+    const current = state.crmProfileId;
+    select.innerHTML =
+      `<option value="">Select a member…</option>` +
+      filtered
+        .map((row) => {
+          const selected = row.id === current ? ' selected' : '';
+          return `<option value="${escapeHtml(row.id)}"${selected}>${escapeHtml(row.full_name || row.email || 'Member')} — ${escapeHtml(row.email || '')}</option>`;
+        })
+        .join('');
+    if (current && !filtered.some((row) => row.id === current)) {
+      select.value = '';
+    }
+  }
+
+  async function loadCrmRecord(profileId) {
+    const host = document.getElementById('crm-record-host');
+    if (!host) return;
+    if (!profileId) {
+      host.innerHTML = '<p class="admin-muted">Select a signed-in member to view or edit their CRM record.</p>';
+      return;
+    }
+    host.innerHTML = '<p class="admin-muted">Loading record…</p>';
+    const data = await adminApi('crm-record', { profileId });
+    const profile = data.profile || {};
+    const fields = data.fields || [];
+    const values = data.values || {};
+    const renderer = window.taunetCrmFields;
+    const formHtml = renderer
+      ? renderer.renderForm(fields, values, { namePrefix: 'crm', admin: true })
+      : '<p class="admin-muted">CRM form script missing.</p>';
+    const plan = profile.plan || 'basic';
+    host.innerHTML = `
+      <div class="crm-record-head">
+        <div>
+          <h2>${escapeHtml(profile.full_name || 'Member')}</h2>
+          <p class="admin-muted" style="margin:0">${escapeHtml(profile.email || '')} · ${escapeHtml(plan)}${profile.member_number ? ' · #' + escapeHtml(profile.member_number) : ''}</p>
+        </div>
+        <span class="admin-chip">${profile.welfare_member ? 'Welfare' : 'Association'}</span>
+      </div>
+      <form class="site-form" id="crm-record-form">${formHtml}
+        <div class="site-form__actions">
+          <button type="submit" class="btn btn--primary">Save CRM record</button>
+          <p class="site-form__note">Sensitive fields stay in Admin only.</p>
+        </div>
+        <p class="inquiry-form__message" id="crm-record-message" hidden></p>
+      </form>`;
+
+    const form = document.getElementById('crm-record-form');
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('crm-record-message');
+      const submit = form.querySelector('[type="submit"]');
+      if (submit) submit.disabled = true;
+      try {
+        const nextValues = renderer.readFormValues(form, fields, 'crm');
+        await adminApi('crm-record-save', {
+          method: 'POST',
+          body: { profile_id: profileId, values: nextValues }
+        });
+        if (message) {
+          message.hidden = false;
+          message.classList.remove('is-error');
+          message.textContent = 'CRM record saved.';
+        }
+      } catch (err) {
+        if (message) {
+          message.hidden = false;
+          message.classList.add('is-error');
+          message.textContent = err.message || 'Could not save CRM record. Run APPLY-CRM-CUSTOM-FIELDS.sql in Supabase.';
+        }
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+  }
+
+  function renderCrmFieldsTable(rows) {
+    const body = document.getElementById('crm-fields-body');
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No custom fields yet. Add one above, or run APPLY-CRM-CUSTOM-FIELDS.sql.</td></tr>`;
+      return;
+    }
+    const labels = window.taunetCrmFields?.GROUP_LABELS || {};
+    body.innerHTML = rows
+      .map((row) => {
+        const vis = row.visibility === 'admin' ? 'Admin only' : 'Member + Admin';
+        const sensitive = row.is_sensitive ? ' · sensitive' : '';
+        return `<tr>
+          <td><strong>${escapeHtml(row.label)}</strong><div class="admin-detail">${escapeHtml(row.field_key)}</div></td>
+          <td>${escapeHtml(labels[row.field_group] || row.field_group)}</td>
+          <td>${escapeHtml(row.field_type)}</td>
+          <td>${escapeHtml(vis)}${escapeHtml(sensitive)}</td>
+          <td>${row.is_active ? 'Yes' : 'Hidden'}</td>
+          <td>
+            <div class="admin-actions">
+              <button type="button" data-crm-edit="${escapeHtml(row.id)}">Edit</button>
+              <button type="button" data-crm-toggle="${escapeHtml(row.id)}" data-active="${row.is_active ? '1' : '0'}">${row.is_active ? 'Hide' : 'Show'}</button>
+              ${row.is_system ? '' : `<button type="button" data-crm-delete="${escapeHtml(row.id)}">Delete</button>`}
+            </div>
+          </td>
+        </tr>`;
+      })
+      .join('');
+
+    body.querySelectorAll('[data-crm-edit]').forEach((btn) => {
+      btn.addEventListener('click', () => startCrmFieldEdit(btn.dataset.crmEdit));
+    });
+    body.querySelectorAll('[data-crm-toggle]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await adminApi('crm-field-update', {
+            method: 'PATCH',
+            body: { id: btn.dataset.crmToggle, is_active: btn.dataset.active !== '1' }
+          });
+          await loadCrm({ keepRecord: true });
+        } catch (err) {
+          alert(err.message || 'Could not update field.');
+        }
+      });
+    });
+    body.querySelectorAll('[data-crm-delete]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this custom field and its saved values?')) return;
+        try {
+          await adminApi('crm-field-delete', { method: 'DELETE', body: { id: btn.dataset.crmDelete } });
+          await loadCrm({ keepRecord: true });
+        } catch (err) {
+          alert(err.message || 'Could not delete field.');
+        }
+      });
+    });
+  }
+
+  function resetCrmFieldForm() {
+    const form = document.getElementById('crm-field-form');
+    if (!form) return;
+    form.reset();
+    document.getElementById('crm-field-id').value = '';
+    document.getElementById('crm-field-editable').checked = true;
+    document.getElementById('crm-field-submit').textContent = 'Add field';
+    document.getElementById('crm-field-cancel').hidden = true;
+  }
+
+  function startCrmFieldEdit(id) {
+    const field = (state.crmFields || []).find((row) => row.id === id);
+    if (!field) return;
+    setCrmTab('fields');
+    document.getElementById('crm-field-id').value = field.id;
+    document.getElementById('crm-field-label').value = field.label || '';
+    document.getElementById('crm-field-type').value = field.field_type || 'text';
+    document.getElementById('crm-field-group').value = field.field_group || 'contact';
+    document.getElementById('crm-field-visibility').value = field.visibility || 'member';
+    const options = window.taunetCrmFields?.parseOptions(field) || [];
+    document.getElementById('crm-field-options').value = options.join(', ');
+    document.getElementById('crm-field-help').value = field.help_text || '';
+    document.getElementById('crm-field-sensitive').checked = Boolean(field.is_sensitive);
+    document.getElementById('crm-field-editable').checked = field.member_editable !== false && field.visibility !== 'admin';
+    document.getElementById('crm-field-submit').textContent = 'Save field';
+    document.getElementById('crm-field-cancel').hidden = false;
+    document.getElementById('crm-field-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function bindCrmUi() {
+    if (state.crmBound) return;
+    state.crmBound = true;
+    document.querySelectorAll('[data-crm-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => setCrmTab(btn.dataset.crmTab));
+    });
+    document.getElementById('crm-member-search')?.addEventListener('input', (event) => {
+      fillCrmMemberSelect(state.crmMembers, event.target.value);
+    });
+    document.getElementById('crm-member-select')?.addEventListener('change', async (event) => {
+      state.crmProfileId = event.target.value || '';
+      try {
+        await loadCrmRecord(state.crmProfileId);
+      } catch (err) {
+        const host = document.getElementById('crm-record-host');
+        if (host) {
+          host.innerHTML = `<p class="admin-muted">${escapeHtml(err.message || 'Could not load CRM record. Run APPLY-CRM-CUSTOM-FIELDS.sql in Supabase.')}</p>`;
+        }
+      }
+    });
+    document.getElementById('crm-field-cancel')?.addEventListener('click', resetCrmFieldForm);
+    document.getElementById('crm-field-sensitive')?.addEventListener('change', (event) => {
+      if (event.target.checked) {
+        document.getElementById('crm-field-visibility').value = 'admin';
+        document.getElementById('crm-field-editable').checked = false;
+      }
+    });
+    document.getElementById('crm-field-visibility')?.addEventListener('change', (event) => {
+      if (event.target.value === 'admin') document.getElementById('crm-field-editable').checked = false;
+    });
+    document.getElementById('crm-field-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const id = document.getElementById('crm-field-id').value;
+      const payload = {
+        label: document.getElementById('crm-field-label').value,
+        field_type: document.getElementById('crm-field-type').value,
+        field_group: document.getElementById('crm-field-group').value,
+        visibility: document.getElementById('crm-field-visibility').value,
+        options: document.getElementById('crm-field-options').value,
+        help_text: document.getElementById('crm-field-help').value,
+        is_sensitive: document.getElementById('crm-field-sensitive').checked,
+        member_editable: document.getElementById('crm-field-editable').checked
+      };
+      try {
+        if (id) {
+          payload.id = id;
+          await adminApi('crm-field-update', { method: 'PATCH', body: payload });
+        } else {
+          await adminApi('crm-field-create', { method: 'POST', body: payload });
+        }
+        resetCrmFieldForm();
+        await loadCrm({ keepRecord: true });
+      } catch (err) {
+        alert(err.message || 'Could not save field.');
+      }
+    });
+  }
+
+  async function loadCrm(options = {}) {
+    bindCrmUi();
+    setCrmTab(state.crmTab || 'records');
+    const [members, fields] = await Promise.all([
+      adminApi('members'),
+      adminApi('crm-fields')
+    ]);
+    state.crmMembers = members.rows || [];
+    state.crmFields = fields.rows || [];
+    fillCrmMemberSelect(state.crmMembers, document.getElementById('crm-member-search')?.value || '');
+    renderCrmFieldsTable(state.crmFields);
+    if (!options.keepRecord) {
+      await loadCrmRecord(state.crmProfileId);
+    } else if (state.crmProfileId && state.crmTab === 'records') {
+      await loadCrmRecord(state.crmProfileId);
+    }
+  }
+
   async function refreshPanel(id) {
     if (id === 'business' || id === 'pages') {
       if (id === 'business') ensureBusinessEditor();
@@ -1650,6 +1925,7 @@
         startItHelpPoll();
       }
       if (id === 'members') await loadMembers();
+      if (id === 'crm') await loadCrm();
       if (id === 'imports') await loadImports();
       if (id === 'events') await loadEvents();
       if (id === 'invoices') await loadInvoices();
@@ -1664,8 +1940,10 @@
         status.hidden = false;
         status.classList.add('is-error');
         status.textContent =
-          err.message ||
-          'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
+          id === 'crm'
+            ? `${err.message || 'Could not load CRM.'} If tables are missing, run docs/supabase/APPLY-CRM-CUSTOM-FIELDS.sql in the Supabase SQL Editor, then refresh.`
+            : err.message ||
+              'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
       }
     }
   }
