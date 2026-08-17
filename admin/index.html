@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817i">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817j">
 </head>
 <body data-page="site-admin">
 
@@ -91,26 +91,28 @@
       <p class="admin-status" id="admin-panel-status" role="status" hidden></p>
 
       <section class="site-admin__panel is-active" data-admin-panel="overview">
-        <div class="admin-attention" id="admin-overview-attention" hidden>
-          <div>
-            <strong id="admin-attention-count">0</strong>
-            <span>new enquiries need review</span>
+        <div class="admin-attention-row">
+          <div class="admin-attention" id="admin-overview-attention" hidden>
+            <div>
+              <strong id="admin-attention-count">0</strong>
+              <span>new enquiries need review</span>
+            </div>
+            <button type="button" class="btn btn--sm btn--primary" data-admin-jump="enquiries">Review now</button>
           </div>
-          <button type="button" class="btn btn--sm btn--primary" data-admin-jump="enquiries">Review now</button>
-        </div>
-        <div class="admin-attention" id="admin-overview-ithelp" hidden>
-          <div>
-            <strong id="admin-ithelp-count">0</strong>
-            <span>open IT Help chats</span>
+          <div class="admin-attention" id="admin-overview-ithelp" hidden>
+            <div>
+              <strong id="admin-ithelp-count">0</strong>
+              <span>open IT Help chats</span>
+            </div>
+            <button type="button" class="btn btn--sm btn--primary" data-admin-jump="ithelp">Open chat</button>
           </div>
-          <button type="button" class="btn btn--sm btn--primary" data-admin-jump="ithelp">Open chat</button>
-        </div>
-        <div class="admin-attention" id="admin-overview-inbox" hidden>
-          <div>
-            <strong id="admin-inbox-count">0</strong>
-            <span>unread Welfare team inbox messages</span>
+          <div class="admin-attention" id="admin-overview-inbox" hidden>
+            <div>
+              <strong id="admin-inbox-count">0</strong>
+              <span>unread Welfare team inbox messages</span>
+            </div>
+            <button type="button" class="btn btn--sm btn--primary" data-admin-jump="inbox">Open inbox</button>
           </div>
-          <button type="button" class="btn btn--sm btn--primary" data-admin-jump="inbox">Open inbox</button>
         </div>
 
         <div class="admin-stats">
