@@ -358,14 +358,15 @@ body[data-page="home"] .hero__visual.animate-on-load {
 }
 
 .home-paths {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: clamp(1.25rem, 3vw, 2rem);
   max-width: 1080px;
   margin: 0 auto;
 }
 
-/* Children of the slot join the parent grid so every upcoming event is featured. */
+/* Children of the slot join the parent layout so every upcoming event is featured. */
 .home-events-slot {
   display: contents;
 }
@@ -376,6 +377,8 @@ body[data-page="home"] .hero__visual.animate-on-load {
   color: inherit;
   text-decoration: none;
   min-width: 0;
+  flex: 0 1 calc((100% - 2 * clamp(1.25rem, 3vw, 2rem)) / 3);
+  max-width: calc((100% - 2 * clamp(1.25rem, 3vw, 2rem)) / 3);
 }
 
 .home-path__media {
@@ -457,8 +460,12 @@ body[data-page="home"] .hero__visual.animate-on-load {
 
 @media (max-width: 860px) {
   .home-paths {
-    grid-template-columns: 1fr;
     max-width: 420px;
+  }
+
+  .home-path {
+    flex: 1 1 100%;
+    max-width: 100%;
   }
 
   .home-path img,
