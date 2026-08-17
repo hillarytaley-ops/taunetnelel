@@ -95,6 +95,10 @@
       btn.classList.add('is-done');
       if (btn.tagName === 'INPUT') btn.value = options.done;
       else btn.textContent = options.done;
+      if (options.stay) {
+        btn.dataset.idleLabel = options.done;
+        return;
+      }
       window.setTimeout(applyIdle, options.hold || 2200);
       return;
     }

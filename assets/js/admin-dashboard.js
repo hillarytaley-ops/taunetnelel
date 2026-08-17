@@ -1141,6 +1141,7 @@
             ${escapeHtml(row.full_name || '—')}
             <div class="admin-detail">${escapeHtml(row.email || '')}</div>
             <div class="admin-actions" style="margin-top:0.45rem;">
+              <button type="button" class="btn btn--sm btn--ghost" data-import-admin-email="${escapeHtml(row.email || '')}" data-import-admin-name="${escapeHtml(row.full_name || '')}">Make admin</button>
               <button type="button" class="admin-btn-danger" data-import-delete="${deleteId}" data-import-name="${deleteName}">Delete member</button>
             </div>
           </td>
@@ -1151,6 +1152,33 @@
         </tr>`;
       })
       .join('');
+
+    body.querySelectorAll('[data-import-admin-email]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const email = String(btn.getAttribute('data-import-admin-email') || '').trim();
+        const fullName = String(btn.getAttribute('data-import-admin-name') || '').trim() || email;
+        if (!email) {
+          alert('This member has no email, so they cannot be added as admin.');
+          return;
+        }
+        if (
+          !confirm(
+            `Add ${fullName} (${email}) as a committee admin?\n\nThey will get an email from members@taunetnelel.org to create their own password, then sign in at Members → Admin.`
+          )
+        ) {
+          return;
+        }
+        setButtonBusy(btn, true, { busy: 'Adding…' });
+        try {
+          const data = await inviteSiteAdmin({ fullName, email, refreshList: false });
+          setButtonBusy(btn, false, { done: 'Admin added' });
+          alert(data.message || `Invitation sent to ${email}.`);
+        } catch (err) {
+          setButtonBusy(btn, false, { fail: 'Not added' });
+          alert(err.message || 'Could not add this member as admin.');
+        }
+      });
+    });
 
     body.querySelectorAll('[data-import-delete]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -1890,6 +1918,30 @@
     URL.revokeObjectURL(url);
   }
 
+  const INVITE_SENT_KEY = 'taunet_admin_invite_sent';
+
+  function inviteSentMap() {
+    try {
+      return JSON.parse(localStorage.getItem(INVITE_SENT_KEY) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function wasInviteSent(email) {
+    return Boolean(inviteSentMap()[String(email || '').toLowerCase().trim()]);
+  }
+
+  function markInviteSent(email) {
+    const key = String(email || '').toLowerCase().trim();
+    if (!key) return;
+    const map = inviteSentMap();
+    map[key] = Date.now();
+    try {
+      localStorage.setItem(INVITE_SENT_KEY, JSON.stringify(map));
+    } catch (_) { /* ignore quota */ }
+  }
+
   async function loadSiteAdmins() {
     const body = document.getElementById('admin-admins-body');
     if (!body) return;
@@ -1904,6 +1956,7 @@
         .map((row) => {
           const email = escapeHtml(row.email || '');
           const name = escapeHtml(row.full_name || '—');
+          const sent = Boolean(row.invited_at) || wasInviteSent(row.email);
           const self = row.is_self
             ? '<span class="admin-muted">You</span>'
             : `<button type="button" class="btn btn--sm btn--ghost" data-admin-remove="${escapeHtml(row.email || '')}">Remove</button>`;
@@ -1912,7 +1965,7 @@
             <td>${email}</td>
             <td>${escapeHtml(formatDate(row.created_at))}</td>
             <td class="admin-row-actions">
-              <button type="button" class="btn btn--sm btn--ghost" data-admin-resend="${escapeHtml(row.email || '')}" data-admin-resend-name="${escapeHtml(row.full_name || '')}">Resend invite</button>
+              <button type="button" class="btn btn--sm ${sent ? 'is-done' : 'btn--ghost'}" data-admin-resend="${escapeHtml(row.email || '')}" data-admin-resend-name="${escapeHtml(row.full_name || '')}" title="${sent ? 'Click to send the invite again' : 'Send invitation email'}">${sent ? 'Sent' : 'Resend invite'}</button>
               ${self}
             </td>
           </tr>`;
@@ -1946,6 +1999,7 @@
       method: 'POST',
       body: { full_name: fullName, email }
     });
+    markInviteSent(email);
     if (refreshList !== false) await loadSiteAdmins();
     return data;
   }
@@ -3199,7 +3253,7 @@
         setInviteStatus(`Sending invitation to ${email}…`, false);
         try {
           const data = await inviteSiteAdmin({ fullName, email, refreshList: false });
-          setButtonBusy(resend, false, { done: 'Sent' });
+          setButtonBusy(resend, false, { done: 'Sent', stay: true });
           setInviteStatus(data.message || `Invitation sent to ${email}.`, false);
         } catch (err) {
           setButtonBusy(resend, false, { fail: 'Not sent' });

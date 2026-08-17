@@ -1517,9 +1517,16 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'site-admins') {
-        const { data } = await sb(
-          'site_admins?select=email,full_name,created_at&order=full_name.asc,email.asc&limit=200'
-        );
+        let data;
+        try {
+          ({ data } = await sb(
+            'site_admins?select=email,full_name,created_at,invited_at&order=full_name.asc,email.asc&limit=200'
+          ));
+        } catch (_) {
+          ({ data } = await sb(
+            'site_admins?select=email,full_name,created_at&order=full_name.asc,email.asc&limit=200'
+          ));
+        }
         const me = String(adminSession.email || '')
           .toLowerCase()
           .trim();
@@ -1531,6 +1538,7 @@ module.exports = async function handler(req, res) {
             email,
             full_name: row.full_name || '',
             created_at: row.created_at || null,
+            invited_at: row.invited_at || null,
             is_self: email === me
           };
         });
@@ -3093,18 +3101,37 @@ module.exports = async function handler(req, res) {
           `site_admins?email=eq.${encodeURIComponent(email)}&select=email,full_name&limit=1`
         );
         const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+        const invitedAt = new Date().toISOString();
+        const withInviteTime = { full_name: fullName, invited_at: invitedAt };
+        const nameOnly = { full_name: fullName };
         if (existing) {
-          await sb(`site_admins?email=eq.${encodeURIComponent(email)}`, {
-            method: 'PATCH',
-            prefer: 'return=minimal',
-            body: JSON.stringify({ full_name: fullName })
-          });
+          try {
+            await sb(`site_admins?email=eq.${encodeURIComponent(email)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify(withInviteTime)
+            });
+          } catch (_) {
+            await sb(`site_admins?email=eq.${encodeURIComponent(email)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify(nameOnly)
+            });
+          }
         } else {
-          await sb('site_admins', {
-            method: 'POST',
-            prefer: 'return=minimal',
-            body: JSON.stringify({ email, full_name: fullName })
-          });
+          try {
+            await sb('site_admins', {
+              method: 'POST',
+              prefer: 'return=minimal',
+              body: JSON.stringify({ email, ...withInviteTime })
+            });
+          } catch (_) {
+            await sb('site_admins', {
+              method: 'POST',
+              prefer: 'return=minimal',
+              body: JSON.stringify({ email, ...nameOnly })
+            });
+          }
         }
 
         const origin = adminInviteOrigin ? adminInviteOrigin(req) : '';
