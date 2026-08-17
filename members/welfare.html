@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=28">
+  <link rel="stylesheet" href="../assets/css/members.css?v=29">
   <link rel="stylesheet" href="../assets/css/member-invoices.css?v=1">
 </head>
 <body>
@@ -56,8 +56,8 @@
           <button type="button" class="welfare-live-alert__dismiss" id="welfare-live-alert-dismiss" aria-label="Dismiss alert">&times;</button>
         </div>
 
-        <div class="dash-grid">
-          <div class="dash-card dash-card--full welfare-status-card" id="welfare-membership-status-card">
+        <div class="welfare-shell">
+          <div class="dash-card welfare-status-card" id="welfare-membership-status-card">
             <div class="welfare-status-card__head">
               <div>
                 <h2>Social Welfare Membership</h2>
@@ -79,201 +79,221 @@
             <p class="welfare-status-note" id="welfare-status-note">Your social welfare membership is active. You are eligible for bereavement support and community reimbursements.</p>
           </div>
 
-          <div class="dash-card dash-card--full dash-card--inbox" id="welfare-inbox-card">
-            <div class="welfare-inbox" id="welfare-inbox">
-              <div class="welfare-inbox__head">
-                <span class="welfare-inbox__avatar" aria-hidden="true">♥</span>
-                <div class="welfare-inbox__head-copy">
-                  <strong>Welfare Committee</strong>
-                  <span>Team inbox · they reply in this chat</span>
+          <nav class="welfare-tabs" aria-label="Welfare sections">
+            <button type="button" class="welfare-tabs__btn is-active" data-welfare-tab="inbox">Inbox</button>
+            <button type="button" class="welfare-tabs__btn" data-welfare-tab="record">Record</button>
+            <button type="button" class="welfare-tabs__btn" data-welfare-tab="claims">Claims</button>
+            <button type="button" class="welfare-tabs__btn" data-welfare-tab="payments">Payments</button>
+            <button type="button" class="welfare-tabs__btn" data-welfare-tab="requests">Requests</button>
+          </nav>
+
+          <section class="welfare-panel is-active" data-welfare-panel="inbox" id="welfare-inbox-card">
+            <div class="dash-card dash-card--inbox">
+              <div class="welfare-inbox" id="welfare-inbox">
+                <div class="welfare-inbox__head">
+                  <span class="welfare-inbox__avatar" aria-hidden="true">♥</span>
+                  <div class="welfare-inbox__head-copy">
+                    <strong>Welfare Committee</strong>
+                    <span>Team inbox · they reply in this chat</span>
+                  </div>
+                  <span class="welfare-inbox__live">Live</span>
                 </div>
-                <span class="welfare-inbox__live">Live</span>
-              </div>
-              <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
-                <div class="welfare-inbox__empty">
-                  <span aria-hidden="true">💬</span>
-                  <p>Loading conversation…</p>
+                <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
+                  <div class="welfare-inbox__empty">
+                    <span aria-hidden="true">💬</span>
+                    <p>Loading conversation…</p>
+                  </div>
                 </div>
+                <form class="welfare-inbox__compose" id="welfare-inbox-form">
+                  <label class="visually-hidden" for="welfare-inbox-body">Message</label>
+                  <textarea id="welfare-inbox-body" name="body" rows="1" required maxlength="2000" placeholder="Write a message…"></textarea>
+                  <button type="submit" class="welfare-inbox__send">Send</button>
+                  <p class="inquiry-form__message welfare-inbox__status" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
+                </form>
               </div>
-              <form class="welfare-inbox__compose" id="welfare-inbox-form">
-                <label class="visually-hidden" for="welfare-inbox-body">Message</label>
-                <textarea id="welfare-inbox-body" name="body" rows="1" required maxlength="2000" placeholder="Write a message…"></textarea>
-                <button type="submit" class="welfare-inbox__send">Send</button>
-                <p class="inquiry-form__message welfare-inbox__status" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
+            </div>
+          </section>
+
+          <section class="welfare-panel" data-welfare-panel="record" id="welfare-record-card" hidden>
+            <div class="dash-card">
+              <h2>Welfare record</h2>
+              <p class="welfare-record-intro">Keep next of kin, beneficiary, and household details up to date. Bank, income, and ID details stay with the committee.</p>
+              <form class="site-form" id="welfare-record-form" aria-label="Social welfare record">
+                <div id="welfare-record-fields">
+                  <p class="welfare-record-loading">Loading your record…</p>
+                </div>
+                <div class="site-form__actions">
+                  <button type="submit" class="btn btn--primary">Save welfare record</button>
+                  <p class="site-form__note">Required for the Welfare Association membership register.</p>
+                </div>
+                <p class="inquiry-form__message" id="welfare-record-message" role="status" aria-live="polite" hidden></p>
               </form>
             </div>
-          </div>
+          </section>
 
-          <div class="dash-card dash-card--full" id="welfare-record-card">
-            <h2>Welfare record</h2>
-            <p class="welfare-record-intro">Keep next of kin, beneficiary, and household details up to date. The Welfare Committee uses this register for bereavement support. Bank, income, and ID details are held by the committee only and are not shown here.</p>
-            <form class="site-form" id="welfare-record-form" aria-label="Social welfare record">
-              <div id="welfare-record-fields">
-                <p class="welfare-record-loading">Loading your record…</p>
+          <section class="welfare-panel" data-welfare-panel="claims" hidden>
+            <div class="welfare-split">
+              <div class="dash-card" id="welfare-request">
+                <h2>Lodge a welfare claim</h2>
+                <p class="welfare-record-intro">Confidential bereavement or hardship claim. Approved reimbursements are posted to alerts with an anonymised member number.</p>
+                <form class="site-form" id="welfare-claim-form" aria-label="Welfare claim">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="welfare-claim-type">Type of claim</label>
+                      <select id="welfare-claim-type" name="claim_type" required>
+                        <option value="">Select…</option>
+                        <option value="bereavement">Bereavement reimbursement</option>
+                        <option value="hardship">Hardship support</option>
+                        <option value="family_emergency">Family emergency</option>
+                        <option value="other">Other welfare support</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="welfare-claim-amount">Amount requested (AUD, optional)</label>
+                      <input type="number" id="welfare-claim-amount" name="amount" min="0" step="0.01" placeholder="Leave blank if unknown">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-claim-details">Describe your situation (confidential)</label>
+                    <textarea id="welfare-claim-details" name="details" required placeholder="Please provide details to help the Welfare Committee assist you…"></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-claim-files">Supporting files (optional)</label>
+                    <input type="file" id="welfare-claim-files" name="files" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
+                    <p class="site-form__note">Up to 3 JPEG, PNG, WebP, or PDF files, 3.5 MB each.</p>
+                  </div>
+                  <div class="site-form__actions">
+                    <button type="submit" class="btn btn--primary">Submit claim</button>
+                    <p class="site-form__note">A welfare officer will contact you within 48 hours.</p>
+                  </div>
+                  <p class="inquiry-form__message" id="welfare-claim-message" role="status" aria-live="polite" hidden></p>
+                </form>
               </div>
-              <div class="site-form__actions">
-                <button type="submit" class="btn btn--primary">Save welfare record</button>
-                <p class="site-form__note">Required for the Welfare Association membership register.</p>
+              <div class="dash-card">
+                <h2>My claims</h2>
+                <ul class="dash-list" id="welfare-my-claims">
+                  <li><span>Loading…</span></li>
+                </ul>
               </div>
-              <p class="inquiry-form__message" id="welfare-record-message" role="status" aria-live="polite" hidden></p>
-            </form>
-          </div>
-
-          <div class="dash-card dash-card--full" id="welfare-payments-card">
-            <h2>$300 contribution / invoices</h2>
-            <p class="welfare-record-intro">Your Association + Welfare invoices. Request a new invoice from Membership if you do not see one yet.</p>
-            <div id="welfare-invoice-history">
-              <p class="muted">Loading…</p>
             </div>
-            <p style="margin-top:0.85rem;font-size:0.92rem;">
-              <a href="membership.html?upgrade=welfare">Request or pay the $300 invoice</a>
-            </p>
-          </div>
+          </section>
 
-          <div class="dash-card dash-card--full" id="welfare-appointment-card">
-            <h2>Book a welfare appointment</h2>
-            <p class="welfare-record-intro">Request a time with the Welfare Committee. They will confirm it on the committee calendar.</p>
-            <form class="site-form" id="welfare-appointment-form">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="welfare-appt-start">Preferred date and time</label>
-                  <input type="datetime-local" id="welfare-appt-start" name="starts_at" required>
-                </div>
-                <div class="form-group">
-                  <label for="welfare-appt-location">Phone or in person</label>
-                  <input type="text" id="welfare-appt-location" name="location" placeholder="Phone, Zoom, or suburb">
-                </div>
+          <section class="welfare-panel" data-welfare-panel="payments" id="welfare-payments-card" hidden>
+            <div class="dash-card">
+              <h2>$300 contribution / invoices</h2>
+              <p class="welfare-record-intro">Your Association + Welfare invoices. Request a new invoice from Membership if you do not see one yet.</p>
+              <div id="welfare-invoice-history">
+                <p class="muted">Loading…</p>
               </div>
-              <div class="form-group">
-                <label for="welfare-appt-details">What you need to discuss</label>
-                <textarea id="welfare-appt-details" name="details" rows="3" required placeholder="Short note for the Welfare Committee…"></textarea>
-              </div>
-              <div class="site-form__actions">
-                <button type="submit" class="btn btn--primary">Request appointment</button>
-              </div>
-              <p class="inquiry-form__message" id="welfare-appointment-message" hidden></p>
-            </form>
-            <ul class="dash-list" id="welfare-appointment-list" hidden></ul>
-          </div>
-
-          <div class="dash-card dash-card--full" id="welfare-alerts">
-            <div class="welfare-alerts__head">
-              <h2>Reimbursement Alerts</h2>
-              <label class="welfare-alert-toggle">
-                <input type="checkbox" id="welfare-alerts-enabled" checked>
-                <span>Alert me when a member receives a reimbursement</span>
-              </label>
+              <p style="margin-top:0.85rem;font-size:0.92rem;">
+                <a href="membership.html?upgrade=welfare">Request or pay the $300 invoice</a>
+              </p>
             </div>
-            <p class="welfare-alerts-intro">When the Welfare Committee approves a bereavement or hardship reimbursement, all enrolled social welfare members are notified here. Member names are anonymised for privacy.</p>
-            <ul class="welfare-alert-list" id="welfare-alert-list" aria-live="polite">
-              <li class="welfare-alert-list__empty">Loading reimbursement alerts…</li>
-            </ul>
-          </div>
+          </section>
 
-          <div class="dash-card dash-card--full" id="welfare-info-request">
-            <h2>Request Welfare Information</h2>
-            <p style="margin-bottom:1.25rem;">Request a bank statement summary, fund balance update, or other information about the social welfare account. Requests are reviewed by the Welfare Committee.</p>
-            <form class="site-form" id="welfare-info-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Welfare information request">
-              <input type="hidden" name="_subject" value="Welfare information request from Taunet Nelel member">
-              <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/welfare.html?sent=1#welfare-info-request">
-              <input type="hidden" name="_template" value="table">
-              <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
-              <input type="hidden" name="member_name" data-member-name-field>
-              <input type="hidden" name="member_email" data-member-email-field>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="welfare-info-type">Information requested</label>
-                  <select id="welfare-info-type" name="info_type" required>
-                    <option value="">Select…</option>
-                    <option value="Welfare bank statement">Welfare bank statement</option>
-                    <option value="Fund balance summary">Fund balance summary</option>
-                    <option value="Recent reimbursements report">Recent reimbursements report</option>
-                    <option value="Constitution &amp; welfare policy">Constitution &amp; welfare policy</option>
-                    <option value="Other welfare information">Other welfare information</option>
-                  </select>
+          <section class="welfare-panel" data-welfare-panel="requests" hidden>
+            <div class="welfare-split">
+              <div class="dash-card" id="welfare-appointment-card">
+                <h2>Book a welfare appointment</h2>
+                <p class="welfare-record-intro">Request a time with the Welfare Committee. They will confirm it on the committee calendar.</p>
+                <form class="site-form" id="welfare-appointment-form">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="welfare-appt-start">Preferred date and time</label>
+                      <input type="datetime-local" id="welfare-appt-start" name="starts_at" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="welfare-appt-location">Phone or in person</label>
+                      <input type="text" id="welfare-appt-location" name="location" placeholder="Phone, Zoom, or suburb">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-appt-details">What you need to discuss</label>
+                    <textarea id="welfare-appt-details" name="details" rows="3" required placeholder="Short note for the Welfare Committee…"></textarea>
+                  </div>
+                  <div class="site-form__actions">
+                    <button type="submit" class="btn btn--primary">Request appointment</button>
+                  </div>
+                  <p class="inquiry-form__message" id="welfare-appointment-message" hidden></p>
+                </form>
+                <ul class="dash-list" id="welfare-appointment-list" hidden></ul>
+              </div>
+              <div class="dash-card" id="welfare-info-request">
+                <h2>Request welfare information</h2>
+                <p class="welfare-record-intro">Ask for a bank statement summary, fund balance, or other welfare-account information.</p>
+                <form class="site-form" id="welfare-info-form" action="https://formsubmit.co/info@taunetnelel.org" method="POST" aria-label="Welfare information request">
+                  <input type="hidden" name="_subject" value="Welfare information request from Taunet Nelel member">
+                  <input type="hidden" name="_next" value="https://www.taunetnelel.org/members/welfare.html?sent=1#welfare-info-request">
+                  <input type="hidden" name="_template" value="table">
+                  <input type="text" name="_honey" class="visually-hidden" tabindex="-1" autocomplete="off">
+                  <input type="hidden" name="member_name" data-member-name-field>
+                  <input type="hidden" name="member_email" data-member-email-field>
+                  <div class="form-group">
+                    <label for="welfare-info-type">Information requested</label>
+                    <select id="welfare-info-type" name="info_type" required>
+                      <option value="">Select…</option>
+                      <option value="Welfare bank statement">Welfare bank statement</option>
+                      <option value="Fund balance summary">Fund balance summary</option>
+                      <option value="Recent reimbursements report">Recent reimbursements report</option>
+                      <option value="Constitution &amp; welfare policy">Constitution &amp; welfare policy</option>
+                      <option value="Other welfare information">Other welfare information</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-info-period">Period (if applicable)</label>
+                    <select id="welfare-info-period" name="period">
+                      <option value="">Select period…</option>
+                      <option value="Jul 2026">Jul 2026</option>
+                      <option value="Jun 2026">Jun 2026</option>
+                      <option value="May 2026">May 2026</option>
+                      <option value="Apr–Jun 2026 (Q2)">Apr–Jun 2026 (Q2)</option>
+                      <option value="Jan–Mar 2026 (Q1)">Jan–Mar 2026 (Q1)</option>
+                      <option value="Jan–Jun 2026 (H1)">Jan–Jun 2026 (H1)</option>
+                      <option value="Full year 2026">Full year 2026</option>
+                      <option value="Oct–Dec 2025 (Q4)">Oct–Dec 2025 (Q4)</option>
+                      <option value="Jul–Sep 2025 (Q3)">Jul–Sep 2025 (Q3)</option>
+                      <option value="Apr–Jun 2025 (Q2)">Apr–Jun 2025 (Q2)</option>
+                      <option value="Jan–Mar 2025 (Q1)">Jan–Mar 2025 (Q1)</option>
+                      <option value="Full year 2025">Full year 2025</option>
+                      <option value="Last 3 months">Last 3 months</option>
+                      <option value="Last 6 months">Last 6 months</option>
+                      <option value="Last 12 months">Last 12 months</option>
+                      <option value="Not applicable">Not applicable</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="welfare-info-message">Details of your request</label>
+                    <textarea id="welfare-info-message" name="message" required placeholder="Describe what you need and why…"></textarea>
+                  </div>
+                  <div class="site-form__actions">
+                    <button type="submit" class="btn btn--primary">Submit request</button>
+                    <p class="site-form__note">We aim to respond within 5 business days.</p>
+                  </div>
+                  <p class="inquiry-form__message" role="status" aria-live="polite" hidden data-success="Your information request has been submitted. The Welfare Committee will respond within 5 business days."></p>
+                </form>
+              </div>
+            </div>
+            <div class="welfare-split" style="margin-top:1rem;">
+              <div class="dash-card" id="welfare-alerts">
+                <div class="welfare-alerts__head">
+                  <h2>Reimbursement alerts</h2>
+                  <label class="welfare-alert-toggle">
+                    <input type="checkbox" id="welfare-alerts-enabled" checked>
+                    <span>Alert me</span>
+                  </label>
                 </div>
-                <div class="form-group">
-                  <label for="welfare-info-period">Period (if applicable)</label>
-                  <select id="welfare-info-period" name="period">
-                    <option value="">Select period…</option>
-                    <option value="Jul 2026">Jul 2026</option>
-                    <option value="Jun 2026">Jun 2026</option>
-                    <option value="May 2026">May 2026</option>
-                    <option value="Apr–Jun 2026 (Q2)">Apr–Jun 2026 (Q2)</option>
-                    <option value="Jan–Mar 2026 (Q1)">Jan–Mar 2026 (Q1)</option>
-                    <option value="Jan–Jun 2026 (H1)">Jan–Jun 2026 (H1)</option>
-                    <option value="Full year 2026">Full year 2026</option>
-                    <option value="Oct–Dec 2025 (Q4)">Oct–Dec 2025 (Q4)</option>
-                    <option value="Jul–Sep 2025 (Q3)">Jul–Sep 2025 (Q3)</option>
-                    <option value="Apr–Jun 2025 (Q2)">Apr–Jun 2025 (Q2)</option>
-                    <option value="Jan–Mar 2025 (Q1)">Jan–Mar 2025 (Q1)</option>
-                    <option value="Full year 2025">Full year 2025</option>
-                    <option value="Last 3 months">Last 3 months</option>
-                    <option value="Last 6 months">Last 6 months</option>
-                    <option value="Last 12 months">Last 12 months</option>
-                    <option value="Not applicable">Not applicable</option>
-                  </select>
-                </div>
+                <p class="welfare-alerts-intro">Approved claims appear here with an anonymised member number.</p>
+                <ul class="welfare-alert-list" id="welfare-alert-list" aria-live="polite">
+                  <li class="welfare-alert-list__empty">Loading reimbursement alerts…</li>
+                </ul>
               </div>
-              <div class="form-group">
-                <label for="welfare-info-message">Details of your request</label>
-                <textarea id="welfare-info-message" name="message" required placeholder="Describe what you need and why…"></textarea>
+              <div class="dash-card">
+                <h2>Peer support</h2>
+                <p>Connect with trained peer supporters from the community. Available weekdays 9am–5pm AEST.</p>
+                <a href="support.html" class="btn btn--ghost" style="margin-top:1rem;">Contact Support</a>
               </div>
-              <div class="site-form__actions">
-                <button type="submit" class="btn btn--primary">Submit request</button>
-                <p class="site-form__note">We aim to respond within 5 business days.</p>
-              </div>
-              <p class="inquiry-form__message" role="status" aria-live="polite" hidden data-success="Your information request has been submitted. The Welfare Committee will respond within 5 business days."></p>
-            </form>
-          </div>
-
-          <div class="dash-card dash-card--full" id="welfare-request">
-            <h2>Lodge a welfare claim</h2>
-            <p class="welfare-record-intro">Confidential bereavement or hardship claim. The Welfare Committee reviews each request and sets the approved amount. Approved reimbursements are posted to the alerts list with an anonymised member number.</p>
-            <form class="site-form" id="welfare-claim-form" aria-label="Welfare claim">
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="welfare-claim-type">Type of claim</label>
-                  <select id="welfare-claim-type" name="claim_type" required>
-                    <option value="">Select…</option>
-                    <option value="bereavement">Bereavement reimbursement</option>
-                    <option value="hardship">Hardship support</option>
-                    <option value="family_emergency">Family emergency</option>
-                    <option value="other">Other welfare support</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="welfare-claim-amount">Amount requested (AUD, optional)</label>
-                  <input type="number" id="welfare-claim-amount" name="amount" min="0" step="0.01" placeholder="Leave blank if unknown">
-                </div>
-              </div>
-              <div class="form-group">
-                <label for="welfare-claim-details">Describe your situation (confidential)</label>
-                <textarea id="welfare-claim-details" name="details" required placeholder="Please provide details to help the Welfare Committee assist you…"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="welfare-claim-files">Supporting files (optional)</label>
-                <input type="file" id="welfare-claim-files" name="files" accept="image/jpeg,image/png,image/webp,application/pdf" multiple>
-                <p class="site-form__note">Up to 3 JPEG, PNG, WebP, or PDF files, 3.5 MB each.</p>
-              </div>
-              <div class="site-form__actions">
-                <button type="submit" class="btn btn--primary">Submit claim</button>
-                <p class="site-form__note">A welfare officer will contact you within 48 hours. You can track status under My claims.</p>
-              </div>
-              <p class="inquiry-form__message" id="welfare-claim-message" role="status" aria-live="polite" hidden></p>
-            </form>
-          </div>
-          <div class="dash-card dash-card--events">
-            <h2>My claims</h2>
-            <ul class="dash-list" id="welfare-my-claims">
-              <li><span>Loading…</span></li>
-            </ul>
-          </div>
-          <div class="dash-card dash-card--announce">
-            <h2>Peer Support</h2>
-            <p>Connect with trained peer supporters from the community. Available weekdays 9am–5pm AEST.</p>
-            <a href="support.html" class="btn btn--ghost" style="margin-top:1rem;">Contact Support</a>
-          </div>
+            </div>
+          </section>
         </div>
       </div>
     </main>
@@ -283,6 +303,6 @@
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
   <script src="../assets/js/invoices.js?v=2"></script>
-  <script src="../assets/js/members.js?v=45"></script>
+  <script src="../assets/js/members.js?v=46"></script>
 </body>
 </html>

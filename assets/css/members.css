@@ -761,6 +761,91 @@
   color: var(--color-text-muted);
 }
 
+.welfare-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.welfare-status-card {
+  margin: 0;
+}
+
+.welfare-status-card .welfare-status-meta {
+  padding: 0.7rem 0;
+  margin-bottom: 0.55rem;
+  gap: 0.7rem;
+}
+
+.welfare-status-note {
+  margin-bottom: 0;
+}
+
+.welfare-tabs {
+  position: sticky;
+  top: 0.55rem;
+  z-index: 8;
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  padding: 0.35rem;
+  background: rgba(255, 252, 247, 0.94);
+  border: 1px solid rgba(61, 35, 20, 0.12);
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(61, 35, 20, 0.08);
+  -webkit-overflow-scrolling: touch;
+}
+
+.welfare-tabs__btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #5c4334;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.welfare-tabs__btn:hover,
+.welfare-tabs__btn:focus-visible {
+  background: rgba(196, 98, 45, 0.1);
+  outline: none;
+}
+
+.welfare-tabs__btn.is-active {
+  background: #3d2314;
+  color: #f7efe6;
+}
+
+.welfare-panel[hidden] {
+  display: none !important;
+}
+
+.welfare-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(15rem, 0.85fr);
+  gap: 1rem;
+}
+
+.welfare-split .dash-card {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .welfare-split {
+    grid-template-columns: 1fr;
+  }
+
+  .welfare-tabs {
+    top: 0;
+    border-radius: 14px;
+  }
+}
+
 .welfare-record-intro {
   margin: 0 0 1.15rem;
   color: var(--color-text-muted);

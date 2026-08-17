@@ -1609,6 +1609,57 @@
     });
   }
 
+  function welfareTabFromHash() {
+    const id = String(window.location.hash || '').replace(/^#/, '');
+    if (id === 'welfare-record-card') return 'record';
+    if (id === 'welfare-request') return 'claims';
+    if (id === 'welfare-payments-card') return 'payments';
+    if (
+      id === 'welfare-appointment-card' ||
+      id === 'welfare-info-request' ||
+      id === 'welfare-alerts'
+    ) {
+      return 'requests';
+    }
+    return 'inbox';
+  }
+
+  function setWelfareTab(tab, options = {}) {
+    const allowed = ['inbox', 'record', 'claims', 'payments', 'requests'];
+    const next = allowed.includes(tab) ? tab : 'inbox';
+    document.querySelectorAll('[data-welfare-tab]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.welfareTab === next);
+    });
+    document.querySelectorAll('[data-welfare-panel]').forEach((panel) => {
+      const on = panel.dataset.welfarePanel === next;
+      panel.classList.toggle('is-active', on);
+      panel.hidden = !on;
+    });
+    if (options.updateHash) {
+      const hashes = {
+        inbox: 'welfare-inbox-card',
+        record: 'welfare-record-card',
+        claims: 'welfare-request',
+        payments: 'welfare-payments-card',
+        requests: 'welfare-appointment-card'
+      };
+      history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${hashes[next]}`);
+    }
+  }
+
+  function initWelfareTabs() {
+    const nav = document.querySelector('.welfare-tabs');
+    if (!nav) return;
+    if (nav.dataset.bound !== '1') {
+      nav.dataset.bound = '1';
+      nav.querySelectorAll('[data-welfare-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => setWelfareTab(btn.dataset.welfareTab, { updateHash: true }));
+      });
+      window.addEventListener('hashchange', () => setWelfareTab(welfareTabFromHash()));
+    }
+    setWelfareTab(welfareTabFromHash());
+  }
+
   function initWelfarePortal(member) {
     const toggle = document.getElementById('welfare-alerts-enabled');
     toggle?.addEventListener('change', () => {
@@ -1618,6 +1669,7 @@
     });
 
     initWelfareLiveAlert();
+    initWelfareTabs();
     renderWelfareStatus(member);
     populateMemberFields(member);
     loadWelfareAlerts(member);
