@@ -149,6 +149,12 @@ body[data-page="site-admin"] {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.site-admin__nav button:active,
+.site-admin__nav button.is-pressed,
+.site-admin__nav a.site-admin__nav-link:active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .site-admin__nav button.is-active,
 .site-admin__nav a.site-admin__nav-link.is-active {
   background: rgba(196, 98, 45, 0.45);
@@ -482,6 +488,14 @@ body[data-page="site-admin"] {
   background: #fff;
 }
 
+.admin-quick-actions button:active,
+.admin-quick-actions button.is-pressed,
+.admin-quick-actions a:active {
+  background: #efe2d3;
+  border-color: rgba(92, 46, 16, 0.45);
+  transform: translateY(1px);
+}
+
 .admin-invite-form {
   margin-bottom: 1rem;
   padding: 1rem;
@@ -517,6 +531,16 @@ body[data-page="site-admin"] {
 
 .admin-invite-form #admin-invite-status {
   margin: 0.65rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  background: rgba(47, 122, 82, 0.12);
+  color: #1f5c3c;
+  font-weight: 600;
+}
+
+.admin-invite-form #admin-invite-status.is-error {
+  background: rgba(160, 40, 40, 0.1);
+  color: #7a2020;
 }
 
 .admin-row-actions {

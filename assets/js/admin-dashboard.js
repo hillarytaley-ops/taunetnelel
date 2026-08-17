@@ -1923,20 +1923,30 @@
     }
   }
 
+  function setButtonBusy(btn, busy, opts) {
+    if (window.TaunetUi?.setButtonBusy) {
+      window.TaunetUi.setButtonBusy(btn, busy, opts);
+      return;
+    }
+    if (!btn) return;
+    btn.disabled = Boolean(busy);
+  }
+
   function setInviteStatus(message, isError) {
     const status = document.getElementById('admin-invite-status');
     if (!status) return;
     status.hidden = !message;
     status.classList.toggle('is-error', Boolean(isError));
     status.textContent = message || '';
+    if (message) status.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
-  async function inviteSiteAdmin({ fullName, email }) {
+  async function inviteSiteAdmin({ fullName, email, refreshList }) {
     const data = await adminApi('invite-admin', {
       method: 'POST',
       body: { full_name: fullName, email }
     });
-    await loadSiteAdmins();
+    if (refreshList !== false) await loadSiteAdmins();
     return data;
   }
 
@@ -1972,20 +1982,24 @@
     const title = form.querySelector('[name="title"]')?.value?.trim();
     const bodyText = form.querySelector('[name="body"]')?.value?.trim();
     const audience = form.querySelector('[name="audience"]')?.value || 'all';
+    const submit = form.querySelector('button[type="submit"]');
     if (status) {
       status.hidden = false;
       status.classList.remove('is-error');
       status.textContent = 'Publishing…';
     }
+    setButtonBusy(submit, true, { busy: 'Publishing…' });
     try {
       await adminApi('announcement-create', {
         method: 'POST',
         body: { title, body: bodyText, audience, is_published: true }
       });
       form.reset();
+      setButtonBusy(submit, false, { done: 'Published' });
       if (status) status.textContent = 'Announcement published.';
       await loadAnnouncementsAdmin();
     } catch (err) {
+      setButtonBusy(submit, false, { fail: 'Not published' });
       if (status) {
         status.classList.add('is-error');
         status.textContent = err.message || 'Could not publish. Run migration 015 first.';
@@ -2342,26 +2356,26 @@
       event.preventDefault();
       const message = document.getElementById('crm-record-message');
       const submit = form.querySelector('[type="submit"]');
-      if (submit) submit.disabled = true;
+      setButtonBusy(submit, true, { busy: 'Saving…' });
       try {
         const nextValues = renderer.readFormValues(form, fields, 'crm');
         await adminApi('crm-record-save', {
           method: 'POST',
           body: { profile_id: profileId, values: nextValues }
         });
+        setButtonBusy(submit, false, { done: 'Saved' });
         if (message) {
           message.hidden = false;
           message.classList.remove('is-error');
           message.textContent = 'CRM record saved.';
         }
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not saved' });
         if (message) {
           message.hidden = false;
           message.classList.add('is-error');
           message.textContent = err.message || 'Could not save CRM record. Run APPLY-CRM-CUSTOM-FIELDS.sql in Supabase.';
         }
-      } finally {
-        if (submit) submit.disabled = false;
       }
     });
   }
@@ -2704,7 +2718,7 @@
       event.preventDefault();
       const message = document.getElementById('crm-email-message');
       const submit = event.target.querySelector('[type="submit"]');
-      if (submit) submit.disabled = true;
+      setButtonBusy(submit, true, { busy: 'Sending…' });
       try {
         const audience = document.getElementById('crm-email-audience').value;
         const result = await adminApi('crm-campaign-send', {
@@ -2730,22 +2744,22 @@
         }
         event.target.reset();
         document.getElementById('crm-email-audience')?.dispatchEvent(new Event('change'));
+        setButtonBusy(submit, false, { done: 'Sent' });
         await loadFollowup({ keepTab: true });
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
         if (message) {
           message.hidden = false;
           message.classList.add('is-error');
           message.textContent = err.message || 'Could not send email campaign.';
         }
-      } finally {
-        if (submit) submit.disabled = false;
       }
     });
     document.getElementById('crm-sms-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const message = document.getElementById('crm-sms-message');
       const submit = event.target.querySelector('[type="submit"]');
-      if (submit) submit.disabled = true;
+      setButtonBusy(submit, true, { busy: 'Sending…' });
       try {
         const result = await adminApi('crm-campaign-send', {
           method: 'POST',
@@ -2762,15 +2776,15 @@
           message.textContent = `Sent ${result.sent || 0} SMS.${result.failed ? ` ${result.failed} failed.` : ''}`;
         }
         event.target.reset();
+        setButtonBusy(submit, false, { done: 'Sent' });
         await loadFollowup({ keepTab: true });
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
         if (message) {
           message.hidden = false;
           message.classList.add('is-error');
           message.textContent = err.message || 'Could not send SMS.';
         }
-      } finally {
-        if (submit) submit.disabled = false;
       }
     });
     document.getElementById('crm-pipeline-card-form')?.addEventListener('submit', async (event) => {
@@ -2975,17 +2989,21 @@
       const threadId = state.itHelpSelectedId;
       const textarea = document.getElementById('ithelp-reply-body');
       const text = String(textarea?.value || '').trim();
+      const submit = e.target.querySelector('button[type="submit"]');
       if (!threadId) return;
       if (!text) {
         alert('Enter a reply.');
         return;
       }
+      setButtonBusy(submit, true, { busy: 'Sending…' });
       try {
         await adminApi('it-help-reply', { method: 'POST', body: { thread_id: threadId, body: text } });
         if (textarea) textarea.value = '';
+        setButtonBusy(submit, false, { done: 'Sent' });
         await loadItHelpMessages(threadId);
         await loadItHelp({ silent: true });
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
         alert(err.message || 'Could not send reply.');
       }
     });
@@ -3023,18 +3041,22 @@
       if (chosen.startsWith('admin:')) body.admin_email = chosen.slice(6);
       else if (chosen.startsWith('member:')) body.profile_id = chosen.slice(7);
       else body.profile_id = chosen;
+      const submit = e.target.querySelector('button[type="submit"]');
+      setButtonBusy(submit, true, { busy: 'Sending…' });
       try {
         const result = await adminApi('welfare-inbox-start', {
           method: 'POST',
           body
         });
         if (textarea) textarea.value = '';
+        setButtonBusy(submit, false, { done: 'Sent' });
         state.inboxSelectedId = result.thread_id || '';
         state.inboxFilter = 'open';
         const filter = document.getElementById('inbox-filter');
         if (filter) filter.value = 'open';
         await loadInbox();
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
         alert(err.message || 'Could not start the conversation.');
       }
     });
@@ -3059,17 +3081,21 @@
       const threadId = state.inboxSelectedId;
       const textarea = document.getElementById('inbox-reply-body');
       const text = String(textarea?.value || '').trim();
+      const submit = e.target.querySelector('button[type="submit"]');
       if (!threadId) return;
       if (!text) {
         alert('Enter a reply.');
         return;
       }
+      setButtonBusy(submit, true, { busy: 'Sending…' });
       try {
         await adminApi('welfare-inbox-reply', { method: 'POST', body: { thread_id: threadId, body: text } });
         if (textarea) textarea.value = '';
+        setButtonBusy(submit, false, { done: 'Sent' });
         await loadInboxMessages(threadId);
         await loadInbox({ silent: true });
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
         alert(err.message || 'Could not send reply.');
       }
     });
@@ -3149,16 +3175,16 @@
         setInviteStatus('Enter their email address.', true);
         return;
       }
-      if (submit) submit.disabled = true;
+      setButtonBusy(submit, true, { busy: 'Sending invitation…' });
       setInviteStatus('Sending invitation…', false);
       try {
         const data = await inviteSiteAdmin({ fullName, email });
         form.reset();
+        setButtonBusy(submit, false, { done: 'Invitation sent' });
         setInviteStatus(data.message || `Invitation sent to ${email}.`, false);
       } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
         setInviteStatus(err.message || 'Could not send the invitation.', true);
-      } finally {
-        if (submit) submit.disabled = false;
       }
     });
 
@@ -3169,15 +3195,15 @@
         const email = String(resend.getAttribute('data-admin-resend') || '').trim();
         const fullName = String(resend.getAttribute('data-admin-resend-name') || '').trim() || email;
         if (!email) return;
-        resend.disabled = true;
+        setButtonBusy(resend, true, { busy: 'Sending…' });
         setInviteStatus(`Sending invitation to ${email}…`, false);
         try {
-          const data = await inviteSiteAdmin({ fullName, email });
+          const data = await inviteSiteAdmin({ fullName, email, refreshList: false });
+          setButtonBusy(resend, false, { done: 'Sent' });
           setInviteStatus(data.message || `Invitation sent to ${email}.`, false);
         } catch (err) {
+          setButtonBusy(resend, false, { fail: 'Not sent' });
           setInviteStatus(err.message || 'Could not resend the invitation.', true);
-        } finally {
-          resend.disabled = false;
         }
         return;
       }
@@ -3187,15 +3213,14 @@
         if (!window.confirm(`Remove ${email} from the committee admin list? They will no longer be able to open this dashboard.`)) {
           return;
         }
-        remove.disabled = true;
+        setButtonBusy(remove, true, { busy: 'Removing…' });
         try {
           await adminApi('remove-admin', { method: 'POST', body: { email } });
           setInviteStatus(`${email} was removed from the admin list.`, false);
           await loadSiteAdmins();
         } catch (err) {
+          setButtonBusy(remove, false, { fail: 'Not removed' });
           setInviteStatus(err.message || 'Could not remove that admin.', true);
-        } finally {
-          remove.disabled = false;
         }
       }
     });

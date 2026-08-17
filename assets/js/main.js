@@ -954,4 +954,39 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && lightbox && !lightbox.hidden) closeLightbox();
   });
+
+  if (!window.__taunetBtnFeedback) {
+    const selector = 'button, .btn, input[type="submit"], input[type="button"]';
+    const clearPressed = () => {
+      document.querySelectorAll('.is-pressed').forEach((el) => el.classList.remove('is-pressed'));
+    };
+    window.__taunetBtnFeedback = true;
+    document.addEventListener(
+      'pointerdown',
+      (event) => {
+        const btn = event.target.closest?.(selector);
+        if (!btn || btn.disabled) return;
+        btn.classList.add('is-pressed');
+      },
+      true
+    );
+    document.addEventListener('pointerup', clearPressed, true);
+    document.addEventListener('pointercancel', clearPressed, true);
+    document.addEventListener('submit', (event) => {
+      if (event.defaultPrevented) return;
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+      const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (!btn || btn.disabled) return;
+      btn.classList.add('is-busy');
+      btn.disabled = true;
+      if (btn.tagName === 'BUTTON') {
+        if (btn.dataset.idleLabel == null) btn.dataset.idleLabel = btn.textContent;
+        btn.textContent = 'Sending…';
+      } else if (btn.tagName === 'INPUT') {
+        if (btn.dataset.idleLabel == null) btn.dataset.idleLabel = btn.value;
+        btn.value = 'Sending…';
+      }
+    });
+  }
 })();

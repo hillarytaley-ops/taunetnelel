@@ -259,7 +259,7 @@
         payload.email = String(emailInput.value || '').trim();
       }
       const btn = form.querySelector('button[type="submit"]');
-      btn.disabled = true;
+      window.TaunetUi?.setButtonBusy?.(btn, true, { busy: 'Sending…' });
       setStatus('Sending…');
       try {
         const res = await fetch(API, {
@@ -279,12 +279,12 @@
         bodyInput.value = '';
         syncIdentityFields();
         renderMessages(data);
+        window.TaunetUi?.setButtonBusy?.(btn, false, { done: 'Sent' });
         setStatus('Sent. IT will reply here.');
         startPoll();
       } catch (err) {
+        window.TaunetUi?.setButtonBusy?.(btn, false, { fail: 'Not sent' });
         setStatus(err.message || 'Could not send message.', true);
-      } finally {
-        btn.disabled = false;
       }
     });
 

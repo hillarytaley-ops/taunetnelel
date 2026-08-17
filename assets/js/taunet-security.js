@@ -65,4 +65,85 @@
     safeRedirectPath,
     safeDomId
   };
+
+  function setButtonBusy(btn, busy, opts) {
+    if (!btn) return;
+    const options = opts || {};
+    if (busy) {
+      if (btn.dataset.idleLabel == null) {
+        btn.dataset.idleLabel = String(btn.textContent || btn.value || '').trim();
+      }
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      btn.classList.add('is-busy');
+      btn.classList.remove('is-done', 'is-fail');
+      const label = options.busy || 'Sending…';
+      if (btn.tagName === 'INPUT') btn.value = label;
+      else btn.textContent = label;
+      return;
+    }
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+    btn.classList.remove('is-busy');
+    const idle = btn.dataset.idleLabel || options.idle || '';
+    const applyIdle = () => {
+      btn.classList.remove('is-done', 'is-fail');
+      if (btn.tagName === 'INPUT') btn.value = idle;
+      else if (idle) btn.textContent = idle;
+    };
+    if (options.done) {
+      btn.classList.add('is-done');
+      if (btn.tagName === 'INPUT') btn.value = options.done;
+      else btn.textContent = options.done;
+      window.setTimeout(applyIdle, options.hold || 2200);
+      return;
+    }
+    if (options.fail) {
+      btn.classList.add('is-fail');
+      if (btn.tagName === 'INPUT') btn.value = options.fail;
+      else btn.textContent = options.fail;
+      window.setTimeout(applyIdle, options.hold || 2200);
+      return;
+    }
+    applyIdle();
+  }
+
+  function bindButtonPressFeedback() {
+    if (global.__taunetBtnFeedback) return;
+    global.__taunetBtnFeedback = true;
+    const selector = 'button, .btn, input[type="submit"], input[type="button"]';
+    const clearPressed = () => {
+      document.querySelectorAll('.is-pressed').forEach((el) => el.classList.remove('is-pressed'));
+    };
+    document.addEventListener(
+      'pointerdown',
+      (event) => {
+        const btn = event.target.closest?.(selector);
+        if (!btn || btn.disabled) return;
+        btn.classList.add('is-pressed');
+      },
+      true
+    );
+    document.addEventListener('pointerup', clearPressed, true);
+    document.addEventListener('pointercancel', clearPressed, true);
+    document.addEventListener(
+      'submit',
+      (event) => {
+        if (event.defaultPrevented) return;
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        const btn = form.querySelector('button[type="submit"], input[type="submit"]');
+        if (!btn || btn.disabled) return;
+        setButtonBusy(btn, true, { busy: btn.getAttribute('data-busy-label') || 'Sending…' });
+      },
+      false
+    );
+  }
+
+  global.TaunetUi = { setButtonBusy };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindButtonPressFeedback, { once: true });
+  } else {
+    bindButtonPressFeedback();
+  }
 })(window);

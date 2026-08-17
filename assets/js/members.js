@@ -314,6 +314,10 @@
   function setSubmitBusy(form, busy) {
     const btn = form.querySelector('button[type="submit"]');
     if (!btn) return;
+    if (window.TaunetUi?.setButtonBusy) {
+      window.TaunetUi.setButtonBusy(btn, busy, { busy: 'Please wait…' });
+      return;
+    }
     btn.disabled = busy;
     btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
     btn.textContent = busy ? 'Please wait…' : btn.dataset.originalText;
