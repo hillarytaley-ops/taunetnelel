@@ -11,6 +11,7 @@
     'ithelp',
     'members',
     'crm',
+    'followup',
     'imports',
     'business',
     'events',
@@ -47,6 +48,9 @@
     crmMembers: [],
     crmFields: [],
     crmBound: false,
+    followupBound: false,
+    followupTab: 'email',
+    pipelineData: null,
     businessEditor: null
   };
 
@@ -122,6 +126,7 @@
       ithelp: 'IT Help chat',
       members: 'Member profiles',
       crm: 'CRM records',
+      followup: 'Follow-up',
       imports: 'Association & Welfare',
       business: 'Business Hub',
       events: 'Events',
@@ -138,6 +143,7 @@
       ithelp: 'Live portal IT chat. Reply here — members see it in the website chat.',
       members: 'People who have registered or signed in online.',
       crm: 'Mambo Mob-style member register. Sensitive bank, income, and ID fields stay Admin-only.',
+      followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
       imports: 'Association and Welfare membership lists.',
       business: 'Edit business cards, news, and blog posts.',
       events: 'Published events for the public site and members.',
@@ -1893,6 +1899,298 @@
     }
   }
 
+  function setFollowupTab(tab) {
+    const allowed = ['email', 'sms', 'pipeline', 'calendar', 'funnel'];
+    state.followupTab = allowed.includes(tab) ? tab : 'email';
+    document.querySelectorAll('[data-followup-tab]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.followupTab === state.followupTab);
+    });
+    ['email', 'sms', 'pipeline', 'calendar', 'funnel'].forEach((id) => {
+      const el = document.getElementById(`followup-${id}-view`);
+      if (el) el.hidden = id !== state.followupTab;
+    });
+  }
+
+  function renderCampaigns(rows) {
+    const body = document.getElementById('crm-campaigns-body');
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No campaigns sent yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
+      .map(
+        (row) => `<tr>
+          <td class="admin-detail">${escapeHtml(formatDate(row.sent_at || row.created_at))}</td>
+          <td>${escapeHtml(row.channel)}</td>
+          <td>${escapeHtml(row.audience)}</td>
+          <td>${escapeHtml(row.subject || row.name || '—')}</td>
+          <td>${escapeHtml(row.status)} · ${row.sent_count || 0} sent${row.failed_count ? ` · ${row.failed_count} failed` : ''}</td>
+        </tr>`
+      )
+      .join('');
+  }
+
+  function fillPipelineSelects(data) {
+    const pipeSelect = document.getElementById('crm-pipe-select');
+    const stageSelect = document.getElementById('crm-pipe-stage');
+    if (!pipeSelect || !stageSelect) return;
+    const pipes = data.pipelines || [];
+    if (!pipeSelect.dataset.filled) {
+      pipeSelect.innerHTML = pipes
+        .map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`)
+        .join('');
+      pipeSelect.dataset.filled = '1';
+    }
+    const pipelineId = pipeSelect.value || pipes[0]?.id;
+    const stages = (data.stages || []).filter((s) => s.pipeline_id === pipelineId);
+    stageSelect.innerHTML = stages
+      .map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`)
+      .join('');
+  }
+
+  function renderPipelineBoard(data) {
+    const host = document.getElementById('crm-pipeline-board');
+    if (!host) return;
+    const pipeSelect = document.getElementById('crm-pipe-select');
+    const pipelineId = pipeSelect?.value || data.pipelines?.[0]?.id;
+    const stages = (data.stages || []).filter((s) => s.pipeline_id === pipelineId);
+    const cards = (data.cards || []).filter((c) => c.pipeline_id === pipelineId);
+    if (!stages.length) {
+      host.innerHTML = '<p class="admin-muted">Run APPLY-CRM-FOLLOWUP.sql to create the welfare pipeline.</p>';
+      return;
+    }
+    host.innerHTML = stages
+      .map((stage) => {
+        const colCards = cards.filter((c) => c.stage_id === stage.id);
+        return `<div class="crm-pipe-col">
+          <h3>${escapeHtml(stage.name)} (${colCards.length})</h3>
+          ${colCards
+            .map(
+              (card) => `<article class="crm-pipe-card">
+                <strong>${escapeHtml(card.title)}</strong>
+                ${card.notes ? `<p>${escapeHtml(card.notes)}</p>` : ''}
+                <select data-move-card="${escapeHtml(card.id)}">
+                  ${stages
+                    .map(
+                      (s) =>
+                        `<option value="${escapeHtml(s.id)}"${s.id === card.stage_id ? ' selected' : ''}>${escapeHtml(s.name)}</option>`
+                    )
+                    .join('')}
+                </select>
+              </article>`
+            )
+            .join('')}
+        </div>`;
+      })
+      .join('');
+    host.querySelectorAll('[data-move-card]').forEach((select) => {
+      select.addEventListener('change', async () => {
+        try {
+          await adminApi('crm-pipeline-card', {
+            method: 'PATCH',
+            body: { id: select.dataset.moveCard, stage_id: select.value }
+          });
+          await loadFollowup({ keepTab: true });
+        } catch (err) {
+          alert(err.message || 'Could not move card.');
+        }
+      });
+    });
+  }
+
+  function renderCalendar(rows) {
+    const body = document.getElementById('crm-calendar-body');
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="5" class="admin-empty">No appointments yet.</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
+      .map((row) => {
+        const actions = ['requested', 'confirmed', 'cancelled', 'completed']
+          .map(
+            (st) =>
+              `<button type="button" data-cal-status="${escapeHtml(row.id)}" data-status="${st}">${st}</button>`
+          )
+          .join('');
+        return `<tr>
+          <td class="admin-detail">${escapeHtml(formatDate(row.starts_at))}</td>
+          <td>${escapeHtml(row.title)}${row.member_name ? `<div class="admin-detail">${escapeHtml(row.member_name)}</div>` : ''}</td>
+          <td>${escapeHtml(row.event_type)}</td>
+          <td>${escapeHtml(row.status)}</td>
+          <td><div class="admin-actions">${actions}</div></td>
+        </tr>`;
+      })
+      .join('');
+    body.querySelectorAll('[data-cal-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await adminApi('crm-calendar-status', {
+            method: 'PATCH',
+            body: { id: btn.dataset.calStatus, status: btn.dataset.status }
+          });
+          await loadFollowup({ keepTab: true });
+        } catch (err) {
+          alert(err.message || 'Could not update appointment.');
+        }
+      });
+    });
+  }
+
+  function renderFunnel(steps) {
+    const host = document.getElementById('crm-funnel-stats');
+    if (!host) return;
+    host.innerHTML = (steps || [])
+      .map(
+        (step) => `<div class="admin-stat">
+          <strong>${escapeHtml(step.count ?? 0)}</strong>
+          <span>${escapeHtml(step.label)}</span>
+        </div>`
+      )
+      .join('');
+  }
+
+  function bindFollowupUi() {
+    if (state.followupBound) return;
+    state.followupBound = true;
+    document.querySelectorAll('[data-followup-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => setFollowupTab(btn.dataset.followupTab));
+    });
+    document.getElementById('crm-pipe-select')?.addEventListener('change', () => {
+      if (!state.pipelineData) return;
+      fillPipelineSelects(state.pipelineData);
+      renderPipelineBoard(state.pipelineData);
+    });
+    document.getElementById('crm-email-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('crm-email-message');
+      const submit = event.target.querySelector('[type="submit"]');
+      if (submit) submit.disabled = true;
+      try {
+        const result = await adminApi('crm-campaign-send', {
+          method: 'POST',
+          body: {
+            channel: 'email',
+            audience: document.getElementById('crm-email-audience').value,
+            subject: document.getElementById('crm-email-subject').value,
+            name: document.getElementById('crm-email-subject').value,
+            body_text: document.getElementById('crm-email-body').value
+          }
+        });
+        if (message) {
+          message.hidden = false;
+          message.classList.remove('is-error');
+          message.textContent = `Sent ${result.sent || 0} email(s).${result.skipped ? ` ${result.skipped} not sent this round (100 per send).` : ''}`;
+        }
+        event.target.reset();
+        await loadFollowup({ keepTab: true });
+      } catch (err) {
+        if (message) {
+          message.hidden = false;
+          message.classList.add('is-error');
+          message.textContent = err.message || 'Could not send email campaign.';
+        }
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    document.getElementById('crm-sms-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('crm-sms-message');
+      const submit = event.target.querySelector('[type="submit"]');
+      if (submit) submit.disabled = true;
+      try {
+        const result = await adminApi('crm-campaign-send', {
+          method: 'POST',
+          body: {
+            channel: 'sms',
+            audience: document.getElementById('crm-sms-audience').value,
+            name: 'SMS campaign',
+            body_text: document.getElementById('crm-sms-body').value
+          }
+        });
+        if (message) {
+          message.hidden = false;
+          message.classList.remove('is-error');
+          message.textContent = `Sent ${result.sent || 0} SMS.${result.failed ? ` ${result.failed} failed.` : ''}`;
+        }
+        event.target.reset();
+        await loadFollowup({ keepTab: true });
+      } catch (err) {
+        if (message) {
+          message.hidden = false;
+          message.classList.add('is-error');
+          message.textContent = err.message || 'Could not send SMS.';
+        }
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+    document.getElementById('crm-pipeline-card-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        await adminApi('crm-pipeline-card', {
+          method: 'POST',
+          body: {
+            pipeline_id: document.getElementById('crm-pipe-select').value,
+            stage_id: document.getElementById('crm-pipe-stage').value,
+            title: document.getElementById('crm-pipe-title').value,
+            notes: document.getElementById('crm-pipe-notes').value
+          }
+        });
+        event.target.reset();
+        await loadFollowup({ keepTab: true });
+      } catch (err) {
+        alert(err.message || 'Could not add pipeline card.');
+      }
+    });
+    document.getElementById('crm-calendar-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        const local = document.getElementById('crm-cal-start').value;
+        await adminApi('crm-calendar-create', {
+          method: 'POST',
+          body: {
+            title: document.getElementById('crm-cal-title').value,
+            starts_at: local ? new Date(local).toISOString() : '',
+            event_type: document.getElementById('crm-cal-type').value,
+            location: document.getElementById('crm-cal-location').value,
+            details: document.getElementById('crm-cal-details').value,
+            status: 'confirmed'
+          }
+        });
+        event.target.reset();
+        await loadFollowup({ keepTab: true });
+      } catch (err) {
+        alert(err.message || 'Could not add calendar item.');
+      }
+    });
+  }
+
+  async function loadFollowup() {
+    bindFollowupUi();
+    setFollowupTab(state.followupTab || 'email');
+    const [campaigns, pipelines, calendar, funnel] = await Promise.all([
+      adminApi('crm-campaigns'),
+      adminApi('crm-pipelines'),
+      adminApi('crm-calendar'),
+      adminApi('crm-funnel')
+    ]);
+    renderCampaigns(campaigns.rows || []);
+    const smsStatus = document.getElementById('crm-sms-status');
+    if (smsStatus) {
+      smsStatus.textContent = campaigns.sms_ready
+        ? 'Twilio is connected. SMS will go to members who have a phone number on their profile.'
+        : 'SMS is not connected yet. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM on Vercel to enable sending.';
+    }
+    state.pipelineData = pipelines;
+    fillPipelineSelects(pipelines);
+    renderPipelineBoard(pipelines);
+    renderCalendar(calendar.rows || []);
+    renderFunnel(funnel.steps || []);
+  }
+
   async function refreshPanel(id) {
     if (id === 'business' || id === 'pages') {
       if (id === 'business') ensureBusinessEditor();
@@ -1926,6 +2224,7 @@
       }
       if (id === 'members') await loadMembers();
       if (id === 'crm') await loadCrm();
+      if (id === 'followup') await loadFollowup();
       if (id === 'imports') await loadImports();
       if (id === 'events') await loadEvents();
       if (id === 'invoices') await loadInvoices();
@@ -1940,8 +2239,8 @@
         status.hidden = false;
         status.classList.add('is-error');
         status.textContent =
-          id === 'crm'
-            ? `${err.message || 'Could not load CRM.'} If tables are missing, run docs/supabase/APPLY-CRM-CUSTOM-FIELDS.sql in the Supabase SQL Editor, then refresh.`
+          id === 'crm' || id === 'followup'
+            ? `${err.message || 'Could not load follow-up tools.'} If tables are missing, run docs/supabase/APPLY-CRM-FOLLOWUP.sql in the Supabase SQL Editor, then refresh.`
             : err.message ||
               'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
       }

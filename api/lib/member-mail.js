@@ -268,14 +268,74 @@ function buildConfirmMail({ actionLink, fullName = '' }) {
   };
 }
 
+async function sendResendBatch(items) {
+  assertResendConfigured();
+  const list = Array.isArray(items) ? items.slice(0, 100) : [];
+  if (!list.length) return { data: [] };
+  const resp = await fetch('https://api.resend.com/emails/batch', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'taunet-member-mail/2.0',
+    },
+    body: JSON.stringify(list),
+  });
+  const payload = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = new Error(payload?.message || 'Resend batch send failed');
+    err.status = 502;
+    throw err;
+  }
+  return payload;
+}
+
+function buildCampaignMail({ greeting, subject, bodyText, unsubUrl }) {
+  const name = String(greeting || 'there').trim() || 'there';
+  const body = String(bodyText || '').trim();
+  const unsub = String(unsubUrl || `${PUBLIC_SITE_URL}/unsubscribe.html`);
+  const text =
+    `Hello ${name},\n\n` +
+    `${body}\n\n` +
+    `Questions? Reply to this email or write to info@taunetnelel.org\n\n` +
+    `Unsubscribe: ${unsub}\n\n` +
+    mailFooterText();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6f4f1;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f4f1;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e6e0d8;">
+        <tr><td style="padding:28px;font-family:Arial,Helvetica,sans-serif;">
+          <p style="margin:0 0 4px;font-size:13px;letter-spacing:0.06em;color:#8B4513;">Taunet Nelel</p>
+          <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#1a1a1a;">${escapeHtml(subject)}</h1>
+          <p style="margin:0 0 12px;font-size:16px;line-height:1.55;color:#222;">Hello ${escapeHtml(name)},</p>
+          <p style="margin:0 0 22px;font-size:16px;line-height:1.7;color:#222;white-space:pre-wrap;">${escapeHtml(body)}</p>
+          <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#666;">Questions? Reply to this email or write to info@taunetnelel.org</p>
+          ${mailFooterHtml()}
+          <p style="margin:16px 0 0;font-size:11px;line-height:1.45;color:#888;">
+            <a href="${escapeHtml(unsub)}" style="color:#8B4513;">Unsubscribe from committee emails</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+  return { subject: String(subject || 'Taunet Nelel'), html, text };
+}
+
 module.exports = {
   RESEND_FROM,
   RESEND_REPLY_TO,
   PUBLIC_SITE_URL,
   sendResendEmail,
+  sendResendBatch,
   sendMemberMail,
   buildPasswordMail,
   buildConfirmMail,
+  buildCampaignMail,
   escapeHtml,
   assertResendConfigured,
   deliverabilityHeaders,

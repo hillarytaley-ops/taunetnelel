@@ -90,6 +90,32 @@
             </form>
           </div>
 
+          <div class="dash-card dash-card--full" id="welfare-appointment-card">
+            <h2>Book a welfare appointment</h2>
+            <p class="welfare-record-intro">Request a time with the Welfare Committee. They will confirm it on the committee calendar.</p>
+            <form class="site-form" id="welfare-appointment-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="welfare-appt-start">Preferred date and time</label>
+                  <input type="datetime-local" id="welfare-appt-start" name="starts_at" required>
+                </div>
+                <div class="form-group">
+                  <label for="welfare-appt-location">Phone or in person</label>
+                  <input type="text" id="welfare-appt-location" name="location" placeholder="Phone, Zoom, or suburb">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="welfare-appt-details">What you need to discuss</label>
+                <textarea id="welfare-appt-details" name="details" rows="3" required placeholder="Short note for the Welfare Committee…"></textarea>
+              </div>
+              <div class="site-form__actions">
+                <button type="submit" class="btn btn--primary">Request appointment</button>
+              </div>
+              <p class="inquiry-form__message" id="welfare-appointment-message" hidden></p>
+            </form>
+            <ul class="dash-list" id="welfare-appointment-list" hidden></ul>
+          </div>
+
           <div class="dash-card dash-card--full" id="welfare-alerts">
             <div class="welfare-alerts__head">
               <h2>Reimbursement Alerts</h2>
@@ -229,6 +255,6 @@
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=1"></script>
-  <script src="../assets/js/members.js?v=39"></script>
+  <script src="../assets/js/members.js?v=40"></script>
 </body>
 </html>

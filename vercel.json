@@ -2,6 +2,11 @@
   "version": 2,
   "cleanUrls": false,
   "trailingSlash": false,
+  "functions": {
+    "api/admin/data.js": {
+      "maxDuration": 60
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/invoice-reminders",

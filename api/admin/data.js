@@ -33,6 +33,33 @@ try {
   sendPaidInvoiceReceiptEmail = null;
 }
 
+let sendResendBatch;
+let buildCampaignMail;
+let RESEND_FROM;
+let PUBLIC_SITE_URL;
+let deliverabilityHeaders;
+try {
+  ({
+    sendResendBatch,
+    buildCampaignMail,
+    RESEND_FROM,
+    PUBLIC_SITE_URL,
+    deliverabilityHeaders
+  } = require('../lib/member-mail'));
+} catch (_) {
+  sendResendBatch = null;
+  buildCampaignMail = null;
+}
+
+let twilioConfigured;
+let sendSms;
+try {
+  ({ twilioConfigured, sendSms } = require('../lib/sms'));
+} catch (_) {
+  twilioConfigured = () => false;
+  sendSms = null;
+}
+
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
@@ -185,6 +212,67 @@ function normalizeCrmFieldInput(body, existing) {
     sort_order: Number.isFinite(sortOrder) ? Math.round(sortOrder) : Number(existing?.sort_order) || 0,
     updated_at: new Date().toISOString()
   };
+}
+
+function emailOk(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+async function loadUnsubscribedSet(channel) {
+  const { data } = await sb(
+    `crm_unsubscribes?select=email,phone,channel&or=(channel.eq.${channel},channel.eq.all)`
+  );
+  const emails = new Set();
+  const phones = new Set();
+  (data || []).forEach((row) => {
+    if (row.email) emails.add(String(row.email).trim().toLowerCase());
+    if (row.phone) phones.add(String(row.phone).replace(/\s/g, ''));
+  });
+  return { emails, phones };
+}
+
+async function collectCampaignRecipients(audience, channel) {
+  const unsub = await loadUnsubscribedSet(channel);
+  const people = [];
+  if (audience === 'newsletter') {
+    const { data } = await sb(
+      'newsletter_subscribers?select=email,subscribed_at&order=subscribed_at.desc&limit=400'
+    );
+    (data || []).forEach((row) => {
+      const email = String(row.email || '').trim().toLowerCase();
+      if (emailOk(email) && !unsub.emails.has(email)) {
+        people.push({ email, phone: '', profile_id: null, name: 'Subscriber' });
+      }
+    });
+    return people;
+  }
+  let query =
+    'profiles?select=id,full_name,email,phone,association_member,welfare_member&order=created_at.desc&limit=400';
+  if (audience === 'association') query += '&association_member=eq.true';
+  if (audience === 'welfare') query += '&welfare_member=eq.true';
+  const { data } = await sb(query);
+  (data || []).forEach((row) => {
+    const email = String(row.email || '').trim().toLowerCase();
+    const phone = String(row.phone || '').trim();
+    if (channel === 'email') {
+      if (!emailOk(email) || unsub.emails.has(email)) return;
+      people.push({
+        email,
+        phone,
+        profile_id: row.id,
+        name: row.full_name || 'Member'
+      });
+      return;
+    }
+    if (!phone || unsub.phones.has(phone.replace(/\s/g, ''))) return;
+    people.push({
+      email,
+      phone,
+      profile_id: row.id,
+      name: row.full_name || 'Member'
+    });
+  });
+  return people;
 }
 
 function ticketsFromEventRow(row) {
@@ -1121,6 +1209,66 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { profile, fields: fields || [], values: valueMap });
       }
 
+      if (resource === 'crm-campaigns') {
+        const { data } = await sb(
+          'crm_campaigns?select=id,channel,name,subject,audience,status,recipient_count,sent_count,failed_count,error_text,created_at,sent_at&order=created_at.desc&limit=50'
+        );
+        return json(res, 200, {
+          rows: data || [],
+          sms_ready: Boolean(twilioConfigured && twilioConfigured())
+        });
+      }
+
+      if (resource === 'crm-pipelines') {
+        const [{ data: pipelines }, { data: stages }, { data: cards }] = await Promise.all([
+          sb('crm_pipelines?select=id,pipeline_key,name,is_active&is_active=eq.true&order=name.asc'),
+          sb('crm_pipeline_stages?select=id,pipeline_id,name,sort_order&order=sort_order.asc'),
+          sb(
+            'crm_pipeline_cards?select=id,pipeline_id,stage_id,profile_id,title,notes,created_at,updated_at&order=updated_at.desc&limit=300'
+          )
+        ]);
+        return json(res, 200, {
+          pipelines: pipelines || [],
+          stages: stages || [],
+          cards: cards || []
+        });
+      }
+
+      if (resource === 'crm-calendar') {
+        const { data } = await sb(
+          'crm_calendar_events?select=id,title,details,starts_at,ends_at,location,event_type,status,profile_id,member_name,member_email,created_at&order=starts_at.desc&limit=120'
+        );
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-funnel') {
+        const [
+          welfareEnquiries,
+          welfareMembers,
+          associationMembers,
+          pendingWelfareInvoices,
+          paidWelfareInvoices,
+          appointments
+        ] = await Promise.all([
+          countRows('form_submissions', 'form_type=eq.welfare').catch(() => 0),
+          countRows('profiles', 'welfare_member=eq.true').catch(() => 0),
+          countRows('profiles', 'association_member=eq.true').catch(() => 0),
+          countRows('invoices', 'kind=eq.welfare&status=eq.pending').catch(() => 0),
+          countRows('invoices', 'kind=eq.welfare&status=eq.paid').catch(() => 0),
+          countRows('crm_calendar_events', 'status=eq.requested').catch(() => 0)
+        ]);
+        return json(res, 200, {
+          steps: [
+            { key: 'enquiry', label: 'Welfare enquiries / registrations', count: welfareEnquiries },
+            { key: 'invoice', label: 'Welfare invoices awaiting payment', count: pendingWelfareInvoices },
+            { key: 'paid', label: 'Welfare invoices paid', count: paidWelfareInvoices },
+            { key: 'active', label: 'Active welfare members', count: welfareMembers },
+            { key: 'association', label: 'Association members (for upgrade)', count: associationMembers },
+            { key: 'appointments', label: 'Appointment requests waiting', count: appointments }
+          ]
+        });
+      }
+
       if (resource === 'imports') {
         const filter = url.searchParams.get('filter') || 'all';
         let query =
@@ -1958,6 +2106,197 @@ module.exports = async function handler(req, res) {
         return json(res, 200, { ok: true, saved: (data || rows).length });
       }
 
+      if (resource === 'crm-campaign-send') {
+        const channel = body.channel === 'sms' ? 'sms' : 'email';
+        const audience = String(body.audience || 'welfare').trim();
+        const allowedAudience = new Set(['all_members', 'association', 'welfare', 'newsletter']);
+        if (!allowedAudience.has(audience)) {
+          return json(res, 400, { error: 'Invalid audience' });
+        }
+        if (channel === 'sms' && audience === 'newsletter') {
+          return json(res, 400, { error: 'SMS cannot use the newsletter list (email only).' });
+        }
+        const name = String(body.name || body.subject || 'Campaign').trim().slice(0, 120) || 'Campaign';
+        const subject = String(body.subject || name).trim().slice(0, 160);
+        const bodyText = String(body.body_text || '').trim().slice(0, 4000);
+        if (!bodyText) return json(res, 400, { error: 'Message text is required' });
+        if (channel === 'email' && !subject) {
+          return json(res, 400, { error: 'Email subject is required' });
+        }
+
+        const recipients = await collectCampaignRecipients(audience, channel);
+        if (!recipients.length) {
+          return json(res, 400, { error: 'No recipients in that audience (or they unsubscribed).' });
+        }
+        const cap = channel === 'sms' ? 40 : 100;
+        const capped = recipients.slice(0, cap);
+
+        const { data: campaignRows } = await sb('crm_campaigns', {
+          method: 'POST',
+          body: JSON.stringify({
+            channel,
+            name,
+            subject: channel === 'email' ? subject : null,
+            body_text: bodyText,
+            audience,
+            status: 'sending',
+            recipient_count: capped.length
+          })
+        });
+        const campaign = Array.isArray(campaignRows) ? campaignRows[0] : null;
+        if (!campaign) return json(res, 500, { error: 'Could not create campaign' });
+
+        const recipientRows = capped.map((person) => ({
+          campaign_id: campaign.id,
+          profile_id: person.profile_id,
+          email: person.email || null,
+          phone: person.phone || null,
+          status: 'queued'
+        }));
+        await sb('crm_campaign_recipients', {
+          method: 'POST',
+          prefer: 'return=minimal',
+          body: JSON.stringify(recipientRows)
+        });
+
+        let sentCount = 0;
+        let failedCount = 0;
+        let lastError = '';
+
+        if (channel === 'email') {
+          if (!sendResendBatch || !buildCampaignMail) {
+            return json(res, 500, { error: 'Email sender is not available on the server.' });
+          }
+          const site = (PUBLIC_SITE_URL || 'https://www.taunetnelel.org').replace(/\/$/, '');
+          const batch = capped.map((person) => {
+            const unsub = `${site}/unsubscribe.html?email=${encodeURIComponent(person.email)}`;
+            const mail = buildCampaignMail({
+              greeting: person.name,
+              subject,
+              bodyText,
+              unsubUrl: unsub
+            });
+            return {
+              from: RESEND_FROM,
+              to: [person.email],
+              subject: mail.subject,
+              html: mail.html,
+              text: mail.text,
+              reply_to: 'info@taunetnelel.org',
+              headers: {
+                ...(deliverabilityHeaders ? deliverabilityHeaders(`campaign-${campaign.id}`) : {}),
+                'List-Unsubscribe': `<${unsub}>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+              },
+              tags: [{ name: 'category', value: 'crm_campaign' }]
+            };
+          });
+          try {
+            await sendResendBatch(batch);
+            sentCount = capped.length;
+            await sb(`crm_campaign_recipients?campaign_id=eq.${encodeURIComponent(campaign.id)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify({ status: 'sent', sent_at: new Date().toISOString() })
+            });
+          } catch (err) {
+            failedCount = capped.length;
+            lastError = err.message || 'Resend failed';
+          }
+        } else {
+          if (!sendSms || !twilioConfigured()) {
+            await sb(`crm_campaigns?id=eq.${encodeURIComponent(campaign.id)}`, {
+              method: 'PATCH',
+              body: JSON.stringify({
+                status: 'failed',
+                failed_count: capped.length,
+                error_text: 'SMS is not connected. Add Twilio keys on Vercel.'
+              })
+            });
+            return json(res, 400, {
+              error: 'SMS is not connected yet. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM in Vercel.'
+            });
+          }
+          for (const person of capped) {
+            try {
+              await sendSms({
+                to: person.phone,
+                body: `${bodyText}\n\nTaunet Nelel — reply STOP to opt out via the committee.`
+              });
+              sentCount += 1;
+            } catch (err) {
+              failedCount += 1;
+              lastError = err.message || 'SMS failed';
+            }
+          }
+        }
+
+        const status = sentCount > 0 && failedCount === 0 ? 'sent' : sentCount > 0 ? 'sent' : 'failed';
+        await sb(`crm_campaigns?id=eq.${encodeURIComponent(campaign.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status,
+            sent_count: sentCount,
+            failed_count: failedCount,
+            error_text: lastError || null,
+            sent_at: new Date().toISOString()
+          })
+        });
+        return json(res, 200, {
+          ok: status !== 'failed',
+          id: campaign.id,
+          sent: sentCount,
+          failed: failedCount,
+          skipped: recipients.length - capped.length
+        });
+      }
+
+      if (resource === 'crm-pipeline-card') {
+        const pipelineId = String(body.pipeline_id || '').trim();
+        const stageId = String(body.stage_id || '').trim();
+        const title = String(body.title || '').trim().slice(0, 160);
+        if (!pipelineId || !stageId || !title) {
+          return json(res, 400, { error: 'Pipeline, stage, and title are required' });
+        }
+        const { data } = await sb('crm_pipeline_cards', {
+          method: 'POST',
+          body: JSON.stringify({
+            pipeline_id: pipelineId,
+            stage_id: stageId,
+            profile_id: body.profile_id || null,
+            title,
+            notes: String(body.notes || '').trim().slice(0, 2000) || null
+          })
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-calendar-create') {
+        const title = String(body.title || '').trim().slice(0, 160);
+        const startsAt = String(body.starts_at || '').trim();
+        if (!title || !startsAt) {
+          return json(res, 400, { error: 'Title and start time are required' });
+        }
+        const { data } = await sb('crm_calendar_events', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            details: String(body.details || '').trim().slice(0, 2000) || null,
+            starts_at: startsAt,
+            ends_at: body.ends_at || null,
+            location: String(body.location || '').trim().slice(0, 160) || null,
+            event_type: ['appointment', 'committee', 'reminder'].includes(body.event_type)
+              ? body.event_type
+              : 'appointment',
+            status: body.status === 'confirmed' ? 'confirmed' : 'confirmed',
+            profile_id: body.profile_id || null,
+            member_name: String(body.member_name || '').trim().slice(0, 120) || null,
+            member_email: String(body.member_email || '').trim().slice(0, 160) || null
+          })
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
       return json(res, 400, { error: 'Unknown POST resource' });
     }
 
@@ -2008,6 +2347,34 @@ module.exports = async function handler(req, res) {
         const { data } = await sb(`crm_custom_fields?id=eq.${encodeURIComponent(id)}`, {
           method: 'PATCH',
           body: JSON.stringify(payload)
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-pipeline-card') {
+        const id = String(body.id || '').trim();
+        const stageId = String(body.stage_id || '').trim();
+        if (!id || !stageId) return json(res, 400, { error: 'Card id and stage are required' });
+        const { data } = await sb(`crm_pipeline_cards?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            stage_id: stageId,
+            notes: body.notes != null ? String(body.notes).trim().slice(0, 2000) : undefined,
+            updated_at: new Date().toISOString()
+          })
+        });
+        return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'crm-calendar-status') {
+        const id = String(body.id || '').trim();
+        const status = String(body.status || '').trim();
+        if (!id || !['requested', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+          return json(res, 400, { error: 'Valid calendar status is required' });
+        }
+        const { data } = await sb(`crm_calendar_events?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status })
         });
         return json(res, 200, { rows: data || [] });
       }

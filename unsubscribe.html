@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unsubscribe | Taunet Nelel</title>
+  <link rel="icon" href="wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/main.css?v=17">
+</head>
+<body>
+  <main class="container" style="max-width:32rem;padding:3rem 1.25rem;">
+    <a href="index.html" class="logo" style="display:inline-block;margin-bottom:1.5rem;">
+      <img src="wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel" width="120" height="52">
+    </a>
+    <h1>Unsubscribe</h1>
+    <p>Stop committee campaign emails from Taunet Nelel. Transactional messages (invoices, password reset) may still be sent.</p>
+    <form class="site-form" id="unsub-form">
+      <div class="form-group">
+        <label for="unsub-email">Email</label>
+        <input type="email" id="unsub-email" name="email" required placeholder="you@example.com">
+      </div>
+      <div class="site-form__actions">
+        <button type="submit" class="btn btn--primary">Unsubscribe</button>
+      </div>
+      <p class="inquiry-form__message" id="unsub-message" hidden></p>
+    </form>
+  </main>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const prefill = params.get('email') || '';
+      const emailEl = document.getElementById('unsub-email');
+      if (prefill) emailEl.value = prefill;
+      document.getElementById('unsub-form').addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const message = document.getElementById('unsub-message');
+        const btn = event.target.querySelector('[type="submit"]');
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/unsubscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailEl.value, channel: 'email' })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'Could not unsubscribe');
+          message.hidden = false;
+          message.classList.remove('is-error');
+          message.textContent = 'You have been unsubscribed from committee campaign emails.';
+        } catch (err) {
+          message.hidden = false;
+          message.classList.add('is-error');
+          message.textContent = err.message || 'Could not unsubscribe.';
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

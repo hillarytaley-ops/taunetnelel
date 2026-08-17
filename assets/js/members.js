@@ -1123,6 +1123,7 @@
     renderWelfareStatus(member);
     renderWelfareAlerts(member);
     loadWelfareRecord(member);
+    initWelfareAppointment(member);
   }
 
   async function loadWelfareRecord(member) {
@@ -1202,6 +1203,79 @@
       console.warn('Welfare record load skipped:', error);
       host.innerHTML = fallback;
     }
+  }
+
+  async function initWelfareAppointment(member) {
+    const form = document.getElementById('welfare-appointment-form');
+    const list = document.getElementById('welfare-appointment-list');
+    if (!form || !member?.id) return;
+
+    async function refreshAppointments(client) {
+      if (!list) return;
+      const { data, error } = await client
+        .from('crm_calendar_events')
+        .select('id,title,starts_at,status,location')
+        .eq('profile_id', member.id)
+        .order('starts_at', { ascending: false })
+        .limit(8);
+      if (error || !data?.length) {
+        list.hidden = true;
+        return;
+      }
+      list.hidden = false;
+      list.innerHTML = data
+        .map((row) => {
+          const when = row.starts_at ? new Date(row.starts_at).toLocaleString() : '';
+          return `<li><span>${escapeHtml(when)} · ${escapeHtml(row.title || 'Appointment')}</span><span class="meta">${escapeHtml(row.status || '')}</span></li>`;
+        })
+        .join('');
+    }
+
+    try {
+      const client = await window.taunetSupabaseApi?.ensureClient?.();
+      if (client) await refreshAppointments(client);
+    } catch (_) { /* ignore until SQL is applied */ }
+
+    if (form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('welfare-appointment-message');
+      const submit = form.querySelector('[type="submit"]');
+      if (submit) submit.disabled = true;
+      try {
+        const client = await window.taunetSupabaseApi?.ensureClient?.();
+        if (!client) throw new Error('Could not connect.');
+        const local = document.getElementById('welfare-appt-start').value;
+        const { error } = await client.from('crm_calendar_events').insert({
+          title: 'Welfare appointment request',
+          details: document.getElementById('welfare-appt-details').value.trim(),
+          starts_at: local ? new Date(local).toISOString() : null,
+          location: document.getElementById('welfare-appt-location').value.trim() || null,
+          event_type: 'appointment',
+          status: 'requested',
+          profile_id: member.id,
+          member_name: member.name || null,
+          member_email: member.email || null
+        });
+        if (error) throw error;
+        if (message) {
+          message.hidden = false;
+          message.classList.remove('is-error');
+          message.textContent = 'Appointment requested. The Welfare Committee will confirm the time.';
+        }
+        form.reset();
+        await refreshAppointments(client);
+      } catch (error) {
+        if (message) {
+          message.hidden = false;
+          message.classList.add('is-error');
+          message.textContent = error.message || 'Could not request an appointment yet. The committee may still be applying the calendar setup.';
+        }
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
   }
 
   function showWelfareSection(member) {
