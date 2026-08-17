@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=27">
+  <link rel="stylesheet" href="../assets/css/members.css?v=28">
   <link rel="stylesheet" href="../assets/css/member-invoices.css?v=1">
 </head>
 <body>
@@ -79,20 +79,27 @@
             <p class="welfare-status-note" id="welfare-status-note">Your social welfare membership is active. You are eligible for bereavement support and community reimbursements.</p>
           </div>
 
-          <div class="dash-card dash-card--full" id="welfare-inbox-card">
-            <h2>Team inbox</h2>
-            <p class="welfare-record-intro">Write to the Welfare Committee here. They reply in this same thread. You also get an email when they reply.</p>
+          <div class="dash-card dash-card--full dash-card--inbox" id="welfare-inbox-card">
             <div class="welfare-inbox" id="welfare-inbox">
-              <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
-                <p class="muted">Loading conversation…</p>
-              </div>
-              <form class="site-form welfare-inbox__compose" id="welfare-inbox-form">
-                <label class="visually-hidden" for="welfare-inbox-body">Message</label>
-                <textarea id="welfare-inbox-body" name="body" rows="3" required maxlength="2000" placeholder="Write to the Welfare Committee…"></textarea>
-                <div class="site-form__actions">
-                  <button type="submit" class="btn btn--primary">Send message</button>
+              <div class="welfare-inbox__head">
+                <span class="welfare-inbox__avatar" aria-hidden="true">♥</span>
+                <div class="welfare-inbox__head-copy">
+                  <strong>Welfare Committee</strong>
+                  <span>Team inbox · they reply in this chat</span>
                 </div>
-                <p class="inquiry-form__message" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
+                <span class="welfare-inbox__live">Live</span>
+              </div>
+              <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
+                <div class="welfare-inbox__empty">
+                  <span aria-hidden="true">💬</span>
+                  <p>Loading conversation…</p>
+                </div>
+              </div>
+              <form class="welfare-inbox__compose" id="welfare-inbox-form">
+                <label class="visually-hidden" for="welfare-inbox-body">Message</label>
+                <textarea id="welfare-inbox-body" name="body" rows="1" required maxlength="2000" placeholder="Write a message…"></textarea>
+                <button type="submit" class="welfare-inbox__send">Send</button>
+                <p class="inquiry-form__message welfare-inbox__status" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
               </form>
             </div>
           </div>
@@ -276,6 +283,6 @@
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
   <script src="../assets/js/invoices.js?v=2"></script>
-  <script src="../assets/js/members.js?v=44"></script>
+  <script src="../assets/js/members.js?v=45"></script>
 </body>
 </html>

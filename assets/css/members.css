@@ -1896,54 +1896,248 @@
   background: rgba(196, 98, 45, 0.85);
 }
 
+.welfare-inbox {
+  border-radius: inherit;
+  overflow: hidden;
+  background: #fffdf9;
+}
+
+.dash-card--inbox {
+  padding: 0;
+  overflow: hidden;
+}
+
+.welfare-inbox__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(135deg, #3d2314 0%, #5c3824 100%);
+  color: #f7efe6;
+}
+
+.welfare-inbox__avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #c4622d;
+  color: #fff8f1;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(255, 248, 241, 0.18);
+}
+
+.welfare-inbox__head-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.welfare-inbox__head-copy strong {
+  display: block;
+  font-family: "DM Sans", sans-serif;
+  font-size: 1rem;
+}
+
+.welfare-inbox__head-copy span {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.78;
+  margin-top: 0.1rem;
+}
+
+.welfare-inbox__live {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255, 248, 241, 0.14);
+  border: 1px solid rgba(255, 248, 241, 0.22);
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+}
+
 .welfare-inbox__messages {
-  max-height: 18rem;
+  max-height: 22rem;
+  min-height: 14rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.75rem;
-  margin-bottom: 0.85rem;
-  background: #fffdf9;
-  border: 1px solid rgba(61, 35, 20, 0.12);
-  border-radius: 12px;
+  gap: 0.7rem;
+  padding: 1rem 0.9rem 1.1rem;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(196, 98, 45, 0.08), transparent 36%),
+    radial-gradient(circle at 88% 82%, rgba(61, 35, 20, 0.06), transparent 40%),
+    #f4eadc;
 }
 
-.welfare-inbox__bubble {
-  max-width: 85%;
-  padding: 0.55rem 0.7rem;
-  border-radius: 10px;
+.welfare-inbox__empty {
+  margin: auto;
+  text-align: center;
+  color: #6a5648;
+  max-width: 16rem;
+}
+
+.welfare-inbox__empty span {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.55rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(61, 35, 20, 0.1);
+  font-size: 1.25rem;
+}
+
+.welfare-inbox__empty p {
+  margin: 0;
   font-size: 0.92rem;
   line-height: 1.4;
 }
 
+.welfare-inbox__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.45rem;
+  max-width: 92%;
+}
+
+.welfare-inbox__row--member {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.welfare-inbox__row--committee {
+  align-self: flex-start;
+}
+
+.welfare-inbox__face {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.welfare-inbox__row--committee .welfare-inbox__face {
+  background: #3d2314;
+  color: #f7efe6;
+}
+
+.welfare-inbox__row--member .welfare-inbox__face {
+  background: #c4622d;
+  color: #fff8f1;
+}
+
+.welfare-inbox__bubble {
+  padding: 0.65rem 0.8rem 0.5rem;
+  font-size: 0.94rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 8px 16px rgba(61, 35, 20, 0.08);
+}
+
 .welfare-inbox__bubble strong {
   display: block;
-  font-size: 0.72rem;
-  text-transform: uppercase;
+  font-size: 0.68rem;
   letter-spacing: 0.04em;
-  margin-bottom: 0.15rem;
+  text-transform: uppercase;
+  margin-bottom: 0.18rem;
+  opacity: 0.78;
 }
 
 .welfare-inbox__bubble time {
   display: block;
-  margin-top: 0.3rem;
-  font-size: 0.72rem;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
   opacity: 0.7;
 }
 
-.welfare-inbox__bubble--member {
-  align-self: flex-end;
-  background: rgba(196, 98, 45, 0.12);
+.welfare-inbox__bubble--committee {
+  background: #fffdf9;
+  color: #2c1810;
+  border: 1px solid rgba(61, 35, 20, 0.08);
+  border-radius: 16px 16px 16px 5px;
 }
 
-.welfare-inbox__bubble--committee {
-  align-self: flex-start;
-  background: rgba(61, 35, 20, 0.06);
+.welfare-inbox__bubble--member {
+  background: linear-gradient(160deg, #d06a32 0%, #c4622d 58%, #a24e24 100%);
+  color: #fffaf4;
+  border-radius: 16px 16px 5px 16px;
+}
+
+.welfare-inbox__compose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: end;
+  padding: 0.75rem 0.85rem 0.85rem;
+  background: #fff;
+  border-top: 1px solid rgba(61, 35, 20, 0.1);
 }
 
 .welfare-inbox__compose textarea {
   width: 100%;
+  min-height: 2.7rem;
+  max-height: 8rem;
+  resize: none;
+  border: 1px solid rgba(61, 35, 20, 0.16);
+  border-radius: 1.2rem;
+  padding: 0.7rem 0.95rem;
+  font: inherit;
+  line-height: 1.4;
+  background: #faf6f0;
+  color: #2c1810;
+}
+
+.welfare-inbox__compose textarea:focus {
+  outline: none;
+  border-color: #c4622d;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(196, 98, 45, 0.18);
+}
+
+.welfare-inbox__send {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  height: 2.7rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: #3d2314;
+  color: #f7efe6;
+  font: inherit;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(61, 35, 20, 0.18);
+}
+
+.welfare-inbox__send:hover,
+.welfare-inbox__send:focus-visible {
+  background: #2a160d;
+  outline: none;
+}
+
+.welfare-inbox__send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.welfare-inbox__status {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 560px) {
+  .welfare-inbox__live {
+    display: none;
+  }
 }
 
 .auth-panel[hidden] {

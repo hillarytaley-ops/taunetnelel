@@ -1239,12 +1239,27 @@
     });
   }
 
+  function formatInboxTime(value) {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return formatMemberDate(value);
+    return parsed.toLocaleString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
   function renderWelfareInbox(payload) {
     const box = document.getElementById('welfare-inbox-messages');
     if (!box) return;
     const messages = payload?.messages || [];
     if (!messages.length) {
-      box.innerHTML = '<p class="muted">No messages yet. Write to the Welfare Committee below.</p>';
+      box.innerHTML = `<div class="welfare-inbox__empty">
+        <span aria-hidden="true">💬</span>
+        <p>Say hello to the Welfare Committee. Your message stays in this chat.</p>
+      </div>`;
       return;
     }
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
@@ -1252,10 +1267,14 @@
       .map((m) => {
         const who = m.sender === 'committee' ? 'committee' : 'member';
         const label = who === 'committee' ? 'Committee' : 'You';
-        return `<div class="welfare-inbox__bubble welfare-inbox__bubble--${who}">
-          <strong>${label}</strong>
-          <div>${escapeHtml(m.body)}</div>
-          <time>${escapeHtml(formatMemberDate(m.createdAt || m.created_at))}</time>
+        const face = who === 'committee' ? 'WC' : 'You';
+        return `<div class="welfare-inbox__row welfare-inbox__row--${who}">
+          <span class="welfare-inbox__face" aria-hidden="true">${face}</span>
+          <div class="welfare-inbox__bubble welfare-inbox__bubble--${who}">
+            <strong>${label}</strong>
+            <div>${escapeHtml(m.body)}</div>
+            <time>${escapeHtml(formatInboxTime(m.createdAt || m.created_at))}</time>
+          </div>
         </div>`;
       })
       .join('');
@@ -1267,7 +1286,10 @@
     const status = document.getElementById('welfare-inbox-status');
     if (!box) return;
     if (sessionStorage.getItem('taunet_preview') === '1') {
-      box.innerHTML = '<p class="muted">Preview — team inbox is not stored.</p>';
+      box.innerHTML = `<div class="welfare-inbox__empty">
+        <span aria-hidden="true">💬</span>
+        <p>Preview — team inbox is not stored.</p>
+      </div>`;
       return;
     }
     try {
@@ -1286,7 +1308,10 @@
         status.textContent = 'This conversation is closed. Send a message to reopen it.';
       }
     } catch (err) {
-      box.innerHTML = `<p class="muted">${escapeHtml(err.message || 'Team inbox will appear after IT runs APPLY-WELFARE-INBOX.sql.')}</p>`;
+      box.innerHTML = `<div class="welfare-inbox__empty">
+        <span aria-hidden="true">💬</span>
+        <p>${escapeHtml(err.message || 'Team inbox will appear after IT runs APPLY-WELFARE-INBOX.sql.')}</p>
+      </div>`;
     }
   }
 
@@ -1295,6 +1320,19 @@
     if (!form || form.dataset.bound === '1') return;
     form.dataset.bound = '1';
     loadWelfareInbox();
+    const textarea = document.getElementById('welfare-inbox-body');
+    function growComposer() {
+      if (!textarea) return;
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 128)}px`;
+    }
+    textarea?.addEventListener('input', growComposer);
+    textarea?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const status = document.getElementById('welfare-inbox-status');
@@ -1322,7 +1360,10 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Could not send the message.');
-        if (textarea) textarea.value = '';
+        if (textarea) {
+          textarea.value = '';
+          growComposer();
+        }
         renderWelfareInbox(data);
         if (status) {
           status.hidden = false;
