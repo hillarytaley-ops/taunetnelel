@@ -103,6 +103,7 @@
     inboxThread: null,
     inboxMessages: [],
     inboxPoll: null,
+    adminEmail: '',
     importFilter: 'all',
     importSearch: '',
     importRows: [],
@@ -309,8 +310,28 @@
     return data;
   }
 
-  function enterAdminPortal(label) {
+  function initialsFromName(value) {
+    const parts = String(value || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!parts.length) return 'TN';
+    return ((parts[0][0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+  }
+
+  function currentAdminEmail() {
+    return String(state.adminEmail || state.user?.email || '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function isCommitteeThread(thread) {
+    return String(thread?.thread_kind || '') === 'committee';
+  }
+
+  function enterAdminPortal(label, email) {
     state.isAdmin = true;
+    if (email) state.adminEmail = String(email).toLowerCase().trim();
     if (els.userLabel) els.userLabel.textContent = label || 'Committee admin';
     showShell(true);
     const hash = (location.hash || '#overview').replace('#', '');
@@ -648,6 +669,10 @@
       state.inboxThread = null;
       state.inboxMessages = [];
     }
+    if (!state.inboxSelectedId && state.inboxThreads.length) {
+      const committee = state.inboxThreads.find((row) => isCommitteeThread(row));
+      state.inboxSelectedId = committee?.id || state.inboxThreads[0].id;
+    }
     if (state.inboxSelectedId) {
       await loadInboxMessages(state.inboxSelectedId);
     }
@@ -662,7 +687,7 @@
       const rows = (data.rows || []).filter((row) => row.welfare_member);
       const current = select.value;
       select.innerHTML =
-        '<option value="">Start a conversation with…</option>' +
+        '<option value="">Choose a welfare member…</option>' +
         rows
           .map((row) => {
             const label = `${row.full_name || 'Member'}${row.email ? ` (${row.email})` : ''}`;
@@ -687,6 +712,7 @@
     const messagesEl = document.getElementById('inbox-messages');
     const form = document.getElementById('inbox-reply-form');
     const toggle = document.getElementById('inbox-toggle-status');
+    const replyBox = document.getElementById('inbox-reply-body');
     if (!list) return;
 
     if (!state.inboxThreads.length) {
@@ -695,14 +721,25 @@
       list.innerHTML = state.inboxThreads
         .map((row) => {
           const active = row.id === state.inboxSelectedId ? ' is-active' : '';
+          const committee = isCommitteeThread(row);
           const unread = row.unread_for_admin
             ? '<span class="admin-chip admin-chip--new">unread</span>'
             : '';
-          return `<button type="button" class="ithelp-thread${active}" data-inbox-id="${escapeHtml(row.id)}">
-            <span class="admin-chip admin-chip--${escapeHtml(row.status || 'open')}">${escapeHtml(row.status || 'open')}</span>
-            ${unread}
-            <strong>${escapeHtml(row.member_name || row.member_email || 'Unknown')}</strong>
-            <div class="admin-detail">${escapeHtml(row.member_email || '')}<br>${escapeHtml(formatDate(row.last_message_at || row.created_at))}</div>
+          const title = committee ? 'Committee room' : row.member_name || row.member_email || 'Unknown';
+          const sub = committee
+            ? 'Private — committee only'
+            : `${row.member_email || ''} · ${formatDate(row.last_message_at || row.created_at)}`;
+          const face = committee ? '◎' : escapeHtml(initialsFromName(title));
+          return `<button type="button" class="admin-chat__thread${committee ? ' admin-chat__thread--committee' : ''}${active}" data-inbox-id="${escapeHtml(row.id)}">
+            <span class="admin-chat__face" aria-hidden="true">${face}</span>
+            <span class="admin-chat__thread-copy">
+              <span class="admin-chat__chips">
+                <span class="admin-chip admin-chip--${escapeHtml(row.status || 'open')}">${committee ? 'committee' : escapeHtml(row.status || 'open')}</span>
+                ${unread}
+              </span>
+              <strong>${escapeHtml(title)}</strong>
+              <span>${escapeHtml(sub)}</span>
+            </span>
           </button>`;
         })
         .join('');
@@ -721,34 +758,69 @@
 
     const thread = state.inboxThread;
     if (!thread) {
-      if (head) head.innerHTML = '<p class="admin-muted">Select a conversation.</p>';
-      if (messagesEl) messagesEl.innerHTML = '';
+      if (head) {
+        head.innerHTML = `<span class="admin-chat__face" aria-hidden="true">♥</span>
+          <div class="admin-chat__head-copy">
+            <strong>Team inbox</strong>
+            <span>Select a conversation, or open Committee room</span>
+          </div>`;
+      }
+      if (messagesEl) {
+        messagesEl.innerHTML = `<div class="admin-chat__empty">
+          <strong>No chat selected</strong>
+          Open Committee room to talk with other admins, or pick a member thread.
+        </div>`;
+      }
       if (form) form.hidden = true;
       return;
     }
 
+    const committee = isCommitteeThread(thread);
     if (head) {
-      head.innerHTML = `<div>
-        <span class="admin-chip admin-chip--${escapeHtml(thread.status)}">${escapeHtml(thread.status)}</span>
-        <strong>${escapeHtml(thread.member_name || thread.member_email || 'Unknown')}</strong>
-        <div class="admin-detail">${escapeHtml(thread.member_email || '')}</div>
-      </div>`;
+      const title = committee ? 'Committee room' : thread.member_name || thread.member_email || 'Unknown';
+      const sub = committee
+        ? 'Private committee chat — members cannot see this'
+        : thread.member_email || '';
+      head.innerHTML = `<span class="admin-chat__face" aria-hidden="true">${committee ? '◎' : escapeHtml(initialsFromName(title))}</span>
+        <div class="admin-chat__head-copy">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(sub)}</span>
+        </div>
+        <span class="admin-chat__live">${committee ? 'Committee' : escapeHtml(thread.status || 'open')}</span>`;
     }
 
     if (messagesEl) {
       const atBottom =
         messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 64;
       if (!state.inboxMessages.length) {
-        messagesEl.innerHTML = '<p class="admin-muted">No messages yet.</p>';
+        messagesEl.innerHTML = `<div class="admin-chat__empty">
+          <strong>${committee ? 'Start the committee chat' : 'No messages yet'}</strong>
+          ${committee ? 'Write something the rest of the committee can see.' : 'Send the first reply below.'}
+        </div>`;
       } else {
+        const me = currentAdminEmail();
         messagesEl.innerHTML = state.inboxMessages
           .map((m) => {
-            const who = m.sender === 'committee' ? 'it' : 'member';
-            const label = who === 'it' ? 'Committee' : 'Member';
-            return `<div class="ithelp-bubble ithelp-bubble--${who}">
-              <strong>${label}</strong>
-              <div>${escapeHtml(m.body)}</div>
-              <time>${escapeHtml(formatDate(m.created_at))}</time>
+            const senderEmail = String(m.sender_email || '').toLowerCase().trim();
+            const mine = committee
+              ? Boolean(me && senderEmail && senderEmail === me)
+              : m.sender === 'committee';
+            const side = mine ? 'you' : 'them';
+            const label = committee
+              ? mine
+                ? 'You'
+                : m.sender_name || m.sender_email || 'Committee'
+              : m.sender === 'committee'
+                ? m.sender_name || 'Committee'
+                : thread.member_name || 'Member';
+            const face = escapeHtml(initialsFromName(label === 'You' ? (m.sender_name || 'You') : label));
+            return `<div class="admin-chat__row admin-chat__row--${side}">
+              <span class="admin-chat__face" aria-hidden="true">${face}</span>
+              <div class="admin-chat__bubble">
+                <strong>${escapeHtml(label)}</strong>
+                <div>${escapeHtml(m.body)}</div>
+                <time>${escapeHtml(formatDate(m.created_at))}</time>
+              </div>
             </div>`;
           })
           .join('');
@@ -757,7 +829,13 @@
     }
 
     if (form) form.hidden = false;
-    if (toggle) toggle.textContent = thread.status === 'closed' ? 'Reopen conversation' : 'Close conversation';
+    if (replyBox) {
+      replyBox.placeholder = committee ? 'Message the committee…' : 'Reply to this member…';
+    }
+    if (toggle) {
+      toggle.hidden = committee;
+      toggle.textContent = thread.status === 'closed' ? 'Reopen conversation' : 'Close conversation';
+    }
   }
 
   async function loadMembers() {
@@ -2835,9 +2913,15 @@
       }
     });
 
+    document.getElementById('inbox-reply-body')?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.shiftKey) return;
+      e.preventDefault();
+      document.getElementById('inbox-reply-form')?.requestSubmit();
+    });
+
     document.getElementById('inbox-toggle-status')?.addEventListener('click', async () => {
       const thread = state.inboxThread;
-      if (!thread) return;
+      if (!thread || isCommitteeThread(thread)) return;
       const nextStatus = thread.status === 'closed' ? 'open' : 'closed';
       try {
         await adminApi('welfare-inbox-close', {
@@ -2962,7 +3046,8 @@
         enterAdminPortal(
           sessionInfo.mode === 'bootstrap'
             ? 'Bootstrap PIN session'
-            : sessionInfo.email || 'Committee admin'
+            : sessionInfo.email || 'Committee admin',
+          sessionInfo.email
         );
         return;
       }
@@ -2980,7 +3065,7 @@
       state.accessToken = sessionData.session.access_token;
       state.user = sessionData.session.user;
       const sessionInfo = await adminApi('session');
-      enterAdminPortal(sessionInfo.email || state.user?.email || 'Committee admin');
+      enterAdminPortal(sessionInfo.email || state.user?.email || 'Committee admin', sessionInfo.email || state.user?.email);
     } catch (_) {
       clearBootstrapPin();
       try {

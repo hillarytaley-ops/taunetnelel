@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817k">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817m">
 </head>
 <body data-page="site-admin">
 
@@ -542,33 +542,38 @@
             <option value="closed">Closed</option>
             <option value="all">All</option>
           </select>
-          <p class="admin-muted">Members write from the Welfare tab (Team inbox, under the membership status). You can also start a conversation here.</p>
+          <p class="admin-muted">Committee room is private to admins. Member chats stay on the Welfare tab Team inbox.</p>
         </div>
-        <form class="ithelp-reply" id="inbox-start-form" style="margin-bottom:0.85rem;">
-          <label class="visually-hidden" for="inbox-new-member">Welfare member</label>
-          <select id="inbox-new-member" required>
-            <option value="">Start a conversation with…</option>
-          </select>
-          <label class="visually-hidden" for="inbox-start-body">Message</label>
-          <textarea id="inbox-start-body" rows="2" required maxlength="2000" placeholder="Write to this welfare member…"></textarea>
-          <div class="ithelp-reply__actions">
-            <button type="submit" class="btn btn--sm btn--primary">Send to member</button>
+        <div class="admin-chat">
+          <div class="admin-chat__sidebar">
+            <div class="admin-chat__sidebar-head">
+              <strong>Conversations</strong>
+              <span>Committee room sits at the top</span>
+            </div>
+            <div class="admin-chat__threads" id="inbox-threads">
+              <p class="admin-muted">Open this tab to load conversations.</p>
+            </div>
+            <form class="admin-chat__new" id="inbox-start-form">
+              <p class="admin-chat__new-title">Message a member</p>
+              <label class="visually-hidden" for="inbox-new-member">Welfare member</label>
+              <select id="inbox-new-member" required>
+                <option value="">Choose a welfare member…</option>
+              </select>
+              <label class="visually-hidden" for="inbox-start-body">Message</label>
+              <textarea id="inbox-start-body" rows="2" required maxlength="2000" placeholder="Write the first message…"></textarea>
+              <button type="submit" class="btn btn--sm btn--primary">Send to member</button>
+            </form>
           </div>
-        </form>
-        <div class="ithelp-layout">
-          <div class="ithelp-threads" id="inbox-threads">
-            <p class="admin-muted">Open this tab to load conversations.</p>
-          </div>
-          <div class="ithelp-conversation">
-            <div class="ithelp-conversation__head" id="inbox-head">
+          <div class="admin-chat__stage">
+            <div class="admin-chat__head" id="inbox-head">
               <p class="admin-muted">Select a conversation.</p>
             </div>
-            <div class="ithelp-messages" id="inbox-messages"></div>
-            <form class="ithelp-reply" id="inbox-reply-form" hidden>
+            <div class="admin-chat__messages" id="inbox-messages"></div>
+            <form class="admin-chat__composer" id="inbox-reply-form" hidden>
               <label class="visually-hidden" for="inbox-reply-body">Reply</label>
-              <textarea id="inbox-reply-body" rows="3" placeholder="Reply to this member…" required maxlength="2000"></textarea>
-              <div class="ithelp-reply__actions">
-                <button type="submit" class="btn btn--sm btn--primary">Send reply</button>
+              <textarea id="inbox-reply-body" rows="1" placeholder="Write a message…" required maxlength="2000"></textarea>
+              <div class="admin-chat__composer-actions">
+                <button type="submit" class="btn btn--sm btn--primary">Send</button>
                 <button type="button" class="btn btn--sm btn--ghost" id="inbox-toggle-status">Close conversation</button>
               </div>
             </form>
@@ -973,6 +978,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817i"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817m"></script>
 </body>
 </html>

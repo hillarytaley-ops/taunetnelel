@@ -895,7 +895,7 @@ async function smsOptInForProfile(profileId) {
 }
 
 async function notifyWelfareInboxMember(profile, thread) {
-  if (!profile?.email) return null;
+  if (!profile?.email || thread?.thread_kind === 'committee' || !thread?.profile_id) return null;
   const { notifyWelfareMember } = require('../lib/welfare-notify');
   return notifyWelfareMember({
     toEmail: profile.email,
@@ -908,6 +908,61 @@ async function notifyWelfareInboxMember(profile, thread) {
     ctaLabel: 'Open team inbox',
     actionPath: '/members/welfare.html#welfare-inbox-card'
   });
+}
+
+function committeeSenderFields(adminSession) {
+  return {
+    sender: 'committee',
+    sender_name: String(adminSession?.admin?.full_name || adminSession?.email || 'Committee').trim(),
+    sender_email: String(adminSession?.email || '')
+      .toLowerCase()
+      .trim()
+  };
+}
+
+async function insertInboxMessage(payload) {
+  try {
+    await sb('welfare_inbox_messages', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(payload)
+    });
+  } catch (_) {
+    const { sender_name, sender_email, ...basic } = payload;
+    await sb('welfare_inbox_messages', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: JSON.stringify(basic)
+    });
+  }
+}
+
+function isCommitteeThread(thread) {
+  return String(thread?.thread_kind || '') === 'committee';
+}
+
+async function ensureCommitteeInboxThread() {
+  try {
+    const { data } = await sb(
+      'welfare_inbox_threads?thread_kind=eq.committee&select=*&limit=1'
+    );
+    if (Array.isArray(data) && data[0]) return data[0];
+    const { data: created } = await sb('welfare_inbox_threads', {
+      method: 'POST',
+      body: JSON.stringify({
+        thread_kind: 'committee',
+        profile_id: null,
+        member_name: 'Committee room',
+        member_email: '',
+        status: 'open',
+        unread_for_admin: false,
+        unread_for_member: false
+      })
+    });
+    return Array.isArray(created) ? created[0] : created;
+  } catch (_) {
+    return null;
+  }
 }
 
 async function closeWelfareInboxForProfile(profileId) {
@@ -1666,16 +1721,47 @@ module.exports = async function handler(req, res) {
 
       if (resource === 'welfare-inbox-threads') {
         const status = url.searchParams.get('status') || 'open';
+        const select =
+          'id,profile_id,member_name,member_email,status,unread_for_admin,last_message_at,created_at,thread_kind';
         let query =
-          'welfare_inbox_threads?select=id,profile_id,member_name,member_email,status,unread_for_admin,last_message_at,created_at&order=last_message_at.desc&limit=120';
+          `welfare_inbox_threads?select=${select}&order=last_message_at.desc&limit=120`;
         if (status === 'open' || status === 'closed') {
           query += `&status=eq.${encodeURIComponent(status)}`;
         } else if (status === 'unread') {
           query += '&unread_for_admin=eq.true';
         }
         try {
-          const { data } = await sb(query);
-          return json(res, 200, { rows: data || [] });
+          let rows;
+          try {
+            const result = await sb(query);
+            rows = result.data || [];
+          } catch (_) {
+            const fallback =
+              'welfare_inbox_threads?select=id,profile_id,member_name,member_email,status,unread_for_admin,last_message_at,created_at&order=last_message_at.desc&limit=120';
+            let q = fallback;
+            if (status === 'open' || status === 'closed') {
+              q += `&status=eq.${encodeURIComponent(status)}`;
+            } else if (status === 'unread') {
+              q += '&unread_for_admin=eq.true';
+            }
+            const result = await sb(q);
+            rows = result.data || [];
+          }
+          const committee = status === 'closed' ? null : await ensureCommitteeInboxThread();
+          if (committee && !rows.some((row) => row.id === committee.id)) {
+            const include =
+              status === 'all' ||
+              status === 'open' ||
+              (status === 'unread' && committee.unread_for_admin);
+            if (include) rows = [committee, ...rows];
+          }
+          rows.sort((a, b) => {
+            const aC = isCommitteeThread(a) ? 0 : 1;
+            const bC = isCommitteeThread(b) ? 0 : 1;
+            if (aC !== bC) return aC - bC;
+            return String(b.last_message_at || '').localeCompare(String(a.last_message_at || ''));
+          });
+          return json(res, 200, { rows });
         } catch (err) {
           return json(res, 200, {
             rows: [],
@@ -1703,7 +1789,11 @@ module.exports = async function handler(req, res) {
           thread.unread_for_admin = false;
         }
         const { data: messages } = await sb(
-          `welfare_inbox_messages?thread_id=eq.${encodeURIComponent(threadId)}&select=id,sender,body,created_at&order=created_at.asc&limit=200`
+          `welfare_inbox_messages?thread_id=eq.${encodeURIComponent(threadId)}&select=id,sender,sender_name,sender_email,body,created_at&order=created_at.asc&limit=200`
+        ).catch(async () =>
+          sb(
+            `welfare_inbox_messages?thread_id=eq.${encodeURIComponent(threadId)}&select=id,sender,body,created_at&order=created_at.asc&limit=200`
+          )
         );
         return json(res, 200, { thread, messages: messages || [] });
       }
@@ -1818,30 +1908,33 @@ module.exports = async function handler(req, res) {
         const thread = Array.isArray(threads) ? threads[0] : null;
         if (!thread) return json(res, 404, { error: 'Conversation not found' });
         const now = new Date().toISOString();
-        await sb('welfare_inbox_messages', {
-          method: 'POST',
-          prefer: 'return=minimal',
-          body: JSON.stringify({ thread_id: threadId, sender: 'committee', body: text })
+        const committeeRoom = isCommitteeThread(thread);
+        await insertInboxMessage({
+          thread_id: threadId,
+          body: text,
+          ...committeeSenderFields(adminSession)
         });
         await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}`, {
           method: 'PATCH',
           prefer: 'return=minimal',
           body: JSON.stringify({
             status: 'open',
-            unread_for_member: true,
-            unread_for_admin: false,
+            unread_for_member: committeeRoom ? false : true,
+            unread_for_admin: committeeRoom,
             last_message_at: now
           })
         });
         let notified = null;
-        try {
-          const { data: profiles } = await sb(
-            `profiles?id=eq.${encodeURIComponent(thread.profile_id)}&select=id,full_name,email,phone&limit=1`
-          );
-          const profile = Array.isArray(profiles) ? profiles[0] : null;
-          notified = await notifyWelfareInboxMember(profile, thread);
-        } catch (notifyErr) {
-          console.error('welfare-inbox-reply notify', notifyErr);
+        if (!committeeRoom && thread.profile_id) {
+          try {
+            const { data: profiles } = await sb(
+              `profiles?id=eq.${encodeURIComponent(thread.profile_id)}&select=id,full_name,email,phone&limit=1`
+            );
+            const profile = Array.isArray(profiles) ? profiles[0] : null;
+            notified = await notifyWelfareInboxMember(profile, thread);
+          } catch (notifyErr) {
+            console.error('welfare-inbox-reply notify', notifyErr);
+          }
         }
         return json(res, 200, { ok: true, notified });
       }
@@ -1895,14 +1988,10 @@ module.exports = async function handler(req, res) {
           });
           thread.status = 'open';
         }
-        await sb('welfare_inbox_messages', {
-          method: 'POST',
-          prefer: 'return=minimal',
-          body: JSON.stringify({
-            thread_id: thread.id,
-            sender: 'committee',
-            body: text
-          })
+        await insertInboxMessage({
+          thread_id: thread.id,
+          body: text,
+          ...committeeSenderFields(adminSession)
         });
         let notified = null;
         try {
@@ -1917,6 +2006,21 @@ module.exports = async function handler(req, res) {
         const threadId = String(body.thread_id || '').trim();
         const nextStatus = body.status === 'closed' ? 'closed' : 'open';
         if (!threadId) return json(res, 400, { error: 'thread_id required' });
+        let thread = null;
+        try {
+          const { data: threads } = await sb(
+            `welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}&select=id,thread_kind&limit=1`
+          );
+          thread = Array.isArray(threads) ? threads[0] : null;
+        } catch (_) {
+          const { data: threads } = await sb(
+            `welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}&select=id&limit=1`
+          );
+          thread = Array.isArray(threads) ? threads[0] : null;
+        }
+        if (isCommitteeThread(thread)) {
+          return json(res, 400, { error: 'The committee room stays open for committee chat.' });
+        }
         await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}`, {
           method: 'PATCH',
           prefer: 'return=minimal',
