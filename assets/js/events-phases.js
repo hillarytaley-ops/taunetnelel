@@ -778,66 +778,91 @@
     });
   }
 
-  function pickHomeFeaturedEvent() {
+  function pickHomeFeaturedEvents() {
     const groups = categorizeEvents(new Date());
-    if (groups.present.length) {
-      return { event: groups.present[0], phase: 'present' };
-    }
-    if (groups.upcoming.length) {
-      const featured = groups.upcoming.find((item) => item.featured) || groups.upcoming[0];
-      return { event: featured, phase: 'upcoming' };
-    }
-    if (groups['most-recent'].length) {
+    const items = [];
+
+    // Live events first, then every upcoming event (not only the featured flag).
+    groups.present.forEach((event) => {
+      items.push({ event, phase: 'present' });
+    });
+    groups.upcoming.forEach((event) => {
+      items.push({ event, phase: 'upcoming' });
+    });
+
+    if (!items.length && groups['most-recent'].length) {
       const featured =
         groups['most-recent'].find((item) => item.featured) || groups['most-recent'][0];
-      return { event: featured, phase: 'most-recent' };
+      items.push({ event: featured, phase: 'most-recent' });
     }
-    return null;
+
+    return items;
+  }
+
+  function pickHomeFeaturedEvent() {
+    return pickHomeFeaturedEvents()[0] || null;
+  }
+
+  function homeEventHeading(phase) {
+    if (phase === 'present') return 'Happening now';
+    if (phase === 'most-recent') return 'Recent event';
+    return 'Upcoming event';
+  }
+
+  function homeEventCta(phase, hasBooking) {
+    if (phase === 'present') return hasBooking ? 'Join / view event' : 'View live event';
+    if (phase === 'most-recent') return 'Browse events';
+    return hasBooking ? 'Book your place' : 'See event details';
+  }
+
+  function renderHomeEventCard(item) {
+    const { event, phase } = item;
+    const badge = dateBadge(event);
+    const imageSrc = escapeHtml(safeUrl(assetPath(event.image, '')));
+    const title = escapeHtml(event.title || 'Event');
+    const detail = event.meta || event.summary || event.location || '';
+    const blurb = escapeHtml(
+      detail
+        ? `${event.title} — ${detail}`
+        : event.title || 'See what is on for the Taunet Nelel community.'
+    );
+    const booking = safeUrl(event.bookingUrl || '');
+    const href = escapeHtml(booking || 'events.html');
+    const external = booking.startsWith('http');
+    const heading = escapeHtml(homeEventHeading(phase));
+    const cta = escapeHtml(homeEventCta(phase, Boolean(booking)));
+    const dateLabel =
+      badge.day && badge.month
+        ? `<span class="home-path__date">${escapeHtml(badge.day)} ${escapeHtml(badge.month)}</span>`
+        : '';
+
+    return (
+      `<a href="${href}" class="home-path home-path--events" data-home-event-card data-event-id="${escapeHtml(event.id || '')}"` +
+      (external ? ' target="_blank" rel="noopener"' : '') +
+      '>' +
+      `<div class="home-path__media">` +
+      (imageSrc
+        ? `<img src="${imageSrc}" alt="${title}" width="640" height="400" loading="lazy">`
+        : '') +
+      dateLabel +
+      `</div>` +
+      `<div class="home-path__body">` +
+      `<h3>${heading}</h3>` +
+      `<p>${blurb}</p>` +
+      `<span class="home-path__cta">${cta}</span>` +
+      `</div>` +
+      `</a>`
+    );
   }
 
   function renderHomeTeaser() {
     const root = document.querySelector('[data-home-events-teaser]');
     if (!root) return;
 
-    const picked = pickHomeFeaturedEvent();
-    if (!picked?.event) return;
+    const items = pickHomeFeaturedEvents();
+    if (!items.length) return;
 
-    const { event, phase } = picked;
-    const img = document.getElementById('home-events-image');
-    const dateEl = document.getElementById('home-events-date');
-    const heading = document.getElementById('home-events-heading');
-    const blurb = document.getElementById('home-events-blurb');
-    const cta = document.getElementById('home-events-cta');
-    const badge = dateBadge(event);
-    const imageSrc = safeUrl(assetPath(event.image, ''));
-
-    if (img && imageSrc) {
-      img.src = imageSrc;
-      img.alt = event.title || 'Upcoming event';
-    }
-    if (dateEl) {
-      dateEl.hidden = false;
-      dateEl.textContent = `${badge.day} ${badge.month}`;
-    }
-    if (heading) {
-      heading.textContent = phase === 'present' ? 'Happening now' : phase === 'upcoming' ? 'Upcoming event' : 'Recent event';
-    }
-    if (blurb) {
-      const detail = event.meta || event.summary || event.location || '';
-      blurb.textContent = detail
-        ? `${event.title} — ${detail}`
-        : event.title || 'See what is on for the Taunet Nelel community.';
-    }
-    if (cta) {
-      cta.textContent =
-        phase === 'present'
-          ? 'View live event'
-          : phase === 'upcoming'
-            ? 'See upcoming events'
-            : 'Browse events';
-    }
-    root.setAttribute('href', 'events.html');
-    root.dataset.eventId = event.id || '';
+    root.innerHTML = items.map((item) => renderHomeEventCard(item)).join('');
   }
 
   function init() {
@@ -887,6 +912,7 @@
     renderPublicPage,
     renderHomeTeaser,
     pickHomeFeaturedEvent,
+    pickHomeFeaturedEvents,
     renderMemberDashboard,
     renderMemberEventsPage
   };

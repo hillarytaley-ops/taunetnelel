@@ -365,6 +365,11 @@ body[data-page="home"] .hero__visual.animate-on-load {
   margin: 0 auto;
 }
 
+/* Children of the slot join the parent grid so every upcoming event is featured. */
+.home-events-slot {
+  display: contents;
+}
+
 .home-path {
   display: flex;
   flex-direction: column;

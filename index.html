@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/main.css?v=17">
-  <link rel="stylesheet" href="assets/css/home.css?v=13">
+  <link rel="stylesheet" href="assets/css/home.css?v=14">
   <!-- Supabase recovery often lands on Site URL (home); bounce tokens to auth page -->
   <script src="assets/js/auth-callback-bounce.js?v=1"></script>
   <script type="application/ld+json">
@@ -214,25 +214,25 @@
         <p>Your Kalenjin community in Victoria &mdash; a home away from home where heritage, culture, and friendship come together.</p>
       </div>
 
-      <div class="home-paths reveal-on-scroll">
-        <a href="events.html" class="home-path home-path--events" id="home-events-teaser" data-home-events-teaser>
-          <div class="home-path__media">
-            <img
-              id="home-events-image"
-              src="wp-content/uploads/2026/01/Taunet-Nelel-Galla.jpg"
-              alt=""
-              width="640"
-              height="400"
-              loading="lazy"
-            >
-            <span class="home-path__date" id="home-events-date" hidden></span>
-          </div>
-          <div class="home-path__body">
-            <h3 id="home-events-heading">Events</h3>
-            <p id="home-events-blurb">Galas, cultural weeks, sports days, and family gatherings across Victoria.</p>
-            <span class="home-path__cta" id="home-events-cta">See upcoming events</span>
-          </div>
-        </a>
+      <div class="home-paths reveal-on-scroll" data-home-paths>
+        <div class="home-events-slot" id="home-events-teaser" data-home-events-teaser>
+          <a href="events.html" class="home-path home-path--events">
+            <div class="home-path__media">
+              <img
+                src="wp-content/uploads/2026/01/Taunet-Nelel-Galla.jpg"
+                alt=""
+                width="640"
+                height="400"
+                loading="lazy"
+              >
+            </div>
+            <div class="home-path__body">
+              <h3>Events</h3>
+              <p>Galas, cultural weeks, sports days, and family gatherings across Victoria.</p>
+              <span class="home-path__cta">See upcoming events</span>
+            </div>
+          </a>
+        </div>
         <a href="gallery.html" class="home-path">
           <img src="wp-content/uploads/2025/10/TAUNET-NELE-GALA.jpg" alt="" width="640" height="400" loading="lazy">
           <div class="home-path__body">
@@ -329,7 +329,7 @@
   <a href="members/auth.html?tab=join" class="mobile-join-fab">Join Us</a>
 
   <script src="assets/js/taunet-security.js?v=1"></script>
-  <script src="assets/js/events-phases.js?v=26"></script>
+  <script src="assets/js/events-phases.js?v=27"></script>
   <script src="assets/js/supabase-config.js?v=3"></script>
   <script src="assets/js/supabase-init.js?v=4"></script>
   <script src="assets/js/events-supabase.js?v=5"></script>
