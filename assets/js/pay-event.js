@@ -57,6 +57,50 @@
     return form?.querySelector('input[name="ticket"]:checked')?.value || 'member';
   }
 
+  function safeImageUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    if (
+      lower.startsWith('javascript:') ||
+      lower.startsWith('data:') ||
+      lower.startsWith('vbscript:') ||
+      lower.startsWith('file:') ||
+      raw.startsWith('//')
+    ) {
+      return '';
+    }
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (raw.startsWith('../') || raw.startsWith('/') || raw.startsWith('./')) return raw;
+    return '../' + raw.replace(/^\.\//, '');
+  }
+
+  function fallbackBannerPath(event) {
+    const id = String(event?.id || eventId || '').toLowerCase();
+    const title = String(event?.title || '').toLowerCase();
+    if (id.includes('pageant') || /pageant|miss taunet|mr\s*&\s*miss/.test(title)) {
+      return 'wp-content/uploads/2025/11/TN-beauty-peagant.jpg';
+    }
+    if (id.includes('gala') || title.includes('gala')) {
+      return 'wp-content/uploads/2026/01/Taunet-Nelel-Galla.jpg';
+    }
+    return 'wp-content/uploads/2025/09/Celebration.jpg';
+  }
+
+  function showEventBanner(event) {
+    const fig = document.getElementById('pay-event-banner');
+    const img = document.getElementById('pay-event-banner-img');
+    if (!fig || !img) return;
+    const src = safeImageUrl(event?.image_path || fallbackBannerPath(event));
+    if (!src) {
+      fig.hidden = true;
+      return;
+    }
+    img.src = src;
+    img.alt = (event?.title ? event.title + ' banner' : 'Event banner');
+    fig.hidden = false;
+  }
+
   function syncMemberIdField() {
     const group = document.getElementById('pay-member-id-group');
     const input = document.getElementById('pay-member-id');
@@ -83,6 +127,8 @@
     const ledeEl = document.getElementById('pay-event-lede');
     const fromAmount = document.getElementById('pay-event-from-amount');
     const fromMeta = document.getElementById('pay-event-from-meta');
+
+    showEventBanner(event);
 
     if (titleEl && event.title) titleEl.textContent = event.title;
     if (eyebrowEl) eyebrowEl.textContent = event.subtitle || 'Event booking';
@@ -229,6 +275,7 @@
         );
       }
     } catch (err) {
+      showEventBanner({ id: eventId, title: document.getElementById('pay-event-title')?.textContent || '' });
       showStatus(err.message || 'Could not load event booking.', true);
     }
   }
@@ -317,5 +364,6 @@
   });
 
   bindTicketChangeHandlers();
+  showEventBanner({ id: eventId });
   loadCatalog();
 })();

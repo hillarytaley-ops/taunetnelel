@@ -24,6 +24,7 @@ const EVENT_FALLBACK = {
     title: "Men's Camp",
     subtitle: "All States Men's Camp",
     location: 'Springbrook',
+    image_path: 'wp-content/uploads/2025/09/Celebration.jpg',
     tickets: [
       { id: 'member', label: 'Member (80%)', amount_cents: 8000 },
       { id: 'non_member', label: 'Non-member (100%)', amount_cents: 10000 },
@@ -186,13 +187,13 @@ async function loadEventCatalog(eventId) {
       let rows;
       try {
         rows = await sb(
-          `events?id=eq.${encodeURIComponent(id)}&select=id,title,location,meta,fee_cents,ticket_prices,booking_url,registration_open,is_published&limit=1`
+          `events?id=eq.${encodeURIComponent(id)}&select=id,title,location,meta,fee_cents,ticket_prices,booking_url,registration_open,is_published,image_path&limit=1`
         );
       } catch (err) {
         const text = String(err?.message || '');
         if (!/ticket_prices/i.test(text)) throw err;
         rows = await sb(
-          `events?id=eq.${encodeURIComponent(id)}&select=id,title,location,meta,fee_cents,booking_url,registration_open,is_published&limit=1`
+          `events?id=eq.${encodeURIComponent(id)}&select=id,title,location,meta,fee_cents,booking_url,registration_open,is_published,image_path&limit=1`
         );
       }
       const row = Array.isArray(rows) ? rows[0] : null;
@@ -216,6 +217,7 @@ async function loadEventCatalog(eventId) {
             title,
             subtitle: row.meta || null,
             location: row.location || null,
+            image_path: row.image_path || null,
             tickets,
             source: 'database',
           };
@@ -309,6 +311,7 @@ function catalogPayload(catalog) {
       title: catalog.title,
       subtitle: catalog.subtitle || null,
       location: catalog.location || null,
+      image_path: catalog.image_path || null,
     },
     tickets: catalog.tickets.map((ticket) => ({
       id: ticket.id,
