@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817n">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817o">
 </head>
 <body data-page="site-admin">
 
@@ -535,20 +535,20 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="inbox">
-        <div class="admin-toolbar">
+        <div class="admin-toolbar admin-toolbar--inbox">
+          <label for="inbox-filter">Show</label>
           <select id="inbox-filter" aria-label="Filter Welfare inbox">
-            <option value="open">Open</option>
+            <option value="open">Open conversations</option>
             <option value="unread">Unread</option>
             <option value="closed">Closed</option>
-            <option value="all">All</option>
+            <option value="all">All conversations</option>
           </select>
-          <p class="admin-muted">Committee room is private to admins. Member chats stay on the Welfare tab Team inbox.</p>
         </div>
         <div class="admin-chat">
           <div class="admin-chat__sidebar">
             <div class="admin-chat__sidebar-head">
               <strong>Conversations</strong>
-              <span>Committee room sits at the top</span>
+              <span>Private committee room, then member chats</span>
             </div>
             <div class="admin-chat__threads" id="inbox-threads">
               <p class="admin-muted">Open this tab to load conversations.</p>
@@ -980,6 +980,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817n"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817o"></script>
 </body>
 </html>

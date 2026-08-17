@@ -70,7 +70,7 @@
     'welfare-list': 'Imported Social Welfare membership list.',
     crm: 'Welfare register. Sensitive bank, income, and ID fields stay Admin-only.',
     followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
-    inbox: 'Committee conversations with Social Welfare members. Replies email the member, and SMS them when Twilio is ready.',
+    inbox: 'Private committee chat and member Team inbox. Choose a conversation below.',
     claims: 'Bereavement and hardship claims lodged on the Welfare tab, including supporting files.',
     'welfare-invoices': '$300 Association + Welfare invoices — mark paid when the deposit lands.',
     'association-members': 'Signed-in Association members who are not on Social Welfare.',

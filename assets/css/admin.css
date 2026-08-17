@@ -216,12 +216,11 @@ body[data-page="site-admin"] {
 }
 
 .site-admin__header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: flex-end;
-  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem 1.25rem;
+  align-items: start;
+  margin-bottom: 1.1rem;
 }
 
 .site-admin__header h1 {
@@ -232,15 +231,34 @@ body[data-page="site-admin"] {
 }
 
 .site-admin__header p {
-  margin: 0.25rem 0 0;
+  margin: 0.3rem 0 0;
   color: #6b4a36;
   font-size: 0.9rem;
+  max-width: 40rem;
+  line-height: 1.4;
 }
 
 .site-admin__user {
-  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(61, 35, 20, 0.12);
+  border-radius: 12px;
+  background: #fffdf9;
+  font-size: 0.78rem;
   color: #6b4a36;
   text-align: right;
+  white-space: nowrap;
+}
+
+.site-admin__user strong {
+  display: block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #3d2314;
 }
 
 .site-admin__panel {
@@ -527,9 +545,19 @@ body[data-page="site-admin"] {
 .admin-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.5rem 0.75rem;
   align-items: center;
   margin-bottom: 0.85rem;
+}
+
+.admin-toolbar label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b4a36;
+}
+
+.admin-toolbar--inbox {
+  margin-bottom: 0.75rem;
 }
 
 .admin-toolbar select,
@@ -1070,11 +1098,15 @@ body[data-page="site-admin"] {
   }
 
   .site-admin__header {
-    align-items: flex-start;
+    grid-template-columns: 1fr;
   }
 
   .site-admin__user {
+    align-items: flex-start;
     text-align: left;
+    width: max-content;
+    max-width: 100%;
+    white-space: normal;
   }
 
   .admin-stats {
