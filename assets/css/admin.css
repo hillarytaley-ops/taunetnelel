@@ -32,7 +32,10 @@ body[data-page="site-admin"] {
   position: sticky;
   top: 0;
   max-height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .site-admin__nav-brand {
@@ -42,7 +45,6 @@ body[data-page="site-admin"] {
   margin-bottom: 0.85rem;
   padding: 0 0.35rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
 }
 
 .site-admin__nav-brand img {
@@ -67,10 +69,6 @@ body[data-page="site-admin"] {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 0.15rem;
 }
 
 .site-admin__nav button {
@@ -123,7 +121,6 @@ body[data-page="site-admin"] {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  flex-shrink: 0;
 }
 
 .site-admin__nav-foot-label {
@@ -941,7 +938,10 @@ body[data-page="site-admin"] {
     max-height: 100vh;
     min-height: 100vh;
     padding: 1rem 0.85rem 1.25rem;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transform: translateX(-105%);
     transition: transform 0.22s ease;
     box-shadow: 8px 0 28px rgba(0, 0, 0, 0.28);
@@ -960,7 +960,6 @@ body[data-page="site-admin"] {
   .site-admin__nav-menu {
     flex-direction: column;
     flex-wrap: nowrap;
-    overflow-y: auto;
   }
 
   .site-admin__nav-foot {
