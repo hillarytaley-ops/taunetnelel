@@ -239,9 +239,11 @@ body[data-page="site-admin"] {
 
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  max-width: 52rem;
+  margin: 0 auto 1rem;
+  justify-items: stretch;
 }
 
 .admin-stat {
@@ -249,7 +251,7 @@ body[data-page="site-admin"] {
   border: 1px solid rgba(139, 69, 19, 0.12);
   border-radius: 12px;
   padding: 1rem;
-  text-align: left;
+  text-align: center;
 }
 
 .admin-stat strong {
@@ -987,6 +989,7 @@ body[data-page="site-admin"] {
 
   .admin-stats {
     grid-template-columns: 1fr 1fr;
+    max-width: none;
   }
 
   .admin-quick-actions {
