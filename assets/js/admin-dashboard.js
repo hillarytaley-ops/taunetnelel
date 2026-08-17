@@ -752,10 +752,23 @@
         const [idRaw, centsRaw] = part.split(':');
         const id = String(idRaw || '').trim().toLowerCase();
         const amount = Math.round(Number(centsRaw));
-        if (!id || !Number.isFinite(amount) || amount <= 0) return;
+        if (!id || !Number.isFinite(amount) || amount < 0) return;
         tickets.push({
           id,
-          label: id === 'couple' ? 'Two people' : id === 'single' ? 'Single' : id,
+          label:
+            id === 'member'
+              ? 'Member (80%)'
+              : id === 'non_member'
+                ? 'Non-member (100%)'
+                : id === 'child_7_17'
+                  ? 'Child 7–17 (45%)'
+                  : id === 'child_0_6'
+                    ? 'Child 0–6 (free)'
+                    : id === 'couple'
+                      ? 'Two people'
+                      : id === 'single'
+                        ? 'Single'
+                        : id,
           amount_cents: amount
         });
       });
@@ -764,9 +777,36 @@
       /* ignore */
     }
     if (Number(row?.fee_cents) > 0) {
-      return [{ id: 'single', label: 'Single', amount_cents: Math.round(Number(row.fee_cents)) }];
+      const base = Math.round(Number(row.fee_cents));
+      return [
+        { id: 'member', label: 'Member (80%)', amount_cents: Math.round(base * 0.8) },
+        { id: 'non_member', label: 'Non-member (100%)', amount_cents: base },
+        { id: 'child_7_17', label: 'Child 7–17 (45%)', amount_cents: Math.round(base * 0.45) },
+        { id: 'child_0_6', label: 'Child 0–6 (free)', amount_cents: 0 }
+      ];
     }
     return [];
+  }
+
+  function baseAudFromAdminRow(row) {
+    const tickets = ticketsFromAdminRow(row);
+    const nonMember = tickets.find((t) => t.id === 'non_member');
+    if (nonMember?.amount_cents != null) return (Number(nonMember.amount_cents) / 100).toFixed(2);
+    const single = tickets.find((t) => t.id === 'single');
+    if (single?.amount_cents != null) return (Number(single.amount_cents) / 100).toFixed(2);
+    if (Number(row?.fee_cents) > 0) return (Number(row.fee_cents) / 100).toFixed(2);
+    return '';
+  }
+
+  function buildTieredTicketsClient(baseAud) {
+    const baseCents = Math.round(Number(baseAud) * 100);
+    if (!Number.isFinite(baseCents) || baseCents < 0) return [];
+    return [
+      { id: 'member', label: 'Member (80%)', amount_cents: Math.round(baseCents * 0.8), pct: 80 },
+      { id: 'non_member', label: 'Non-member (100%)', amount_cents: baseCents, pct: 100 },
+      { id: 'child_7_17', label: 'Child 7–17 (45%)', amount_cents: Math.round(baseCents * 0.45), pct: 45 },
+      { id: 'child_0_6', label: 'Child 0–6 (free)', amount_cents: 0, pct: 0 }
+    ];
   }
 
   async function loadEvents() {
@@ -803,38 +843,21 @@
             </div>
             <div class="admin-detail" style="margin-top:0.45rem" data-event-pricing="${escapeHtml(row.id)}">
               <div style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;margin-bottom:0.3rem">
-                <label>Single $
+                <label>Full $
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     style="width:5.2rem"
-                    value="${(() => {
-                      const tickets = ticketsFromAdminRow(row);
-                      const single = tickets.find((t) => t.id === 'single') || tickets[0];
-                      return single?.amount_cents != null ? (Number(single.amount_cents) / 100).toFixed(2) : '';
-                    })()}"
-                    data-event-fee-single="${escapeHtml(row.id)}"
-                    aria-label="Single ticket AUD"
+                    value="${baseAudFromAdminRow(row)}"
+                    data-event-fee-base="${escapeHtml(row.id)}"
+                    aria-label="Full non-member price AUD"
                     placeholder="100"
                   >
                 </label>
-                <label>Two $
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    style="width:5.2rem"
-                    value="${(() => {
-                      const tickets = ticketsFromAdminRow(row);
-                      const couple = tickets.find((t) => t.id === 'couple');
-                      return couple?.amount_cents != null ? (Number(couple.amount_cents) / 100).toFixed(2) : '';
-                    })()}"
-                    data-event-fee-couple="${escapeHtml(row.id)}"
-                    aria-label="Two people ticket AUD"
-                    placeholder="150"
-                  >
-                </label>
+              </div>
+              <div class="admin-detail" style="margin-bottom:0.35rem">
+                Member 80% · Non-member 100% · Child 7–17 45% · 0–6 free
               </div>
               <label style="display:flex;gap:0.35rem;align-items:center;margin-bottom:0.3rem">
                 <input type="checkbox" data-event-payid="${escapeHtml(row.id)}"${
@@ -896,36 +919,16 @@
         clickEvent.stopPropagation();
         const id = btn.dataset.eventSavePrices;
         const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"');
-        const singleInput = body.querySelector(`[data-event-fee-single="${esc}"]`);
-        const coupleInput = body.querySelector(`[data-event-fee-couple="${esc}"]`);
+        const baseInput = body.querySelector(`[data-event-fee-base="${esc}"]`);
         const payidInput = body.querySelector(`[data-event-payid="${esc}"]`);
         const statusEl = body.querySelector(`[data-event-price-status="${esc}"]`);
-        const singleRaw = String(singleInput?.value || '').trim();
-        const coupleRaw = String(coupleInput?.value || '').trim();
-        if (singleRaw !== '' && (!Number.isFinite(Number(singleRaw)) || Number(singleRaw) < 0)) {
-          alert('Enter a valid Single price in AUD (e.g. 100).');
-          return;
-        }
-        if (coupleRaw !== '' && (!Number.isFinite(Number(coupleRaw)) || Number(coupleRaw) < 0)) {
-          alert('Enter a valid Two people price in AUD (e.g. 150).');
+        const baseRaw = String(baseInput?.value || '').trim();
+        if (baseRaw !== '' && (!Number.isFinite(Number(baseRaw)) || Number(baseRaw) < 0)) {
+          alert('Enter a valid full (non-member) price in AUD (e.g. 100).');
           return;
         }
 
-        const ticket_prices = [];
-        if (singleRaw !== '') {
-          ticket_prices.push({
-            id: 'single',
-            label: 'Single',
-            amount_cents: Math.round(Number(singleRaw) * 100)
-          });
-        }
-        if (coupleRaw !== '') {
-          ticket_prices.push({
-            id: 'couple',
-            label: 'Two people',
-            amount_cents: Math.round(Number(coupleRaw) * 100)
-          });
-        }
+        const ticket_prices = baseRaw === '' ? [] : buildTieredTicketsClient(baseRaw);
 
         btn.disabled = true;
         if (statusEl) statusEl.textContent = 'Saving…';
@@ -935,14 +938,18 @@
             body: {
               id,
               ticket_prices: ticket_prices.length ? ticket_prices : null,
-              fee_cents: ticket_prices.length ? ticket_prices[0].amount_cents : null,
+              fee_base_aud: baseRaw === '' ? '' : Number(baseRaw),
+              fee_cents: ticket_prices.length
+                ? ticket_prices.find((t) => t.id === 'non_member')?.amount_cents ||
+                  ticket_prices[0].amount_cents
+                : null,
               enable_payid_booking: Boolean(payidInput?.checked)
             }
           });
           if (statusEl) {
             statusEl.textContent = result?.warning
               ? `Saved. ${result.warning}`
-              : 'Prices saved.';
+              : 'Prices saved (member / non-member / child tiers).';
           }
           await loadEvents();
         } catch (err) {
@@ -1080,8 +1087,7 @@
     const endRaw = fd.get('end_at');
     const flyerInput = form.querySelector('[name="flyer"]');
     const flyerFile = flyerInput?.files?.[0] || null;
-    const singleRaw = String(fd.get('fee_single_aud') || '').trim();
-    const coupleRaw = String(fd.get('fee_couple_aud') || '').trim();
+    const baseRaw = String(fd.get('fee_base_aud') || '').trim();
     const payload = {
       title: String(fd.get('title') || '').trim(),
       location: String(fd.get('location') || '').trim(),
@@ -1091,8 +1097,7 @@
       meta: String(fd.get('meta') || '').trim(),
       badge: String(fd.get('badge') || '').trim(),
       phase_override: String(fd.get('phase_override') || 'auto'),
-      fee_single_aud: singleRaw === '' ? '' : Number(singleRaw),
-      fee_couple_aud: coupleRaw === '' ? '' : Number(coupleRaw),
+      fee_base_aud: baseRaw === '' ? '' : Number(baseRaw),
       enable_payid_booking: Boolean(form.querySelector('[name="enable_payid_booking"]')?.checked),
       is_published: form.querySelector('[name="is_published"]')?.checked !== false,
       registration_open: Boolean(form.querySelector('[name="registration_open"]')?.checked),

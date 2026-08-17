@@ -73,17 +73,31 @@
             <fieldset class="pay-portal__tickets">
               <legend>Ticket</legend>
               <label class="pay-portal__ticket">
-                <input type="radio" name="ticket" value="single" checked>
+                <input type="radio" name="ticket" value="member" checked>
                 <span>
-                  <strong>Single</strong>
+                  <strong>Member (80%)</strong>
+                  <em>$80 AUD</em>
+                </span>
+              </label>
+              <label class="pay-portal__ticket">
+                <input type="radio" name="ticket" value="non_member">
+                <span>
+                  <strong>Non-member (100%)</strong>
                   <em>$100 AUD</em>
                 </span>
               </label>
               <label class="pay-portal__ticket">
-                <input type="radio" name="ticket" value="couple">
+                <input type="radio" name="ticket" value="child_7_17">
                 <span>
-                  <strong>Two people</strong>
-                  <em>$150 AUD</em>
+                  <strong>Child 7–17 (45%)</strong>
+                  <em>$45 AUD</em>
+                </span>
+              </label>
+              <label class="pay-portal__ticket">
+                <input type="radio" name="ticket" value="child_0_6">
+                <span>
+                  <strong>Child 0–6 (free)</strong>
+                  <em>Free</em>
                 </span>
               </label>
             </fieldset>
@@ -180,6 +194,6 @@
   </footer>
 
   <script src="../assets/js/main.js?v=13"></script>
-  <script src="../assets/js/pay-event.js?v=1"></script>
+  <script src="../assets/js/pay-event.js?v=2"></script>
 </body>
 </html>

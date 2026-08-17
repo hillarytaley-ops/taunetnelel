@@ -25,8 +25,10 @@ const EVENT_FALLBACK = {
     subtitle: "All States Men's Camp",
     location: 'Springbrook',
     tickets: [
-      { id: 'single', label: 'Single', amount_cents: 10000 },
-      { id: 'couple', label: 'Two people', amount_cents: 15000 },
+      { id: 'member', label: 'Member (80%)', amount_cents: 8000 },
+      { id: 'non_member', label: 'Non-member (100%)', amount_cents: 10000 },
+      { id: 'child_7_17', label: 'Child 7–17 (45%)', amount_cents: 4500 },
+      { id: 'child_0_6', label: 'Child 0–6 (free)', amount_cents: 0 },
     ],
   },
 };
@@ -87,7 +89,7 @@ function normalizeTickets(raw, feeCents, title) {
   if (Array.isArray(raw)) {
     raw.forEach((item, index) => {
       const amount = Math.round(Number(item?.amount_cents));
-      if (!Number.isFinite(amount) || amount <= 0) return;
+      if (!Number.isFinite(amount) || amount < 0) return;
       const id = String(item?.id || `ticket-${index + 1}`)
         .trim()
         .toLowerCase()
@@ -98,17 +100,33 @@ function normalizeTickets(raw, feeCents, title) {
         id,
         label,
         amount_cents: amount,
-        description: `${title} — ${label} (${formatAud(amount)})`,
+        description:
+          amount === 0
+            ? `${title} — ${label} (free)`
+            : `${title} — ${label} (${formatAud(amount)})`,
       });
     });
   }
   if (!list.length && Number(feeCents) > 0) {
     const amount = Math.round(Number(feeCents));
-    list.push({
-      id: 'single',
-      label: 'Standard',
-      amount_cents: amount,
-      description: `${title} — event fee (${formatAud(amount)})`,
+    // Expand full price into standard membership/age tiers.
+    const tiers = [
+      { id: 'member', label: 'Member (80%)', pct: 80 },
+      { id: 'non_member', label: 'Non-member (100%)', pct: 100 },
+      { id: 'child_7_17', label: 'Child 7–17 (45%)', pct: 45 },
+      { id: 'child_0_6', label: 'Child 0–6 (free)', pct: 0 },
+    ];
+    tiers.forEach((tier) => {
+      const cents = Math.round((amount * tier.pct) / 100);
+      list.push({
+        id: tier.id,
+        label: tier.label,
+        amount_cents: cents,
+        description:
+          cents === 0
+            ? `${title} — ${tier.label}`
+            : `${title} — ${tier.label} (${formatAud(cents)})`,
+      });
     });
   }
   return list;
@@ -124,10 +142,24 @@ function ticketsFromBookingUrl(bookingUrl) {
       const [idRaw, centsRaw] = part.split(':');
       const id = String(idRaw || '').trim().toLowerCase();
       const amount = Math.round(Number(centsRaw));
-      if (!id || !Number.isFinite(amount) || amount <= 0) return;
+      if (!id || !Number.isFinite(amount) || amount < 0) return;
+      const label =
+        id === 'member'
+          ? 'Member (80%)'
+          : id === 'non_member'
+            ? 'Non-member (100%)'
+            : id === 'child_7_17'
+              ? 'Child 7–17 (45%)'
+              : id === 'child_0_6'
+                ? 'Child 0–6 (free)'
+                : id === 'couple'
+                  ? 'Two people'
+                  : id === 'single'
+                    ? 'Single'
+                    : id;
       tickets.push({
         id,
-        label: id === 'couple' ? 'Two people' : id === 'single' ? 'Single' : id,
+        label,
         amount_cents: amount,
       });
     });
@@ -228,8 +260,9 @@ function catalogPayload(catalog) {
       id: ticket.id,
       label: ticket.label,
       amount_cents: ticket.amount_cents,
-      amount_label: formatAud(ticket.amount_cents),
+      amount_label: ticket.amount_cents === 0 ? 'Free' : formatAud(ticket.amount_cents),
       description: ticket.description,
+      free: ticket.amount_cents === 0,
     })),
     source: catalog.source || null,
   };
@@ -272,17 +305,11 @@ module.exports = async function handler(req, res) {
     if (!SUPABASE_URL || !SERVICE_KEY) {
       return json(res, 500, { error: 'Server missing Supabase credentials.' });
     }
-    if (!paymentConfigured()) {
-      return json(res, 503, {
-        error:
-          'PayID / bank details are not configured yet. Please contact info@taunetnelel.org.',
-      });
-    }
 
     rateLimit(`ip:${clientIp(req)}`, 12, 60 * 60 * 1000);
     const body = await readBody(req);
     const eventId = String(body.event_id || 'men-s-camp-2026-08-01').trim();
-    const ticketKey = String(body.ticket || 'single').trim().toLowerCase();
+    const ticketKey = String(body.ticket || 'member').trim().toLowerCase();
     const fullName = String(body.full_name || '').trim();
     const email = String(body.email || '')
       .trim()
@@ -309,6 +336,39 @@ module.exports = async function handler(req, res) {
 
     rateLimit(`email:${email}`, 5, 60 * 60 * 1000);
 
+    // Free ticket (e.g. child 0-6): no invoice / PayID required.
+    if (Number(ticket.amount_cents) === 0) {
+      return json(res, 200, {
+        ok: true,
+        free: true,
+        event: {
+          id: catalog.id,
+          title: catalog.title,
+        },
+        ticket: {
+          id: ticket.id,
+          label: ticket.label,
+          amount_cents: 0,
+          amount_label: 'Free',
+        },
+        message:
+          'Your free place is recorded. No PayID payment is required for this ticket. Please bring ID/age confirmation if the event team asks for it.',
+        invoice: null,
+        payment: {
+          method: 'free',
+          payid: null,
+          bank_name: null,
+        },
+      });
+    }
+
+    if (!paymentConfigured()) {
+      return json(res, 503, {
+        error:
+          'PayID / bank details are not configured yet. Please contact info@taunetnelel.org.',
+      });
+    }
+
     const userId = await findProfileIdByEmail(email);
     const invoice = await createAndEmailInvoice({
       kind: 'event',
@@ -334,6 +394,7 @@ module.exports = async function handler(req, res) {
 
     return json(res, 200, {
       ok: true,
+      free: false,
       event: {
         id: catalog.id,
         title: catalog.title,

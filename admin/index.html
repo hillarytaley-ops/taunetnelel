@@ -351,13 +351,9 @@
             <div class="admin-flyer-preview admin-field--wide" id="admin-event-flyer-preview" hidden>
               <img alt="Flyer preview" id="admin-event-flyer-preview-img">
             </div>
-            <label class="admin-field"><span>Single ticket (AUD)</span>
-              <input name="fee_single_aud" type="number" min="0" step="0.01" placeholder="e.g. 100">
-              <span class="admin-field__hint">Shown on Book &amp; PayID as “Single”.</span>
-            </label>
-            <label class="admin-field"><span>Two people (AUD)</span>
-              <input name="fee_couple_aud" type="number" min="0" step="0.01" placeholder="e.g. 150">
-              <span class="admin-field__hint">Optional second ticket price.</span>
+            <label class="admin-field"><span>Full price / non-member 100% (AUD)</span>
+              <input name="fee_base_aud" type="number" min="0" step="0.01" placeholder="e.g. 100">
+              <span class="admin-field__hint">Auto tickets: Member 80% · Non-member 100% · Child 7–17 45% · Child 0–6 free.</span>
             </label>
             <label class="admin-field admin-field--check"><input name="enable_payid_booking" type="checkbox" checked> Book &amp; PayID / bank</label>
             <label class="admin-field admin-field--check"><input name="is_published" type="checkbox" checked> Published</label>
@@ -581,6 +577,6 @@
   <script src="../assets/js/business-content.js?v=3"></script>
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260814a"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817a"></script>
 </body>
 </html>

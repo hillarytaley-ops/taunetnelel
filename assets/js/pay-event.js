@@ -54,7 +54,7 @@
   }
 
   function selectedTicket() {
-    return form?.querySelector('input[name="ticket"]:checked')?.value || 'single';
+    return form?.querySelector('input[name="ticket"]:checked')?.value || 'member';
   }
 
   function syncSummaryFromCatalog(data) {
@@ -75,18 +75,36 @@
         '</strong>. Pay by <strong>PayID</strong> or <strong>bank transfer</strong> — both details appear together after you book.';
     }
 
-    const single = tickets.find((t) => t.id === 'single') || tickets[0];
-    if (single && fromAmount) fromAmount.textContent = single.amount_label || '$100';
-    if (single && fromMeta) fromMeta.textContent = (single.label || 'single') + ' · AUD';
+    const paid = tickets.filter((t) => Number(t.amount_cents) > 0);
+    const showcase =
+      tickets.find((t) => t.id === 'non_member') ||
+      tickets.find((t) => t.id === 'member') ||
+      paid[0] ||
+      tickets[0];
+    if (showcase && fromAmount) {
+      fromAmount.textContent =
+        Number(showcase.amount_cents) === 0
+          ? 'Free'
+          : showcase.amount_label || '$0';
+    }
+    if (showcase && fromMeta) {
+      fromMeta.textContent = (showcase.label || 'ticket') + ' · AUD';
+    }
 
     if (form && tickets.length) {
       const fieldset = form.querySelector('.pay-portal__tickets');
       if (fieldset) {
+        const preferred = selectedTicket();
         fieldset.innerHTML =
           '<legend>Ticket</legend>' +
           tickets
             .map((ticket, index) => {
-              const checked = index === 0 || ticket.id === selectedTicket() ? ' checked' : '';
+              const checked =
+                ticket.id === preferred || (!preferred && index === 0) ? ' checked' : '';
+              const priceLabel =
+                Number(ticket.amount_cents) === 0
+                  ? 'Free'
+                  : escapeHtml(ticket.amount_label || '') + ' AUD';
               return (
                 '<label class="pay-portal__ticket">' +
                 '<input type="radio" name="ticket" value="' +
@@ -97,8 +115,8 @@
                 '<span><strong>' +
                 escapeHtml(ticket.label) +
                 '</strong><em>' +
-                escapeHtml(ticket.amount_label) +
-                ' AUD</em></span></label>'
+                priceLabel +
+                '</em></span></label>'
               );
             })
             .join('');
@@ -111,6 +129,7 @@
     const payment = data.payment || {};
     const ticket = data.ticket || {};
     const event = data.event || {};
+    const isFree = Boolean(data.free) || Number(ticket.amount_cents) === 0;
 
     const setText = (id, value) => {
       const el = document.getElementById(id);
@@ -119,39 +138,53 @@
 
     setText('pay-out-event', event.title || 'Event');
     setText('pay-out-ticket', ticket.label || '—');
-    setText('pay-out-amount', (invoice.amount_label || ticket.amount_label || '') + ' AUD');
-    setText('pay-out-invoice', invoice.invoice_number);
-    setText('pay-out-ref', invoice.pay_reference);
-    setText('pay-out-payid', payment.payid || 'PayID will appear once configured');
+    setText(
+      'pay-out-amount',
+      isFree ? 'Free' : (invoice.amount_label || ticket.amount_label || '') + ' AUD'
+    );
+    setText('pay-out-invoice', isFree ? 'Not required' : invoice.invoice_number);
+    setText('pay-out-ref', isFree ? 'Not required' : invoice.pay_reference);
+    setText(
+      'pay-out-payid',
+      isFree ? 'No payment needed' : payment.payid || 'PayID will appear once configured'
+    );
 
     const heading = document.getElementById('pay-out-heading');
     if (heading) {
-      heading.textContent =
-        'Pay ' + (invoice.amount_label || '') + ' via PayID or bank';
+      heading.textContent = isFree
+        ? 'Free place confirmed'
+        : 'Pay ' + (invoice.amount_label || '') + ' via PayID or bank';
     }
 
     const emailNote = document.getElementById('pay-email-note');
     if (emailNote) {
-      emailNote.textContent =
-        (data.message || 'PayID and bank details are shown above.') +
-        ' A paid receipt PDF is emailed only after Admin confirms your payment.';
+      emailNote.textContent = isFree
+        ? data.message ||
+          'This ticket is free. No PayID payment is required.'
+        : (data.message || 'PayID and bank details are shown above.') +
+          ' A paid receipt PDF is emailed only after Admin confirms your payment.';
     }
 
     const bankBlock = document.getElementById('pay-bank-block');
     const bankList = document.getElementById('pay-out-bank');
-    const bankLines = [];
-    if (payment.bank_name) bankLines.push('Bank: ' + payment.bank_name);
-    if (payment.bank_bsb) bankLines.push('BSB: ' + payment.bank_bsb);
-    if (payment.bank_account_number) bankLines.push('Account: ' + payment.bank_account_number);
-    if (payment.bank_account_name) bankLines.push('Account name: ' + payment.bank_account_name);
+    if (isFree) {
+      if (bankBlock) bankBlock.hidden = true;
+      if (bankList) bankList.innerHTML = '';
+    } else {
+      const bankLines = [];
+      if (payment.bank_name) bankLines.push('Bank: ' + payment.bank_name);
+      if (payment.bank_bsb) bankLines.push('BSB: ' + payment.bank_bsb);
+      if (payment.bank_account_number) bankLines.push('Account: ' + payment.bank_account_number);
+      if (payment.bank_account_name) bankLines.push('Account name: ' + payment.bank_account_name);
 
-    if (bankBlock && bankList) {
-      if (bankLines.length) {
-        bankBlock.hidden = false;
-        bankList.innerHTML = bankLines.map((line) => '<li>' + escapeHtml(line) + '</li>').join('');
-      } else {
-        bankBlock.hidden = true;
-        bankList.innerHTML = '';
+      if (bankBlock && bankList) {
+        if (bankLines.length) {
+          bankBlock.hidden = false;
+          bankList.innerHTML = bankLines.map((line) => '<li>' + escapeHtml(line) + '</li>').join('');
+        } else {
+          bankBlock.hidden = true;
+          bankList.innerHTML = '';
+        }
       }
     }
 

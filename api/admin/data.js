@@ -74,7 +74,7 @@ function safeHttpUrl(value) {
 function encodeTicketsQuery(tickets) {
   if (!Array.isArray(tickets) || !tickets.length) return '';
   return tickets
-    .map((t) => `${encodeURIComponent(t.id)}:${Math.round(Number(t.amount_cents))}`)
+    .map((t) => `${encodeURIComponent(t.id)}:${Math.round(Number(t.amount_cents) || 0)}`)
     .join(',');
 }
 
@@ -88,8 +88,21 @@ function parseTicketsQuery(raw) {
       .trim()
       .toLowerCase();
     const amount = Math.round(Number(centsRaw));
-    if (!id || !Number.isFinite(amount) || amount <= 0) return;
-    const label = id === 'couple' ? 'Two people' : id === 'single' ? 'Single' : id;
+    if (!id || !Number.isFinite(amount) || amount < 0) return;
+    const label =
+      id === 'member'
+        ? 'Member (80%)'
+        : id === 'non_member'
+          ? 'Non-member (100%)'
+          : id === 'child_7_17'
+            ? 'Child 7–17 (45%)'
+            : id === 'child_0_6'
+              ? 'Child 0–6 (free)'
+              : id === 'couple'
+                ? 'Two people'
+                : id === 'single'
+                  ? 'Single'
+                  : id;
     tickets.push({ id, label, amount_cents: amount });
   });
   return tickets.length ? tickets : null;
@@ -457,8 +470,44 @@ function parseEventFeeCents(body) {
 }
 
 /**
+ * Build ticket_prices from a full (non-member 100%) base price.
+ * Members 80% · Non-members 100% · Child 7-17 45% · Child 0-6 free.
+ */
+function buildTieredEventTickets(baseCents) {
+  const base = Math.round(Number(baseCents));
+  if (!Number.isFinite(base) || base < 0) return null;
+  const tiers = [
+    { id: 'member', label: 'Member (80%)', pct: 80 },
+    { id: 'non_member', label: 'Non-member (100%)', pct: 100 },
+    { id: 'child_7_17', label: 'Child 7–17 (45%)', pct: 45 },
+    { id: 'child_0_6', label: 'Child 0–6 (free)', pct: 0 },
+  ];
+  return tiers.map((tier) => ({
+    id: tier.id,
+    label: tier.label,
+    amount_cents: Math.round((base * tier.pct) / 100),
+    pct: tier.pct,
+  }));
+}
+
+function baseCentsFromTickets(tickets) {
+  if (!Array.isArray(tickets) || !tickets.length) return null;
+  const nonMember = tickets.find((t) => t.id === 'non_member');
+  if (nonMember && Number.isFinite(Number(nonMember.amount_cents))) {
+    return Math.round(Number(nonMember.amount_cents));
+  }
+  const single = tickets.find((t) => t.id === 'single');
+  if (single && Number.isFinite(Number(single.amount_cents))) {
+    return Math.round(Number(single.amount_cents));
+  }
+  const max = Math.max(...tickets.map((t) => Math.round(Number(t.amount_cents) || 0)));
+  return Number.isFinite(max) && max >= 0 ? max : null;
+}
+
+/**
  * Build ticket_prices JSON for Book & PayID.
- * Accepts ticket_prices array, or fee_single_aud / fee_couple_aud (AUD dollars).
+ * Accepts ticket_prices array, fee_base_aud / fee_full_aud (100% non-member),
+ * or legacy fee_single_aud / fee_couple_aud.
  */
 function parseTicketPrices(body) {
   if (body?.ticket_prices === null) return null;
@@ -466,17 +515,31 @@ function parseTicketPrices(body) {
     const tickets = body.ticket_prices
       .map((item, index) => {
         const amount = Math.round(Number(item?.amount_cents));
-        if (!Number.isFinite(amount) || amount <= 0) return null;
+        if (!Number.isFinite(amount) || amount < 0) return null;
         const id = String(item?.id || `ticket-${index + 1}`)
           .trim()
           .toLowerCase()
           .replace(/[^a-z0-9_-]+/g, '-')
           .replace(/^-+|-+$/g, '') || `ticket-${index + 1}`;
         const label = String(item?.label || id).trim() || id;
-        return { id, label, amount_cents: amount };
+        const row = { id, label, amount_cents: amount };
+        if (item?.pct != null && Number.isFinite(Number(item.pct))) {
+          row.pct = Math.round(Number(item.pct));
+        }
+        return row;
       })
       .filter(Boolean);
     return tickets.length ? tickets : null;
+  }
+
+  const baseFromAud =
+    body?.fee_base_aud !== undefined && body?.fee_base_aud !== null && body?.fee_base_aud !== ''
+      ? audToCents(body.fee_base_aud)
+      : body?.fee_full_aud !== undefined && body?.fee_full_aud !== null && body?.fee_full_aud !== ''
+        ? audToCents(body.fee_full_aud)
+        : null;
+  if (Number.isFinite(baseFromAud) && baseFromAud >= 0) {
+    return buildTieredEventTickets(baseFromAud);
   }
 
   const tickets = [];
@@ -489,8 +552,9 @@ function parseTicketPrices(body) {
           ? Math.round(Number(body.fee_cents))
           : null;
   const couple = audToCents(body?.fee_couple_aud);
-  if (Number.isFinite(single) && single > 0) {
-    tickets.push({ id: 'single', label: 'Single', amount_cents: single });
+  if (Number.isFinite(single) && single >= 0) {
+    // Treat legacy "single" as full non-member price and expand to tiers.
+    return buildTieredEventTickets(single);
   }
   if (Number.isFinite(couple) && couple > 0) {
     tickets.push({ id: 'couple', label: 'Two people', amount_cents: couple });
@@ -710,8 +774,10 @@ const SEED_EVENTS = [
     is_published: true,
     fee_cents: 10000,
     ticket_prices: [
-      { id: 'single', label: 'Single', amount_cents: 10000 },
-      { id: 'couple', label: 'Two people', amount_cents: 15000 }
+      { id: 'member', label: 'Member (80%)', amount_cents: 8000, pct: 80 },
+      { id: 'non_member', label: 'Non-member (100%)', amount_cents: 10000, pct: 100 },
+      { id: 'child_7_17', label: 'Child 7–17 (45%)', amount_cents: 4500, pct: 45 },
+      { id: 'child_0_6', label: 'Child 0–6 (free)', amount_cents: 0, pct: 0 }
     ]
   },
   {
@@ -1425,7 +1491,10 @@ module.exports = async function handler(req, res) {
               err.message ||
               'Flyer upload failed. Event can still be saved without the flyer image.';
             const ticketsNoFlyer = parseTicketPrices(body);
-            const feeNoFlyer = ticketsNoFlyer?.[0]?.amount_cents ?? parseEventFeeCents(body);
+            const feeNoFlyer =
+              ticketsNoFlyer?.find((t) => t.id === 'non_member')?.amount_cents ??
+              ticketsNoFlyer?.[0]?.amount_cents ??
+              parseEventFeeCents(body);
             const enablePayNoFlyer =
               body.enable_payid_booking != null
                 ? Boolean(body.enable_payid_booking)
@@ -1485,7 +1554,10 @@ module.exports = async function handler(req, res) {
         }
 
         const tickets = parseTicketPrices(body);
-        const feeCents = tickets?.[0]?.amount_cents ?? parseEventFeeCents(body);
+        const feeCents =
+          tickets?.find((t) => t.id === 'non_member')?.amount_cents ??
+          tickets?.[0]?.amount_cents ??
+          parseEventFeeCents(body);
         const enablePay =
           body.enable_payid_booking != null
             ? Boolean(body.enable_payid_booking)
@@ -1860,19 +1932,30 @@ module.exports = async function handler(req, res) {
           body.fee_aud !== undefined ||
           body.fee_single_aud !== undefined ||
           body.fee_couple_aud !== undefined ||
+          body.fee_base_aud !== undefined ||
+          body.fee_full_aud !== undefined ||
           body.ticket_prices !== undefined
         ) {
           const tickets = parseTicketPrices(body);
           const feeCents = parseEventFeeCents(body);
           if (tickets) {
             patch.ticket_prices = tickets;
-            patch.fee_cents = tickets[0].amount_cents;
-          } else if (body.ticket_prices === null || body.fee_single_aud === '' || body.fee_cents === null) {
+            const base =
+              tickets.find((t) => t.id === 'non_member')?.amount_cents ??
+              tickets.find((t) => t.id === 'single')?.amount_cents ??
+              tickets[0].amount_cents;
+            patch.fee_cents = base;
+          } else if (
+            body.ticket_prices === null ||
+            body.fee_single_aud === '' ||
+            body.fee_base_aud === '' ||
+            body.fee_cents === null
+          ) {
             patch.ticket_prices = null;
             patch.fee_cents = feeCents;
           } else if (feeCents != null) {
             patch.fee_cents = feeCents;
-            patch.ticket_prices = [{ id: 'single', label: 'Single', amount_cents: feeCents }];
+            patch.ticket_prices = buildTieredEventTickets(feeCents);
           }
           const resolvedTickets = patch.ticket_prices || tickets || null;
           if (body.enable_payid_booking != null) {
@@ -1893,6 +1976,8 @@ module.exports = async function handler(req, res) {
           body.fee_cents === undefined &&
           body.fee_single_aud === undefined &&
           body.fee_couple_aud === undefined &&
+          body.fee_base_aud === undefined &&
+          body.fee_full_aud === undefined &&
           body.ticket_prices === undefined
         ) {
           patch.booking_url = bookingUrlForEvent(id, body.enable_payid_booking, null, null);
