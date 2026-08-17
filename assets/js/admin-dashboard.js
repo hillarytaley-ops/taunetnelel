@@ -2063,17 +2063,27 @@
       fillPipelineSelects(state.pipelineData);
       renderPipelineBoard(state.pipelineData);
     });
+    document.getElementById('crm-email-audience')?.addEventListener('change', () => {
+      const wrap = document.getElementById('crm-email-to-wrap');
+      const input = document.getElementById('crm-email-to');
+      const individual = document.getElementById('crm-email-audience').value === 'individual';
+      if (wrap) wrap.hidden = !individual;
+      if (input) input.required = individual;
+    });
+    document.getElementById('crm-email-audience')?.dispatchEvent(new Event('change'));
     document.getElementById('crm-email-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const message = document.getElementById('crm-email-message');
       const submit = event.target.querySelector('[type="submit"]');
       if (submit) submit.disabled = true;
       try {
+        const audience = document.getElementById('crm-email-audience').value;
         const result = await adminApi('crm-campaign-send', {
           method: 'POST',
           body: {
             channel: 'email',
-            audience: document.getElementById('crm-email-audience').value,
+            audience,
+            to_email: document.getElementById('crm-email-to')?.value || '',
             subject: document.getElementById('crm-email-subject').value,
             name: document.getElementById('crm-email-subject').value,
             body_text: document.getElementById('crm-email-body').value
@@ -2082,9 +2092,15 @@
         if (message) {
           message.hidden = false;
           message.classList.remove('is-error');
-          message.textContent = `Sent ${result.sent || 0} email(s).${result.skipped ? ` ${result.skipped} not sent this round (100 per send).` : ''}`;
+          const extra = result.failed
+            ? ` ${result.failed} failed.`
+            : result.total && result.sent !== result.total
+              ? ` ${result.total} in the list.`
+              : '';
+          message.textContent = `Sent ${result.sent || 0} email(s).${extra}`;
         }
         event.target.reset();
+        document.getElementById('crm-email-audience')?.dispatchEvent(new Event('change'));
         await loadFollowup({ keepTab: true });
       } catch (err) {
         if (message) {

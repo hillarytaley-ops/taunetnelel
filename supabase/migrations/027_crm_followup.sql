@@ -21,7 +21,7 @@ create table if not exists public.crm_campaigns (
   subject text,
   body_text text not null,
   audience text not null check (audience in (
-    'all_members', 'association', 'welfare', 'newsletter'
+    'all_members', 'association', 'welfare', 'newsletter', 'individual'
   )),
   status text not null default 'draft'
     check (status in ('draft', 'sending', 'sent', 'failed')),

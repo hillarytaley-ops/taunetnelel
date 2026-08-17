@@ -342,17 +342,22 @@
         </div>
 
         <div id="followup-email-view">
-          <p class="admin-muted">Send committee emails through Resend (already used for invoices and password reset). Max 100 recipients per send. Recipients who unsubscribe are skipped.</p>
+          <p class="admin-muted">Send to one person, or to a whole list. Large lists are sent in batches of 100 automatically until everyone is included. Recipients who unsubscribe are skipped.</p>
           <form class="site-form crm-field-form" id="crm-email-form">
             <div class="form-row">
               <div class="form-group">
                 <label for="crm-email-audience">Audience</label>
                 <select id="crm-email-audience">
+                  <option value="individual">One email address</option>
                   <option value="welfare">Social Welfare members</option>
                   <option value="association">Association members</option>
                   <option value="all_members">All signed-in members</option>
                   <option value="newsletter">Newsletter list</option>
                 </select>
+              </div>
+              <div class="form-group" id="crm-email-to-wrap">
+                <label for="crm-email-to">Send to</label>
+                <input type="email" id="crm-email-to" placeholder="member@example.com" autocomplete="email">
               </div>
               <div class="form-group">
                 <label for="crm-email-subject">Subject</label>
@@ -365,7 +370,7 @@
             </div>
             <div class="site-form__actions">
               <button type="submit" class="btn btn--primary">Send email campaign</button>
-              <p class="site-form__note">From members@taunetnelel.org · includes an unsubscribe link</p>
+              <p class="site-form__note">From members@taunetnelel.org · includes an unsubscribe link. Group sends go out in batches of 100 until the full list is done.</p>
             </div>
             <p class="inquiry-form__message" id="crm-email-message" hidden></p>
           </form>
@@ -856,6 +861,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817d"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817e"></script>
 </body>
 </html>

@@ -231,12 +231,38 @@ async function loadUnsubscribedSet(channel) {
   return { emails, phones };
 }
 
-async function collectCampaignRecipients(audience, channel) {
+function chunkList(items, size) {
+  const list = Array.isArray(items) ? items : [];
+  const out = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+async function collectCampaignRecipients(audience, channel, extraEmail) {
   const unsub = await loadUnsubscribedSet(channel);
   const people = [];
+  if (audience === 'individual') {
+    const email = String(extraEmail || '').trim().toLowerCase();
+    if (!emailOk(email)) return [];
+    if (unsub.emails.has(email)) {
+      const err = new Error('That address has unsubscribed from committee emails.');
+      err.status = 400;
+      throw err;
+    }
+    const { data } = await sb(
+      `profiles?email=eq.${encodeURIComponent(email)}&select=id,full_name,email,phone&limit=1`
+    );
+    const row = Array.isArray(data) ? data[0] : null;
+    return [{
+      email,
+      phone: row?.phone || '',
+      profile_id: row?.id || null,
+      name: row?.full_name || 'there'
+    }];
+  }
   if (audience === 'newsletter') {
     const { data } = await sb(
-      'newsletter_subscribers?select=email,subscribed_at&order=subscribed_at.desc&limit=400'
+      'newsletter_subscribers?select=email,subscribed_at&order=subscribed_at.desc&limit=2000'
     );
     (data || []).forEach((row) => {
       const email = String(row.email || '').trim().toLowerCase();
@@ -247,7 +273,7 @@ async function collectCampaignRecipients(audience, channel) {
     return people;
   }
   let query =
-    'profiles?select=id,full_name,email,phone,association_member,welfare_member&order=created_at.desc&limit=400';
+    'profiles?select=id,full_name,email,phone,association_member,welfare_member&order=created_at.desc&limit=2000';
   if (audience === 'association') query += '&association_member=eq.true';
   if (audience === 'welfare') query += '&welfare_member=eq.true';
   const { data } = await sb(query);
@@ -2109,12 +2135,14 @@ module.exports = async function handler(req, res) {
       if (resource === 'crm-campaign-send') {
         const channel = body.channel === 'sms' ? 'sms' : 'email';
         const audience = String(body.audience || 'welfare').trim();
-        const allowedAudience = new Set(['all_members', 'association', 'welfare', 'newsletter']);
+        const allowedAudience = new Set([
+          'all_members', 'association', 'welfare', 'newsletter', 'individual'
+        ]);
         if (!allowedAudience.has(audience)) {
           return json(res, 400, { error: 'Invalid audience' });
         }
-        if (channel === 'sms' && audience === 'newsletter') {
-          return json(res, 400, { error: 'SMS cannot use the newsletter list (email only).' });
+        if (channel === 'sms' && (audience === 'newsletter' || audience === 'individual')) {
+          return json(res, 400, { error: 'SMS cannot use that audience. Use a member list.' });
         }
         const name = String(body.name || body.subject || 'Campaign').trim().slice(0, 120) || 'Campaign';
         const subject = String(body.subject || name).trim().slice(0, 160);
@@ -2124,12 +2152,18 @@ module.exports = async function handler(req, res) {
           return json(res, 400, { error: 'Email subject is required' });
         }
 
-        const recipients = await collectCampaignRecipients(audience, channel);
+        const recipients = await collectCampaignRecipients(
+          audience,
+          channel,
+          body.to_email || body.email
+        );
         if (!recipients.length) {
-          return json(res, 400, { error: 'No recipients in that audience (or they unsubscribed).' });
+          return json(res, 400, {
+            error: audience === 'individual'
+              ? 'Enter a valid email address.'
+              : 'No recipients in that audience (or they unsubscribed).'
+          });
         }
-        const cap = channel === 'sms' ? 40 : 100;
-        const capped = recipients.slice(0, cap);
 
         const { data: campaignRows } = await sb('crm_campaigns', {
           method: 'POST',
@@ -2140,24 +2174,25 @@ module.exports = async function handler(req, res) {
             body_text: bodyText,
             audience,
             status: 'sending',
-            recipient_count: capped.length
+            recipient_count: recipients.length
           })
         });
         const campaign = Array.isArray(campaignRows) ? campaignRows[0] : null;
         if (!campaign) return json(res, 500, { error: 'Could not create campaign' });
 
-        const recipientRows = capped.map((person) => ({
-          campaign_id: campaign.id,
-          profile_id: person.profile_id,
-          email: person.email || null,
-          phone: person.phone || null,
-          status: 'queued'
-        }));
-        await sb('crm_campaign_recipients', {
-          method: 'POST',
-          prefer: 'return=minimal',
-          body: JSON.stringify(recipientRows)
-        });
+        for (const group of chunkList(recipients, 100)) {
+          await sb('crm_campaign_recipients', {
+            method: 'POST',
+            prefer: 'return=minimal',
+            body: JSON.stringify(group.map((person) => ({
+              campaign_id: campaign.id,
+              profile_id: person.profile_id,
+              email: person.email || null,
+              phone: person.phone || null,
+              status: 'queued'
+            })))
+          });
+        }
 
         let sentCount = 0;
         let failedCount = 0;
@@ -2168,7 +2203,7 @@ module.exports = async function handler(req, res) {
             return json(res, 500, { error: 'Email sender is not available on the server.' });
           }
           const site = (PUBLIC_SITE_URL || 'https://www.taunetnelel.org').replace(/\/$/, '');
-          const batch = capped.map((person) => {
+          const toBatchPayload = (person) => {
             const unsub = `${site}/unsubscribe.html?email=${encodeURIComponent(person.email)}`;
             const mail = buildCampaignMail({
               greeting: person.name,
@@ -2190,18 +2225,22 @@ module.exports = async function handler(req, res) {
               },
               tags: [{ name: 'category', value: 'crm_campaign' }]
             };
-          });
-          try {
-            await sendResendBatch(batch);
-            sentCount = capped.length;
+          };
+          for (const group of chunkList(recipients, 100)) {
+            try {
+              await sendResendBatch(group.map(toBatchPayload));
+              sentCount += group.length;
+            } catch (err) {
+              failedCount += group.length;
+              lastError = err.message || 'Resend failed';
+            }
+          }
+          if (sentCount) {
             await sb(`crm_campaign_recipients?campaign_id=eq.${encodeURIComponent(campaign.id)}`, {
               method: 'PATCH',
               prefer: 'return=minimal',
               body: JSON.stringify({ status: 'sent', sent_at: new Date().toISOString() })
             });
-          } catch (err) {
-            failedCount = capped.length;
-            lastError = err.message || 'Resend failed';
           }
         } else {
           if (!sendSms || !twilioConfigured()) {
@@ -2209,7 +2248,7 @@ module.exports = async function handler(req, res) {
               method: 'PATCH',
               body: JSON.stringify({
                 status: 'failed',
-                failed_count: capped.length,
+                failed_count: recipients.length,
                 error_text: 'SMS is not connected. Add Twilio keys on Vercel.'
               })
             });
@@ -2217,7 +2256,7 @@ module.exports = async function handler(req, res) {
               error: 'SMS is not connected yet. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM in Vercel.'
             });
           }
-          for (const person of capped) {
+          for (const person of recipients) {
             try {
               await sendSms({
                 to: person.phone,
@@ -2231,7 +2270,7 @@ module.exports = async function handler(req, res) {
           }
         }
 
-        const status = sentCount > 0 && failedCount === 0 ? 'sent' : sentCount > 0 ? 'sent' : 'failed';
+        const status = sentCount > 0 ? 'sent' : 'failed';
         await sb(`crm_campaigns?id=eq.${encodeURIComponent(campaign.id)}`, {
           method: 'PATCH',
           body: JSON.stringify({
@@ -2247,7 +2286,7 @@ module.exports = async function handler(req, res) {
           id: campaign.id,
           sent: sentCount,
           failed: failedCount,
-          skipped: recipients.length - capped.length
+          total: recipients.length
         });
       }
 
