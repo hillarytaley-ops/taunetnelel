@@ -78,13 +78,15 @@
     if (invoiceEl) invoiceEl.textContent = invoice.invoice_number || '—';
     if (refEl) refEl.textContent = invoice.pay_reference || '—';
     if (payidEl) {
-      payidEl.textContent = payment.payid || 'PayID will appear above once ready';
+      payidEl.textContent = payment.payid || '—';
     }
+    const payidBlock = document.getElementById('pay-payid-block');
+    if (payidBlock) payidBlock.hidden = !payment.payid;
     if (emailNote) {
       const alreadyJoined = params.get('joined') === '1';
       emailNote.textContent =
         (data.message ||
-          'PayID details are shown above. Keep your payment reference.') +
+          'Bank transfer details are shown above. Keep your payment reference.') +
         ' A paid receipt PDF is emailed only after Admin confirms your payment.' +
         (alreadyJoined
           ? ' After confirmation, sign in to open the member dashboard.'

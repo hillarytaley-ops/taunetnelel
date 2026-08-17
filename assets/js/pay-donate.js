@@ -88,11 +88,13 @@
     if (invoiceEl) invoiceEl.textContent = invoice.invoice_number || '—';
     if (refEl) refEl.textContent = invoice.pay_reference || '—';
     if (payidEl) {
-      payidEl.textContent = payment.payid || 'PayID will appear above once ready';
+      payidEl.textContent = payment.payid || '—';
     }
+    const payidBlock = document.getElementById('pay-payid-block');
+    if (payidBlock) payidBlock.hidden = !payment.payid;
     if (emailNote) {
       emailNote.textContent =
-        (data.message || 'PayID details are shown above. Keep your payment reference.') +
+        (data.message || 'Bank transfer details are shown above. Keep your payment reference.') +
         ' A thank-you receipt PDF is emailed only after Admin confirms your payment.';
     }
 

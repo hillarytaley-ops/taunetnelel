@@ -405,7 +405,7 @@ module.exports = async function handler(req, res) {
         amount_cents: ticket.amount_cents,
         amount_label: formatAud(ticket.amount_cents),
       },
-      message: `Booking payment ${invoice.invoice_number} is ready. Pay via PayID or bank transfer using your reference. A paid receipt is emailed only after the Treasurer confirms payment.`,
+      message: `Booking payment ${invoice.invoice_number} is ready. Pay by bank transfer using your reference. A paid receipt is emailed only after the Treasurer confirms payment.`,
       invoice: {
         id: invoice.id,
         invoice_number: invoice.invoice_number,

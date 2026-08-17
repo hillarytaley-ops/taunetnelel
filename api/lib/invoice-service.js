@@ -11,6 +11,8 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const ORG_LEGAL_NAME = (process.env.ORG_LEGAL_NAME || 'Taunet Nelel Incorporated').trim();
 const ORG_ABN = (process.env.ORG_ABN || '').trim();
 const PAYID = (process.env.PAYID || '').trim();
+/** Temporarily hide PayID everywhere public — bank transfer / EFT only. */
+const SHOW_PUBLIC_PAYID = false;
 const BANK_NAME = (process.env.BANK_NAME || '').trim();
 const BANK_BSB = (process.env.BANK_BSB || '').trim();
 const BANK_ACCOUNT = (process.env.BANK_ACCOUNT_NUMBER || process.env.BANK_ACCOUNT || '').trim();
@@ -116,7 +118,9 @@ function paymentConfigured() {
 function buildEmailHtml(invoice) {
   const amount = formatAud(invoice.amount_cents);
   const payBits = [];
-  if (PAYID) payBits.push(`<li><strong>PayID:</strong> ${escapeHtml(PAYID)}</li>`);
+  if (SHOW_PUBLIC_PAYID && PAYID) {
+    payBits.push(`<li><strong>PayID:</strong> ${escapeHtml(PAYID)}</li>`);
+  }
   if (BANK_NAME) payBits.push(`<li><strong>Bank:</strong> ${escapeHtml(BANK_NAME)}</li>`);
   if (BANK_BSB) payBits.push(`<li><strong>BSB:</strong> ${escapeHtml(BANK_BSB)}</li>`);
   if (BANK_ACCOUNT) payBits.push(`<li><strong>Account:</strong> ${escapeHtml(BANK_ACCOUNT)}</li>`);
@@ -131,7 +135,7 @@ function buildEmailHtml(invoice) {
   <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
   <h1 style="font-size:22px;margin:0 0 12px;">Payment request ${escapeHtml(invoice.invoice_number)}</h1>
   <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
-  <p>This is a <strong>payment request</strong>, not a receipt. Please pay by PayID or bank transfer using the reference below. A paid receipt is emailed only after the Treasurer confirms your payment in Admin.</p>
+  <p>This is a <strong>payment request</strong>, not a receipt. Please pay by bank transfer (EFT) using the reference below. A paid receipt is emailed only after the Treasurer confirms your payment in Admin.</p>
   <p><strong>${escapeHtml(invoice.description)}</strong><br>
   Amount due: <strong>${amount} AUD</strong><br>
   Due: ${escapeHtml(formatDate(invoice.due_at))}</p>
@@ -166,7 +170,7 @@ async function sendInvoiceEmail(invoice) {
     description: invoice.description,
     amountLabel: formatAud(invoice.amount_cents),
     payReference: invoice.pay_reference,
-    payid: PAYID,
+    payid: SHOW_PUBLIC_PAYID ? PAYID : '',
     bankName: BANK_NAME,
     bankBsb: BANK_BSB,
     bankAccount: BANK_ACCOUNT,
@@ -183,7 +187,7 @@ async function sendInvoiceEmail(invoice) {
       `Amount due: ${formatAud(invoice.amount_cents)} AUD\n` +
       `Due: ${formatDate(invoice.due_at)}\n` +
       `Reference: ${invoice.pay_reference}\n` +
-      (PAYID ? `PayID: ${PAYID}\n` : '') +
+      (SHOW_PUBLIC_PAYID && PAYID ? `PayID: ${PAYID}\n` : '') +
       `This is not a receipt. You will receive a paid receipt after the Treasurer confirms your payment.\n` +
       `Questions: info@taunetnelel.org\n` +
       `Taunet Nelel Welfare Association · Victoria, Australia\n` +
@@ -262,7 +266,7 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
     description: paidInvoice.description,
     amountLabel: formatAud(paidInvoice.amount_cents),
     payReference: paidInvoice.pay_reference,
-    payid: PAYID,
+    payid: SHOW_PUBLIC_PAYID ? PAYID : '',
     bankName: BANK_NAME,
     bankBsb: BANK_BSB,
     bankAccount: BANK_ACCOUNT,
@@ -445,7 +449,7 @@ async function createAndEmailInvoice({
 function getPublicPaymentDetails() {
   return {
     configured: paymentConfigured(),
-    payid: PAYID || null,
+    payid: SHOW_PUBLIC_PAYID ? PAYID || null : null,
     bank_name: BANK_NAME || null,
     bank_bsb: BANK_BSB || null,
     bank_account_number: BANK_ACCOUNT || null,
@@ -557,7 +561,7 @@ function buildReminderEmailHtml(invoice, kind) {
   Amount due: <strong>${amount} AUD</strong><br>
   Due: ${escapeHtml(formatDate(invoice.due_at))}<br>
   Payment reference: <strong>${escapeHtml(invoice.pay_reference)}</strong></p>
-  ${PAYID ? `<p><strong>PayID:</strong> ${escapeHtml(PAYID)}</p>` : ''}
+  ${SHOW_PUBLIC_PAYID && PAYID ? `<p><strong>PayID:</strong> ${escapeHtml(PAYID)}</p>` : ''}
   <p style="font-size:13px;color:#555;">A PDF copy is attached. Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
 </body></html>`;
 }
@@ -579,7 +583,7 @@ async function sendInvoiceReminderEmail(invoice, reminderKind) {
     description: invoice.description,
     amountLabel: formatAud(invoice.amount_cents),
     payReference: invoice.pay_reference,
-    payid: PAYID,
+    payid: SHOW_PUBLIC_PAYID ? PAYID : '',
     bankName: BANK_NAME,
     bankBsb: BANK_BSB,
     bankAccount: BANK_ACCOUNT,

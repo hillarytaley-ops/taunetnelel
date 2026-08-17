@@ -160,7 +160,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       plan: 'basic',
       installments: 1,
-      message: `Payment request ${invoice.invoice_number} is ready. Pay $50 via PayID using your reference. You will receive a paid receipt by email only after the Treasurer confirms your payment.`,
+      message: `Payment request ${invoice.invoice_number} is ready. Pay $50 by bank transfer using your reference. You will receive a paid receipt by email only after the Treasurer confirms your payment.`,
       invoice: {
         id: invoice.id,
         invoice_number: invoice.invoice_number,

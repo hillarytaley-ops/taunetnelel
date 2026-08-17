@@ -72,7 +72,7 @@
       ledeEl.innerHTML =
         'Book your place at <strong>' +
         escapeHtml(event.location) +
-        '</strong>. Pay by <strong>PayID</strong> or <strong>bank transfer</strong> — both details appear together after you book.';
+        '</strong>. Pay by <strong>bank transfer</strong> — account details appear after you book.';
     }
 
     const paid = tickets.filter((t) => Number(t.amount_cents) > 0);
@@ -146,22 +146,24 @@
     setText('pay-out-ref', isFree ? 'Not required' : invoice.pay_reference);
     setText(
       'pay-out-payid',
-      isFree ? 'No payment needed' : payment.payid || 'PayID will appear once configured'
+      isFree ? 'No payment needed' : payment.payid || '—'
     );
+    const payidBlock = document.getElementById('pay-payid-block');
+    if (payidBlock) payidBlock.hidden = isFree || !payment.payid;
 
     const heading = document.getElementById('pay-out-heading');
     if (heading) {
       heading.textContent = isFree
         ? 'Free place confirmed'
-        : 'Pay ' + (invoice.amount_label || '') + ' via PayID or bank';
+        : 'Pay ' + (invoice.amount_label || '') + ' by bank transfer';
     }
 
     const emailNote = document.getElementById('pay-email-note');
     if (emailNote) {
       emailNote.textContent = isFree
         ? data.message ||
-          'This ticket is free. No PayID payment is required.'
-        : (data.message || 'PayID and bank details are shown above.') +
+          'This ticket is free. No bank payment is required.'
+        : (data.message || 'Bank transfer details are shown above.') +
           ' A paid receipt PDF is emailed only after Admin confirms your payment.';
     }
 

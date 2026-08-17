@@ -179,7 +179,7 @@ module.exports = async function handler(req, res) {
     return json(res, 200, {
       ok: true,
       plan: 'donation',
-      message: `Donation request ${invoice.invoice_number} is ready. Pay ${formatAud(invoice.amount_cents)} via PayID using your reference. A thank-you receipt is emailed only after the Treasurer confirms your payment.`,
+      message: `Donation request ${invoice.invoice_number} is ready. Pay ${formatAud(invoice.amount_cents)} by bank transfer using your reference. A thank-you receipt is emailed only after the Treasurer confirms your payment.`,
       invoice: {
         id: invoice.id,
         invoice_number: invoice.invoice_number,

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Donate — PayID | Taunet Nelel</title>
-  <meta name="description" content="Donate to Taunet Nelel via PayID or bank transfer. Support community events, culture, and welfare programs.">
+  <title>Donate — Bank transfer | Taunet Nelel</title>
+  <meta name="description" content="Donate to Taunet Nelel by bank transfer. Support community events, culture, and welfare programs.">
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=17">
@@ -48,8 +48,8 @@
     <div class="container pay-portal__layout">
       <aside class="pay-portal__summary">
         <p class="pay-portal__eyebrow">Donate</p>
-        <h1>Give by PayID</h1>
-        <p class="pay-portal__lede">Support Taunet Nelel community programs, culture, and events. Same PayID and bank details used for membership payments.</p>
+        <h1>Give by bank transfer</h1>
+        <p class="pay-portal__lede">Support Taunet Nelel community programs, culture, and events. Use the bank account details shown after you confirm your donation amount.</p>
         <div class="pay-portal__amount" aria-label="You choose the amount">
           <span class="pay-portal__amount-value" id="donate-summary-amount">$50</span>
           <span class="pay-portal__amount-meta">your gift · AUD</span>
@@ -66,7 +66,7 @@
       <section class="pay-portal__card" aria-labelledby="pay-donate-heading">
         <div id="pay-step-form">
           <h2 id="pay-donate-heading">Make a donation</h2>
-          <p class="pay-portal__intro">Choose an amount, enter your details, then pay via PayID or bank transfer with your unique reference.</p>
+          <p class="pay-portal__intro">Choose an amount, enter your details, then pay by bank transfer with your unique reference.</p>
 
           <form id="pay-donate-form" class="pay-portal__form" novalidate>
             <fieldset class="pay-portal__amount-picks">
@@ -95,7 +95,7 @@
               <input type="tel" id="pay-phone" name="phone" autocomplete="tel" placeholder="+61 4XX XXX XXX">
             </div>
             <button type="submit" class="btn btn--primary pay-portal__submit" id="pay-submit">
-              Get PayID details
+              Get bank details
             </button>
             <p class="pay-portal__fine">You will pay in your banking app. No card details are collected on this site.</p>
             <p id="pay-form-status" class="pay-portal__status" role="status" aria-live="polite" hidden></p>
@@ -104,7 +104,7 @@
 
         <div id="pay-step-instructions" hidden>
           <p class="pay-portal__badge">Donation request ready</p>
-          <h2>Pay via PayID</h2>
+          <h2>Pay by bank transfer</h2>
           <p class="pay-portal__intro">Use your banking app. Include the <strong>payment reference</strong> exactly so we can match your gift.</p>
 
           <dl class="pay-portal__facts">
@@ -125,20 +125,20 @@
             </div>
           </dl>
 
-          <div class="pay-portal__paybox">
+          <div class="pay-portal__paybox" id="pay-payid-block" hidden>
             <h3>PayID</h3>
             <p class="pay-portal__payid" id="pay-out-payid">—</p>
             <button type="button" class="btn btn--ghost btn--sm" id="pay-copy-payid">Copy PayID</button>
           </div>
 
-          <div class="pay-portal__bank" id="pay-bank-block" hidden>
-            <h3>Or bank transfer</h3>
+          <div class="pay-portal__bank" id="pay-bank-block">
+            <h3>Bank transfer</h3>
             <ul id="pay-out-bank"></ul>
           </div>
 
           <ol class="pay-portal__steps">
-            <li>Open your banking app and choose PayID (or EFT).</li>
-            <li>Enter the PayID / account details above.</li>
+            <li>Open your banking app and choose bank transfer / EFT.</li>
+            <li>Enter the BSB and account details above.</li>
             <li>Pay the <strong>amount shown</strong> and paste the <strong>payment reference</strong>.</li>
             <li>The Treasurer matches your transfer and emails a thank-you receipt when confirmed.</li>
           </ol>
@@ -165,6 +165,6 @@
   </footer>
 
   <script src="../assets/js/main.js?v=14"></script>
-  <script src="../assets/js/pay-donate.js?v=1"></script>
+  <script src="../assets/js/pay-donate.js?v=2"></script>
 </body>
 </html>

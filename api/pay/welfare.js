@@ -186,8 +186,8 @@ module.exports = async function handler(req, res) {
 
     const message =
       plan === 'installments'
-        ? `Installment 1 of 3 (${primary.invoice_number}) is ready on screen. Pay $100 via PayID now. Installments 2 and 3 will be emailed as payment requests when due. A paid receipt is sent only after the Treasurer confirms each payment.`
-        : `Payment request ${primary.invoice_number} is ready on screen. Pay $300 via PayID using your reference. You will receive a paid receipt by email only after the Treasurer confirms your payment.`;
+        ? `Installment 1 of 3 (${primary.invoice_number}) is ready on screen. Pay $100 by bank transfer now. Installments 2 and 3 will be emailed as payment requests when due. A paid receipt is sent only after the Treasurer confirms each payment.`
+        : `Payment request ${primary.invoice_number} is ready on screen. Pay $300 by bank transfer using your reference. You will receive a paid receipt by email only after the Treasurer confirms your payment.`;
 
     return json(res, 200, {
       ok: true,

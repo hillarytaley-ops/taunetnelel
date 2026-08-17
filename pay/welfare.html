@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pay Association + Welfare — PayID | Taunet Nelel</title>
-  <meta name="description" content="Pay Taunet Nelel Association + Welfare ($300 / year) via PayID — pay in full or three $100 installments with reminders.">
+  <title>Pay Association + Welfare — Bank transfer | Taunet Nelel</title>
+  <meta name="description" content="Pay Taunet Nelel Association + Welfare ($300 / year) by bank transfer — pay in full or three $100 installments with reminders.">
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=17">
@@ -48,7 +48,7 @@
     <div class="container pay-portal__layout">
       <aside class="pay-portal__summary">
         <p class="pay-portal__eyebrow">Association + Welfare</p>
-        <h1>Pay by PayID</h1>
+        <h1>Pay by bank transfer</h1>
         <p class="pay-portal__lede">Registered member and welfare — pay <strong>$300</strong> in full, or <strong>three $100</strong> installments over three months with email reminders.</p>
         <div class="pay-portal__amount" aria-label="Plan total">
           <span class="pay-portal__amount-value">$300</span>
@@ -67,7 +67,7 @@
       <section class="pay-portal__card" aria-labelledby="pay-welfare-heading">
         <div id="pay-step-form">
           <h2 id="pay-welfare-heading">Start Association + Welfare payment</h2>
-          <p class="pay-portal__intro">Choose how you want to pay, then enter your details. We show PayID instructions on screen. A paid receipt is emailed only after the Treasurer confirms your payment.</p>
+          <p class="pay-portal__intro">Choose how you want to pay, then enter your details. We show bank transfer instructions on screen. A paid receipt is emailed only after the Treasurer confirms your payment.</p>
 
           <form id="pay-welfare-form" class="pay-portal__form" method="post" action="#" novalidate>
             <div class="pay-portal__plan-options" role="radiogroup" aria-labelledby="pay-plan-label">
@@ -75,7 +75,7 @@
               <label class="pay-portal__plan-option">
                 <span>
                   <strong>Pay $300 in full</strong>
-                  <small>One PayID transfer for the year</small>
+                  <small>One bank transfer for the year</small>
                 </span>
                 <input type="radio" name="plan" value="full" checked>
               </label>
@@ -101,7 +101,7 @@
               <input type="tel" id="pay-phone" name="phone" autocomplete="tel" placeholder="+61 4XX XXX XXX">
             </div>
             <button type="submit" class="btn btn--accent pay-portal__submit" id="pay-submit">
-              Get PayID details
+              Get bank details
             </button>
             <p class="pay-portal__fine">You will pay in your banking app. No card details are collected on this site.</p>
             <p id="pay-form-status" class="pay-portal__status" role="status" aria-live="polite" hidden></p>
@@ -110,7 +110,7 @@
 
         <div id="pay-step-instructions" hidden>
           <p class="pay-portal__badge" id="pay-out-badge">Invoice ready</p>
-          <h2 id="pay-out-title">Pay via PayID</h2>
+          <h2 id="pay-out-title">Pay by bank transfer</h2>
           <p class="pay-portal__intro">Use your banking app. Include the <strong>payment reference</strong> exactly so we can match your deposit.</p>
 
           <dl class="pay-portal__facts">
@@ -140,20 +140,20 @@
             <ul id="pay-out-schedule"></ul>
           </div>
 
-          <div class="pay-portal__paybox">
+          <div class="pay-portal__paybox" id="pay-payid-block" hidden>
             <h3>PayID</h3>
             <p class="pay-portal__payid" id="pay-out-payid">—</p>
             <button type="button" class="btn btn--ghost btn--sm" id="pay-copy-payid">Copy PayID</button>
           </div>
 
-          <div class="pay-portal__bank" id="pay-bank-block" hidden>
-            <h3>Or bank transfer</h3>
+          <div class="pay-portal__bank" id="pay-bank-block">
+            <h3>Bank transfer</h3>
             <ul id="pay-out-bank"></ul>
           </div>
 
           <ol class="pay-portal__steps">
-            <li>Open your banking app and choose PayID (or EFT).</li>
-            <li>Enter the PayID / account details above.</li>
+            <li>Open your banking app and choose bank transfer / EFT.</li>
+            <li>Enter the BSB and account details above.</li>
             <li>Pay the <strong>amount due now</strong> using the payment reference.</li>
             <li>If you chose installments, watch for reminder emails for months 2 and 3.</li>
             <li><strong>Create your member login</strong> with this same email if you do not have one yet.</li>
@@ -182,6 +182,6 @@
   </footer>
 
   <script src="../assets/js/main.js?v=13"></script>
-  <script src="../assets/js/pay-welfare.js?v=2"></script>
+  <script src="../assets/js/pay-welfare.js?v=3"></script>
 </body>
 </html>

@@ -97,8 +97,10 @@
     if (invoiceEl) invoiceEl.textContent = invoice.invoice_number || '—';
     if (refEl) refEl.textContent = invoice.pay_reference || '—';
     if (payidEl) {
-      payidEl.textContent = payment.payid || 'PayID will appear on your emailed invoice';
+      payidEl.textContent = payment.payid || '—';
     }
+    const payidBlock = document.getElementById('pay-payid-block');
+    if (payidBlock) payidBlock.hidden = !payment.payid;
     if (badge) {
       badge.textContent =
         plan === 'installments'
@@ -107,7 +109,9 @@
     }
     if (title) {
       title.textContent =
-        plan === 'installments' ? 'Pay $100 via PayID (installment 1)' : 'Pay $300 via PayID';
+        plan === 'installments'
+          ? 'Pay $100 by bank transfer (installment 1)'
+          : 'Pay $300 by bank transfer';
     }
 
     if (scheduleBlock && scheduleList && plan === 'installments' && schedule.length) {
@@ -126,7 +130,7 @@
     if (emailNote) {
       emailNote.textContent =
         data.message ||
-        'PayID details are shown above. A paid receipt is emailed only after the Treasurer confirms your payment.';
+        'Bank transfer details are shown above. A paid receipt is emailed only after the Treasurer confirms your payment.';
     }
 
     const joinBtn = document.getElementById('pay-create-login');

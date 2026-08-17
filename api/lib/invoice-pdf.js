@@ -77,7 +77,7 @@ function buildInvoicePdf(data) {
     lines.push('Payment received. Thank you for supporting Taunet Nelel.');
     lines.push(`Payment reference: ${data.payReference || '—'}`);
   } else {
-    lines.push('Pay by PayID / bank transfer');
+    lines.push('Pay by bank transfer (EFT)');
     if (data.payid) lines.push(`PayID: ${data.payid}`);
     if (data.bankName) lines.push(`Bank: ${data.bankName}`);
     if (data.bankBsb) lines.push(`BSB: ${data.bankBsb}`);
