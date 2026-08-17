@@ -1654,7 +1654,8 @@ body[data-page="site-admin"] {
 }
 
 .admin-chat__new select,
-.admin-chat__new textarea {
+.admin-chat__new textarea,
+.admin-chat__new input[type="search"] {
   width: 100%;
   border: 1px solid rgba(255, 248, 241, 0.22);
   border-radius: 10px;

@@ -895,7 +895,7 @@ async function smsOptInForProfile(profileId) {
 }
 
 async function notifyWelfareInboxMember(profile, thread) {
-  if (!profile?.email || thread?.thread_kind === 'committee' || !thread?.profile_id) return null;
+  if (!profile?.email || isPrivateAdminChat(thread) || !thread?.profile_id) return null;
   const { notifyWelfareMember } = require('../lib/welfare-notify');
   return notifyWelfareMember({
     toEmail: profile.email,
@@ -939,6 +939,36 @@ async function insertInboxMessage(payload) {
 
 function isCommitteeThread(thread) {
   return String(thread?.thread_kind || '') === 'committee';
+}
+
+function isAdminDmThread(thread) {
+  return String(thread?.thread_kind || '') === 'admin_dm';
+}
+
+function isPrivateAdminChat(thread) {
+  return isCommitteeThread(thread) || isAdminDmThread(thread);
+}
+
+function inboxKindRank(row) {
+  if (isCommitteeThread(row)) return 0;
+  if (isAdminDmThread(row)) return 1;
+  return 2;
+}
+
+function adminPairKey(emailA, emailB) {
+  return [String(emailA || '').toLowerCase().trim(), String(emailB || '').toLowerCase().trim()]
+    .filter(Boolean)
+    .sort()
+    .join('|');
+}
+
+function peerFromAdminPair(pair, myEmail) {
+  const mine = String(myEmail || '').toLowerCase().trim();
+  const parts = String(pair || '')
+    .split('|')
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+  return parts.find((part) => part !== mine) || parts[0] || '';
 }
 
 async function ensureCommitteeInboxThread() {
@@ -1407,9 +1437,71 @@ module.exports = async function handler(req, res) {
 
       if (resource === 'members') {
         const { data } = await sb(
-          'profiles?select=id,full_name,email,phone,plan,association_member,welfare_member,member_number,created_at&order=created_at.desc&limit=200'
+          'profiles?select=id,full_name,email,phone,plan,association_member,welfare_member,member_number,created_at&order=created_at.desc&limit=2000'
         );
         return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'inbox-directory') {
+        const [{ data: welfareProfiles }, { data: welfareImports }, { data: admins }] =
+          await Promise.all([
+            sb(
+              'profiles?welfare_member=eq.true&select=id,full_name,email&order=full_name.asc&limit=2000'
+            ).catch(() => ({ data: [] })),
+            sb(
+              'member_imports?welfare_member=eq.true&select=id,full_name,email&order=full_name.asc&limit=2000'
+            ).catch(() => ({ data: [] })),
+            sb('site_admins?select=email,full_name&order=full_name.asc&limit=200').catch(() => ({
+              data: []
+            }))
+          ]);
+        const byEmail = new Map();
+        (welfareProfiles || []).forEach((row) => {
+          const email = String(row.email || '')
+            .toLowerCase()
+            .trim();
+          if (!email) return;
+          byEmail.set(email, {
+            id: row.id,
+            full_name: row.full_name || 'Member',
+            email,
+            signed_in: true
+          });
+        });
+        (welfareImports || []).forEach((row) => {
+          const email = String(row.email || '')
+            .toLowerCase()
+            .trim();
+          if (!email) return;
+          const existing = byEmail.get(email);
+          if (existing) {
+            if (!existing.full_name || existing.full_name === 'Member') {
+              existing.full_name = row.full_name || existing.full_name;
+            }
+            return;
+          }
+          byEmail.set(email, {
+            id: null,
+            full_name: row.full_name || 'Member',
+            email,
+            signed_in: false
+          });
+        });
+        const welfare = [...byEmail.values()].sort((a, b) =>
+          String(a.full_name).localeCompare(String(b.full_name), undefined, { sensitivity: 'base' })
+        );
+        const committee = (admins || [])
+          .map((row) => ({
+            email: String(row.email || '')
+              .toLowerCase()
+              .trim(),
+            full_name: row.full_name || row.email || 'Committee'
+          }))
+          .filter((row) => row.email)
+          .sort((a, b) =>
+            String(a.full_name).localeCompare(String(b.full_name), undefined, { sensitivity: 'base' })
+          );
+        return json(res, 200, { welfare, admins: committee });
       }
 
       if (resource === 'crm-fields') {
@@ -1756,10 +1848,36 @@ module.exports = async function handler(req, res) {
             if (include) rows = [committee, ...rows];
           }
           rows.sort((a, b) => {
-            const aC = isCommitteeThread(a) ? 0 : 1;
-            const bC = isCommitteeThread(b) ? 0 : 1;
+            const aC = inboxKindRank(a);
+            const bC = inboxKindRank(b);
             if (aC !== bC) return aC - bC;
             return String(b.last_message_at || '').localeCompare(String(a.last_message_at || ''));
+          });
+          let adminMap = {};
+          try {
+            const { data: adminRows } = await sb(
+              'site_admins?select=email,full_name&limit=200'
+            );
+            (adminRows || []).forEach((row) => {
+              const email = String(row.email || '')
+                .toLowerCase()
+                .trim();
+              if (email) adminMap[email] = row.full_name || email;
+            });
+          } catch (_) {
+            adminMap = {};
+          }
+          const me = String(adminSession.email || '')
+            .toLowerCase()
+            .trim();
+          rows = rows.map((row) => {
+            if (!isAdminDmThread(row)) return row;
+            const peer = peerFromAdminPair(row.member_email, me);
+            return {
+              ...row,
+              peer_email: peer,
+              peer_name: adminMap[peer] || row.member_name || peer
+            };
           });
           return json(res, 200, { rows });
         } catch (err) {
@@ -1780,6 +1898,21 @@ module.exports = async function handler(req, res) {
         );
         const thread = Array.isArray(threads) ? threads[0] : null;
         if (!thread) return json(res, 404, { error: 'Conversation not found' });
+        if (isAdminDmThread(thread)) {
+          const me = String(adminSession.email || '')
+            .toLowerCase()
+            .trim();
+          const peer = peerFromAdminPair(thread.member_email, me);
+          thread.peer_email = peer;
+          try {
+            const { data: adminRows } = await sb(
+              `site_admins?email=eq.${encodeURIComponent(peer)}&select=email,full_name&limit=1`
+            );
+            thread.peer_name = adminRows?.[0]?.full_name || peer;
+          } catch (_) {
+            thread.peer_name = peer;
+          }
+        }
         if (thread.unread_for_admin) {
           await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(threadId)}`, {
             method: 'PATCH',
@@ -1908,7 +2041,7 @@ module.exports = async function handler(req, res) {
         const thread = Array.isArray(threads) ? threads[0] : null;
         if (!thread) return json(res, 404, { error: 'Conversation not found' });
         const now = new Date().toISOString();
-        const committeeRoom = isCommitteeThread(thread);
+        const committeeRoom = isPrivateAdminChat(thread);
         await insertInboxMessage({
           thread_id: threadId,
           body: text,
@@ -1941,11 +2074,77 @@ module.exports = async function handler(req, res) {
 
       if (resource === 'welfare-inbox-start') {
         const profileId = String(body.profile_id || '').trim();
+        const adminEmail = String(body.admin_email || '')
+          .toLowerCase()
+          .trim();
         const text = String(body.body || '').trim();
-        if (!profileId) return json(res, 400, { error: 'Choose a welfare member.' });
         if (text.length < 1 || text.length > 2000) {
           return json(res, 400, { error: 'Enter a message.' });
         }
+
+        if (adminEmail) {
+          const me = String(adminSession.email || '')
+            .toLowerCase()
+            .trim();
+          if (adminEmail === me) {
+            return json(res, 400, { error: 'Use Committee room to post to everyone, including yourself.' });
+          }
+          const { data: admins } = await sb(
+            `site_admins?email=eq.${encodeURIComponent(adminEmail)}&select=email,full_name&limit=1`
+          );
+          const admin = Array.isArray(admins) ? admins[0] : null;
+          if (!admin) return json(res, 404, { error: 'That committee admin was not found.' });
+          const pair = adminPairKey(me, adminEmail);
+          const now = new Date().toISOString();
+          const { data: existingThreads } = await sb(
+            `welfare_inbox_threads?thread_kind=eq.admin_dm&member_email=eq.${encodeURIComponent(pair)}&select=*&limit=1`
+          );
+          let thread = Array.isArray(existingThreads) ? existingThreads[0] : null;
+          if (!thread) {
+            try {
+              const { data: created } = await sb('welfare_inbox_threads', {
+                method: 'POST',
+                body: JSON.stringify({
+                  thread_kind: 'admin_dm',
+                  profile_id: null,
+                  member_name: admin.full_name || adminEmail,
+                  member_email: pair,
+                  status: 'open',
+                  unread_for_admin: true,
+                  unread_for_member: false,
+                  last_message_at: now
+                })
+              });
+              thread = Array.isArray(created) ? created[0] : created;
+            } catch (err) {
+              return json(res, 400, {
+                error:
+                  err.message ||
+                  'Could not start an admin chat. Run docs/supabase/APPLY-INBOX-ADMIN-DM.sql in Supabase.'
+              });
+            }
+          } else {
+            await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(thread.id)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify({
+                status: 'open',
+                unread_for_admin: true,
+                unread_for_member: false,
+                last_message_at: now
+              })
+            });
+            thread.status = 'open';
+          }
+          await insertInboxMessage({
+            thread_id: thread.id,
+            body: text,
+            ...committeeSenderFields(adminSession)
+          });
+          return json(res, 200, { ok: true, thread_id: thread.id });
+        }
+
+        if (!profileId) return json(res, 400, { error: 'Choose a welfare member or committee admin.' });
         const { data: profiles } = await sb(
           `profiles?id=eq.${encodeURIComponent(profileId)}&select=id,full_name,email,phone,welfare_member&limit=1`
         );

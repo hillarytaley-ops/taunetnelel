@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817m">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817n">
 </head>
 <body data-page="site-admin">
 
@@ -554,14 +554,16 @@
               <p class="admin-muted">Open this tab to load conversations.</p>
             </div>
             <form class="admin-chat__new" id="inbox-start-form">
-              <p class="admin-chat__new-title">Message a member</p>
-              <label class="visually-hidden" for="inbox-new-member">Welfare member</label>
+              <p class="admin-chat__new-title">Message someone</p>
+              <label class="visually-hidden" for="inbox-people-search">Search people</label>
+              <input type="search" id="inbox-people-search" placeholder="Search name or email…" autocomplete="off">
+              <label class="visually-hidden" for="inbox-new-member">Choose a person</label>
               <select id="inbox-new-member" required>
-                <option value="">Choose a welfare member…</option>
+                <option value="">Choose a welfare member or committee admin…</option>
               </select>
               <label class="visually-hidden" for="inbox-start-body">Message</label>
               <textarea id="inbox-start-body" rows="2" required maxlength="2000" placeholder="Write the first message…"></textarea>
-              <button type="submit" class="btn btn--sm btn--primary">Send to member</button>
+              <button type="submit" class="btn btn--sm btn--primary">Send</button>
             </form>
           </div>
           <div class="admin-chat__stage">
@@ -978,6 +980,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817m"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817n"></script>
 </body>
 </html>

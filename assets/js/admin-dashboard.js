@@ -104,6 +104,8 @@
     inboxMessages: [],
     inboxPoll: null,
     adminEmail: '',
+    inboxDirectory: { welfare: [], admins: [] },
+    inboxPeopleQuery: '',
     importFilter: 'all',
     importSearch: '',
     importRows: [],
@@ -327,6 +329,14 @@
 
   function isCommitteeThread(thread) {
     return String(thread?.thread_kind || '') === 'committee';
+  }
+
+  function isAdminDmThread(thread) {
+    return String(thread?.thread_kind || '') === 'admin_dm';
+  }
+
+  function isPrivateAdminChat(thread) {
+    return isCommitteeThread(thread) || isAdminDmThread(thread);
   }
 
   function enterAdminPortal(label, email) {
@@ -683,20 +693,81 @@
     const select = document.getElementById('inbox-new-member');
     if (!select) return;
     try {
-      const data = await adminApi('members');
-      const rows = (data.rows || []).filter((row) => row.welfare_member);
-      const current = select.value;
-      select.innerHTML =
-        '<option value="">Choose a welfare member…</option>' +
-        rows
-          .map((row) => {
-            const label = `${row.full_name || 'Member'}${row.email ? ` (${row.email})` : ''}`;
-            return `<option value="${escapeHtml(row.id)}">${escapeHtml(label)}</option>`;
-          })
-          .join('');
-      if (current && rows.some((row) => row.id === current)) select.value = current;
+      const data = await adminApi('inbox-directory');
+      state.inboxDirectory = {
+        welfare: data.welfare || [],
+        admins: data.admins || []
+      };
     } catch (_) {
-      /* keep the empty select */
+      try {
+        const data = await adminApi('members');
+        state.inboxDirectory = {
+          welfare: (data.rows || [])
+            .filter((row) => row.welfare_member)
+            .map((row) => ({
+              id: row.id,
+              full_name: row.full_name || 'Member',
+              email: row.email || '',
+              signed_in: true
+            })),
+          admins: []
+        };
+      } catch (__) {
+        /* keep last directory */
+      }
+    }
+    renderInboxPeopleSelect();
+  }
+
+  function renderInboxPeopleSelect() {
+    const select = document.getElementById('inbox-new-member');
+    if (!select) return;
+    const current = select.value;
+    const q = String(state.inboxPeopleQuery || '')
+      .toLowerCase()
+      .trim();
+    const matches = (name, email) => {
+      if (!q) return true;
+      return `${name || ''} ${email || ''}`.toLowerCase().includes(q);
+    };
+    const me = currentAdminEmail();
+    const welfare = (state.inboxDirectory.welfare || []).filter((row) =>
+      matches(row.full_name, row.email)
+    );
+    const admins = (state.inboxDirectory.admins || []).filter((row) =>
+      matches(row.full_name, row.email)
+    );
+    const welfareOpts = welfare
+      .map((row) => {
+        const label = `${row.full_name || 'Member'}${row.email ? ` (${row.email})` : ''}${
+          row.signed_in ? '' : ' — not signed in'
+        }`;
+        if (!row.id || !row.signed_in) {
+          return `<option value="" disabled>${escapeHtml(label)}</option>`;
+        }
+        return `<option value="member:${escapeHtml(row.id)}">${escapeHtml(label)}</option>`;
+      })
+      .join('');
+    const adminOpts = admins
+      .map((row) => {
+        const mine = String(row.email || '').toLowerCase() === me;
+        const label = `${row.full_name || 'Committee'}${row.email ? ` (${row.email})` : ''}${
+          mine ? ' — you' : ''
+        }`;
+        if (mine) return `<option value="" disabled>${escapeHtml(label)}</option>`;
+        return `<option value="admin:${escapeHtml(row.email)}">${escapeHtml(label)}</option>`;
+      })
+      .join('');
+    select.innerHTML =
+      `<option value="">Choose a welfare member or committee admin…</option>` +
+      `<optgroup label="Social Welfare members (${welfare.length})">${
+        welfareOpts || '<option value="" disabled>No welfare members match</option>'
+      }</optgroup>` +
+      `<optgroup label="Committee admins (${admins.length})">${
+        adminOpts || '<option value="" disabled>No committee admins match</option>'
+      }</optgroup>`;
+    if (current && [...select.options].some((opt) => opt.value === current && !opt.disabled)) {
+      select.value = current;
     }
   }
 
@@ -722,19 +793,29 @@
         .map((row) => {
           const active = row.id === state.inboxSelectedId ? ' is-active' : '';
           const committee = isCommitteeThread(row);
+          const adminDm = isAdminDmThread(row);
           const unread = row.unread_for_admin
             ? '<span class="admin-chip admin-chip--new">unread</span>'
             : '';
-          const title = committee ? 'Committee room' : row.member_name || row.member_email || 'Unknown';
+          const title = committee
+            ? 'Committee room'
+            : adminDm
+              ? row.peer_name || row.member_name || row.peer_email || 'Committee admin'
+              : row.member_name || row.member_email || 'Unknown';
           const sub = committee
             ? 'Private — committee only'
-            : `${row.member_email || ''} · ${formatDate(row.last_message_at || row.created_at)}`;
+            : adminDm
+              ? `${row.peer_email || ''} · Committee admin`
+              : `${row.member_email || ''} · ${formatDate(row.last_message_at || row.created_at)}`;
           const face = committee ? '◎' : escapeHtml(initialsFromName(title));
-          return `<button type="button" class="admin-chat__thread${committee ? ' admin-chat__thread--committee' : ''}${active}" data-inbox-id="${escapeHtml(row.id)}">
+          const kindClass = committee || adminDm ? ' admin-chat__thread--committee' : '';
+          return `<button type="button" class="admin-chat__thread${kindClass}${active}" data-inbox-id="${escapeHtml(row.id)}">
             <span class="admin-chat__face" aria-hidden="true">${face}</span>
             <span class="admin-chat__thread-copy">
               <span class="admin-chat__chips">
-                <span class="admin-chip admin-chip--${escapeHtml(row.status || 'open')}">${committee ? 'committee' : escapeHtml(row.status || 'open')}</span>
+                <span class="admin-chip admin-chip--${escapeHtml(row.status || 'open')}">${
+                  committee ? 'committee' : adminDm ? 'admin' : escapeHtml(row.status || 'open')
+                }</span>
                 ${unread}
               </span>
               <strong>${escapeHtml(title)}</strong>
@@ -776,17 +857,24 @@
     }
 
     const committee = isCommitteeThread(thread);
+    const adminDm = isAdminDmThread(thread);
     if (head) {
-      const title = committee ? 'Committee room' : thread.member_name || thread.member_email || 'Unknown';
+      const title = committee
+        ? 'Committee room'
+        : adminDm
+          ? thread.peer_name || thread.member_name || thread.peer_email || 'Committee admin'
+          : thread.member_name || thread.member_email || 'Unknown';
       const sub = committee
         ? 'Private committee chat — members cannot see this'
-        : thread.member_email || '';
+        : adminDm
+          ? `${thread.peer_email || ''} · private admin chat`
+          : thread.member_email || '';
       head.innerHTML = `<span class="admin-chat__face" aria-hidden="true">${committee ? '◎' : escapeHtml(initialsFromName(title))}</span>
         <div class="admin-chat__head-copy">
           <strong>${escapeHtml(title)}</strong>
           <span>${escapeHtml(sub)}</span>
         </div>
-        <span class="admin-chat__live">${committee ? 'Committee' : escapeHtml(thread.status || 'open')}</span>`;
+        <span class="admin-chat__live">${committee ? 'Committee' : adminDm ? 'Admin' : escapeHtml(thread.status || 'open')}</span>`;
     }
 
     if (messagesEl) {
@@ -794,19 +882,25 @@
         messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 64;
       if (!state.inboxMessages.length) {
         messagesEl.innerHTML = `<div class="admin-chat__empty">
-          <strong>${committee ? 'Start the committee chat' : 'No messages yet'}</strong>
-          ${committee ? 'Write something the rest of the committee can see.' : 'Send the first reply below.'}
+          <strong>${committee ? 'Start the committee chat' : adminDm ? 'Start this admin chat' : 'No messages yet'}</strong>
+          ${
+            committee
+              ? 'Write something the rest of the committee can see.'
+              : adminDm
+                ? 'This message is only between you and this committee admin.'
+                : 'Send the first reply below.'
+          }
         </div>`;
       } else {
         const me = currentAdminEmail();
         messagesEl.innerHTML = state.inboxMessages
           .map((m) => {
             const senderEmail = String(m.sender_email || '').toLowerCase().trim();
-            const mine = committee
+            const mine = isPrivateAdminChat(thread)
               ? Boolean(me && senderEmail && senderEmail === me)
               : m.sender === 'committee';
             const side = mine ? 'you' : 'them';
-            const label = committee
+            const label = isPrivateAdminChat(thread)
               ? mine
                 ? 'You'
                 : m.sender_name || m.sender_email || 'Committee'
@@ -830,7 +924,11 @@
 
     if (form) form.hidden = false;
     if (replyBox) {
-      replyBox.placeholder = committee ? 'Message the committee…' : 'Reply to this member…';
+      replyBox.placeholder = committee
+        ? 'Message the committee…'
+        : adminDm
+          ? 'Message this committee admin…'
+          : 'Reply to this member…';
     }
     if (toggle) {
       toggle.hidden = committee;
@@ -2857,20 +2955,24 @@
       e.preventDefault();
       const select = document.getElementById('inbox-new-member');
       const textarea = document.getElementById('inbox-start-body');
-      const profileId = String(select?.value || '').trim();
+      const chosen = String(select?.value || '').trim();
       const text = String(textarea?.value || '').trim();
-      if (!profileId) {
-        alert('Choose a welfare member.');
+      if (!chosen) {
+        alert('Choose a welfare member or committee admin.');
         return;
       }
       if (!text) {
         alert('Enter a message.');
         return;
       }
+      const body = { body: text };
+      if (chosen.startsWith('admin:')) body.admin_email = chosen.slice(6);
+      else if (chosen.startsWith('member:')) body.profile_id = chosen.slice(7);
+      else body.profile_id = chosen;
       try {
         const result = await adminApi('welfare-inbox-start', {
           method: 'POST',
-          body: { profile_id: profileId, body: text }
+          body
         });
         if (textarea) textarea.value = '';
         state.inboxSelectedId = result.thread_id || '';
@@ -2881,6 +2983,11 @@
       } catch (err) {
         alert(err.message || 'Could not start the conversation.');
       }
+    });
+
+    document.getElementById('inbox-people-search')?.addEventListener('input', (e) => {
+      state.inboxPeopleQuery = e.target.value || '';
+      renderInboxPeopleSelect();
     });
 
     document.getElementById('inbox-filter')?.addEventListener('change', (e) => {

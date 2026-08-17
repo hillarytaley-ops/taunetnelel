@@ -1,5 +1,5 @@
 -- Run in Supabase SQL Editor after APPLY-WELFARE-INBOX.sql, then refresh Admin → Team inbox.
--- Adds: private Committee room (admins chat with each other) and sender names on messages.
+-- Adds: Committee room, sender names, and 1:1 admin chats from the people dropdown.
 -- Safe to re-run.
 
 alter table public.welfare_inbox_threads
@@ -22,11 +22,15 @@ alter table public.welfare_inbox_threads
 
 alter table public.welfare_inbox_threads
   add constraint welfare_inbox_threads_thread_kind_check
-  check (thread_kind in ('member', 'committee'));
+  check (thread_kind in ('member', 'committee', 'admin_dm'));
 
 create unique index if not exists welfare_inbox_committee_one
   on public.welfare_inbox_threads (thread_kind)
   where thread_kind = 'committee';
+
+create unique index if not exists welfare_inbox_admin_dm_pair
+  on public.welfare_inbox_threads (member_email)
+  where thread_kind = 'admin_dm';
 
 alter table public.welfare_inbox_messages
   add column if not exists sender_name text;
