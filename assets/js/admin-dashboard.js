@@ -639,6 +639,7 @@
     const data = await adminApi('welfare-inbox-threads', { status });
     state.inboxThreads = data.rows || [];
     state.inboxWarning = data.warning || '';
+    await fillInboxMemberSelect();
     if (
       state.inboxSelectedId &&
       !state.inboxThreads.some((row) => row.id === state.inboxSelectedId)
@@ -651,6 +652,27 @@
       await loadInboxMessages(state.inboxSelectedId);
     }
     renderInbox();
+  }
+
+  async function fillInboxMemberSelect() {
+    const select = document.getElementById('inbox-new-member');
+    if (!select) return;
+    try {
+      const data = await adminApi('members');
+      const rows = (data.rows || []).filter((row) => row.welfare_member);
+      const current = select.value;
+      select.innerHTML =
+        '<option value="">Start a conversation with…</option>' +
+        rows
+          .map((row) => {
+            const label = `${row.full_name || 'Member'}${row.email ? ` (${row.email})` : ''}`;
+            return `<option value="${escapeHtml(row.id)}">${escapeHtml(label)}</option>`;
+          })
+          .join('');
+      if (current && rows.some((row) => row.id === current)) select.value = current;
+    } catch (_) {
+      /* keep the empty select */
+    }
   }
 
   async function loadInboxMessages(threadId) {
@@ -765,6 +787,7 @@
         const plan = row.plan || 'basic';
         const chipClass = plan === 'both' ? 'both' : plan === 'welfare' ? 'welfare' : '';
         const showApprove = scope !== 'welfare' && !row.welfare_member;
+        const showRevoke = scope === 'welfare' && row.welfare_member;
         return `<tr>
           <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}</div></td>
           <td><span class="admin-chip admin-chip--${chipClass}">${escapeHtml(plan)}</span></td>
@@ -772,6 +795,7 @@
           <td>
             ${row.welfare_member ? 'Yes' : 'No'}
             ${showApprove ? `<div class="admin-actions" style="margin-top:0.35rem"><button type="button" data-approve-welfare="${escapeHtml(row.id)}">Approve welfare</button></div>` : ''}
+            ${showRevoke ? `<div class="admin-actions" style="margin-top:0.35rem"><button type="button" data-revoke-welfare="${escapeHtml(row.id)}">Revoke welfare</button></div>` : ''}
           </td>
           <td class="admin-detail">${escapeHtml(formatDate(row.created_at))}</td>
           <td><div class="admin-actions"><button type="button" data-open-crm="${escapeHtml(row.id)}">CRM record</button></div></td>
@@ -790,6 +814,26 @@
           await loadMembers();
         } catch (err) {
           alert(err.message || 'Could not approve welfare.');
+        }
+      });
+    });
+    body.querySelectorAll('[data-revoke-welfare]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (
+          !confirm(
+            'Revoke Social Welfare access for this signed-in member? They will keep their login, but the Welfare tab will lock until you approve them again.'
+          )
+        ) {
+          return;
+        }
+        try {
+          await adminApi('revoke-welfare', {
+            method: 'PATCH',
+            body: { id: btn.dataset.revokeWelfare }
+          });
+          await loadMembers();
+        } catch (err) {
+          alert(err.message || 'Could not revoke welfare.');
         }
       });
     });
@@ -939,7 +983,7 @@
         }
         if (
           !confirm(
-            `Remove ${name} from the Association & Welfare list?\n\nThis deletes the import record only — not their login/account if they already signed up.`
+            `Remove ${name} from this list and turn off their matching website access?\n\nTheir login stays, but Welfare/Association flags on that email are revoked so they cannot keep using the portal.`
           )
         ) {
           return;
@@ -2728,6 +2772,36 @@
         await loadItHelp();
       } catch (err) {
         alert(err.message || 'Could not update chat status.');
+      }
+    });
+
+    document.getElementById('inbox-start-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const select = document.getElementById('inbox-new-member');
+      const textarea = document.getElementById('inbox-start-body');
+      const profileId = String(select?.value || '').trim();
+      const text = String(textarea?.value || '').trim();
+      if (!profileId) {
+        alert('Choose a welfare member.');
+        return;
+      }
+      if (!text) {
+        alert('Enter a message.');
+        return;
+      }
+      try {
+        const result = await adminApi('welfare-inbox-start', {
+          method: 'POST',
+          body: { profile_id: profileId, body: text }
+        });
+        if (textarea) textarea.value = '';
+        state.inboxSelectedId = result.thread_id || '';
+        state.inboxFilter = 'open';
+        const filter = document.getElementById('inbox-filter');
+        if (filter) filter.value = 'open';
+        await loadInbox();
+      } catch (err) {
+        alert(err.message || 'Could not start the conversation.');
       }
     });
 

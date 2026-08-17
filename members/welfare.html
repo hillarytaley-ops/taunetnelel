@@ -39,7 +39,7 @@
       <div id="welfare-gate" class="dash-card welfare-locked" hidden>
         <div class="icon">🔒</div>
         <h2>Social Welfare Registration Required</h2>
-        <p style="max-width:480px;margin:1rem auto;">The welfare portal is available to registered social welfare members. Sign in with your welfare account, or register for a welfare package from your dashboard if you are an association member.</p>
+        <p style="max-width:480px;margin:1rem auto;">This tab is only for current Social Welfare members. If you were removed from the welfare list, the committee must approve you again before you can use Team inbox, claims, and the welfare record.</p>
         <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-top:1.25rem;">
           <a href="auth.html?tab=signin" class="btn btn--outline">Sign in to Welfare</a>
           <a href="dashboard.html#welfare-register-card" class="btn btn--accent">Register for Social Welfare</a>
@@ -77,6 +77,24 @@
               <li><span>$300 payment</span><strong data-welfare-payment>—</strong></li>
             </ul>
             <p class="welfare-status-note" id="welfare-status-note">Your social welfare membership is active. You are eligible for bereavement support and community reimbursements.</p>
+          </div>
+
+          <div class="dash-card dash-card--full" id="welfare-inbox-card">
+            <h2>Team inbox</h2>
+            <p class="welfare-record-intro">Write to the Welfare Committee here. They reply in this same thread. You also get an email when they reply.</p>
+            <div class="welfare-inbox" id="welfare-inbox">
+              <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
+                <p class="muted">Loading conversation…</p>
+              </div>
+              <form class="site-form welfare-inbox__compose" id="welfare-inbox-form">
+                <label class="visually-hidden" for="welfare-inbox-body">Message</label>
+                <textarea id="welfare-inbox-body" name="body" rows="3" required maxlength="2000" placeholder="Write to the Welfare Committee…"></textarea>
+                <div class="site-form__actions">
+                  <button type="submit" class="btn btn--primary">Send message</button>
+                </div>
+                <p class="inquiry-form__message" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
+              </form>
+            </div>
           </div>
 
           <div class="dash-card dash-card--full" id="welfare-record-card">
@@ -202,24 +220,6 @@
             </form>
           </div>
 
-          <div class="dash-card dash-card--full" id="welfare-inbox-card">
-            <h2>Team inbox</h2>
-            <p class="welfare-record-intro">Message the Welfare Committee in this thread. They reply here. You also get an email (and SMS when that is switched on).</p>
-            <div class="welfare-inbox" id="welfare-inbox">
-              <div class="welfare-inbox__messages" id="welfare-inbox-messages" aria-live="polite">
-                <p class="muted">Loading conversation…</p>
-              </div>
-              <form class="site-form welfare-inbox__compose" id="welfare-inbox-form">
-                <label class="visually-hidden" for="welfare-inbox-body">Message</label>
-                <textarea id="welfare-inbox-body" name="body" rows="3" required maxlength="2000" placeholder="Write to the Welfare Committee…"></textarea>
-                <div class="site-form__actions">
-                  <button type="submit" class="btn btn--primary">Send message</button>
-                </div>
-                <p class="inquiry-form__message" id="welfare-inbox-status" role="status" aria-live="polite" hidden></p>
-              </form>
-            </div>
-          </div>
-
           <div class="dash-card dash-card--full" id="welfare-request">
             <h2>Lodge a welfare claim</h2>
             <p class="welfare-record-intro">Confidential bereavement or hardship claim. The Welfare Committee reviews each request and sets the approved amount. Approved reimbursements are posted to the alerts list with an anonymised member number.</p>
@@ -276,6 +276,6 @@
   <script src="../assets/js/members-auth.js?v=17"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
   <script src="../assets/js/invoices.js?v=2"></script>
-  <script src="../assets/js/members.js?v=43"></script>
+  <script src="../assets/js/members.js?v=44"></script>
 </body>
 </html>

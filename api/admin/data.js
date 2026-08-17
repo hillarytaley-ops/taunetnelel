@@ -882,6 +882,87 @@ async function ensureWaitingPeriodEnds(profileId, admittedIso) {
   return waitingEnds;
 }
 
+async function smsOptInForProfile(profileId) {
+  try {
+    const { data: optRows } = await sb(
+      `crm_field_values?profile_id=eq.${encodeURIComponent(profileId)}&field_key=eq.sms_opt_in&select=value_text&limit=1`
+    );
+    const optValue = Array.isArray(optRows) ? String(optRows[0]?.value_text || '').toLowerCase() : '';
+    return optValue === 'true' || optValue === 'yes' || optValue === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+async function notifyWelfareInboxMember(profile, thread) {
+  if (!profile?.email) return null;
+  const { notifyWelfareMember } = require('../lib/welfare-notify');
+  return notifyWelfareMember({
+    toEmail: profile.email,
+    toPhone: profile.phone,
+    smsOptIn: await smsOptInForProfile(profile.id),
+    greeting: profile.full_name || thread?.member_name || 'Member',
+    subject: 'The Welfare Committee sent you a message',
+    title: 'New welfare message',
+    lead: 'The Welfare Committee sent you a message. Open the Welfare tab to read it and reply in Team inbox.',
+    ctaLabel: 'Open team inbox',
+    actionPath: '/members/welfare.html#welfare-inbox-card'
+  });
+}
+
+async function closeWelfareInboxForProfile(profileId) {
+  try {
+    await sb(`welfare_inbox_threads?profile_id=eq.${encodeURIComponent(profileId)}`, {
+      method: 'PATCH',
+      prefer: 'return=minimal',
+      body: JSON.stringify({ status: 'closed' })
+    });
+  } catch (_) { /* table may not exist yet */ }
+}
+
+async function revokeProfileMembership(profile, flags) {
+  const dropWelfare = flags.welfare !== false;
+  const dropAssociation = flags.association !== false;
+  const nextWelfare = dropWelfare ? false : Boolean(profile.welfare_member);
+  const nextAssociation = dropAssociation ? false : Boolean(profile.association_member);
+  let nextPlan = 'basic';
+  if (nextAssociation && nextWelfare) nextPlan = 'both';
+  else if (nextWelfare) nextPlan = 'welfare';
+  else if (nextAssociation) nextPlan = 'basic';
+  await sb(`profiles?id=eq.${encodeURIComponent(profile.id)}`, {
+    method: 'PATCH',
+    prefer: 'return=minimal',
+    body: JSON.stringify({
+      welfare_member: nextWelfare,
+      association_member: nextAssociation,
+      plan: nextPlan,
+      updated_at: new Date().toISOString()
+    })
+  });
+  if (dropWelfare) {
+    await closeWelfareInboxForProfile(profile.id);
+    try {
+      await upsertCrmValues(profile.id, { welfare_membership_status: 'Removed' });
+    } catch (_) { /* ignore */ }
+  }
+}
+
+async function revokeProfilesMatchingImport(row) {
+  const email = String(row?.email || '').trim().toLowerCase();
+  if (!email) return 0;
+  const { data } = await sb(
+    `profiles?email=eq.${encodeURIComponent(email)}&select=id,association_member,welfare_member,plan`
+  );
+  const profiles = Array.isArray(data) ? data : [];
+  for (const profile of profiles) {
+    await revokeProfileMembership(profile, {
+      welfare: Boolean(row.welfare_member),
+      association: Boolean(row.association_member)
+    });
+  }
+  return profiles.length;
+}
+
 async function upsertCrmValues(profileId, values) {
   const now = new Date().toISOString();
   const rows = Object.entries(values || {})
@@ -1758,28 +1839,78 @@ module.exports = async function handler(req, res) {
             `profiles?id=eq.${encodeURIComponent(thread.profile_id)}&select=id,full_name,email,phone&limit=1`
           );
           const profile = Array.isArray(profiles) ? profiles[0] : null;
-          if (profile?.email) {
-            const { data: optRows } = await sb(
-              `crm_field_values?profile_id=eq.${encodeURIComponent(profile.id)}&field_key=eq.sms_opt_in&select=value_text&limit=1`
-            );
-            const optValue = Array.isArray(optRows) ? String(optRows[0]?.value_text || '').toLowerCase() : '';
-            const { notifyWelfareMember } = require('../lib/welfare-notify');
-            notified = await notifyWelfareMember({
-              toEmail: profile.email,
-              toPhone: profile.phone,
-              smsOptIn: optValue === 'true' || optValue === 'yes' || optValue === '1',
-              greeting: profile.full_name || thread.member_name || 'Member',
-              subject: 'The Welfare Committee replied',
-              title: 'New welfare message',
-              lead: 'The Welfare Committee replied to your message. Open the Welfare tab to read it and continue the conversation.',
-              ctaLabel: 'Open team inbox',
-              actionPath: '/members/welfare.html#welfare-inbox-card'
-            });
-          }
+          notified = await notifyWelfareInboxMember(profile, thread);
         } catch (notifyErr) {
           console.error('welfare-inbox-reply notify', notifyErr);
         }
         return json(res, 200, { ok: true, notified });
+      }
+
+      if (resource === 'welfare-inbox-start') {
+        const profileId = String(body.profile_id || '').trim();
+        const text = String(body.body || '').trim();
+        if (!profileId) return json(res, 400, { error: 'Choose a welfare member.' });
+        if (text.length < 1 || text.length > 2000) {
+          return json(res, 400, { error: 'Enter a message.' });
+        }
+        const { data: profiles } = await sb(
+          `profiles?id=eq.${encodeURIComponent(profileId)}&select=id,full_name,email,phone,welfare_member&limit=1`
+        );
+        const profile = Array.isArray(profiles) ? profiles[0] : null;
+        if (!profile) return json(res, 404, { error: 'Member not found' });
+        if (!profile.welfare_member) {
+          return json(res, 400, { error: 'That login is not a Social Welfare member.' });
+        }
+        const now = new Date().toISOString();
+        const { data: existingThreads } = await sb(
+          `welfare_inbox_threads?profile_id=eq.${encodeURIComponent(profileId)}&select=*&limit=1`
+        );
+        let thread = Array.isArray(existingThreads) ? existingThreads[0] : null;
+        if (!thread) {
+          const { data: created } = await sb('welfare_inbox_threads', {
+            method: 'POST',
+            body: JSON.stringify({
+              profile_id: profile.id,
+              member_name: profile.full_name || null,
+              member_email: profile.email || null,
+              status: 'open',
+              unread_for_admin: false,
+              unread_for_member: true,
+              last_message_at: now
+            })
+          });
+          thread = Array.isArray(created) ? created[0] : created;
+        } else {
+          await sb(`welfare_inbox_threads?id=eq.${encodeURIComponent(thread.id)}`, {
+            method: 'PATCH',
+            prefer: 'return=minimal',
+            body: JSON.stringify({
+              status: 'open',
+              unread_for_admin: false,
+              unread_for_member: true,
+              last_message_at: now,
+              member_name: profile.full_name || thread.member_name,
+              member_email: profile.email || thread.member_email
+            })
+          });
+          thread.status = 'open';
+        }
+        await sb('welfare_inbox_messages', {
+          method: 'POST',
+          prefer: 'return=minimal',
+          body: JSON.stringify({
+            thread_id: thread.id,
+            sender: 'committee',
+            body: text
+          })
+        });
+        let notified = null;
+        try {
+          notified = await notifyWelfareInboxMember(profile, thread);
+        } catch (notifyErr) {
+          console.error('welfare-inbox-start notify', notifyErr);
+        }
+        return json(res, 200, { ok: true, thread_id: thread.id, notified });
       }
 
       if (resource === 'welfare-inbox-close') {
@@ -2337,7 +2468,7 @@ module.exports = async function handler(req, res) {
         const id = String(body.id || url.searchParams.get('id') || '').trim();
         if (!id) return json(res, 400, { error: 'Member import id is required' });
         const { data: existing } = await sb(
-          `member_imports?id=eq.${encodeURIComponent(id)}&select=id,full_name,email`
+          `member_imports?id=eq.${encodeURIComponent(id)}&select=id,full_name,email,association_member,welfare_member`
         );
         const row = Array.isArray(existing) ? existing[0] : null;
         if (!row) return json(res, 404, { error: 'Member not found in Association & Welfare list' });
@@ -2345,11 +2476,18 @@ module.exports = async function handler(req, res) {
           method: 'DELETE',
           prefer: 'return=minimal',
         });
+        let revokedLogins = 0;
+        try {
+          revokedLogins = await revokeProfilesMatchingImport(row);
+        } catch (revokeErr) {
+          console.error('import-delete revoke profile', revokeErr);
+        }
         return json(res, 200, {
           ok: true,
           id,
           email: row.email || null,
           full_name: row.full_name || null,
+          revoked_logins: revokedLogins
         });
       }
 
@@ -2650,6 +2788,17 @@ module.exports = async function handler(req, res) {
           console.error('approve-welfare waiting period', crmErr);
         }
         return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'revoke-welfare') {
+        const id = body.id;
+        const { data: rows } = await sb(
+          `profiles?id=eq.${encodeURIComponent(id)}&select=id,association_member,welfare_member,plan`
+        );
+        const row = Array.isArray(rows) ? rows[0] : null;
+        if (!row) return json(res, 404, { error: 'Profile not found' });
+        await revokeProfileMembership(row, { welfare: true, association: false });
+        return json(res, 200, { ok: true, id });
       }
 
       if (resource === 'welfare-claim-update') {

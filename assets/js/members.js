@@ -102,6 +102,12 @@
   function migrateMember(raw) {
     if (!raw) return null;
     const member = { ...raw };
+    if (member.welfareMember === false) {
+      member.welfareRegistered = false;
+      if (member.welfareStatus === 'active' || member.welfareStatus === 'pending') {
+        member.welfareStatus = '';
+      }
+    }
 
     if (member.plan === 'both' || (member.associationMember && member.welfareMember)) {
       member.plan = 'both';
@@ -133,8 +139,11 @@
 
     // Stale localStorage / admin-approved welfare while plan column still "basic"
     if (
-      member.planLabel === 'Association + Welfare' ||
-      (member.welfareStatus === 'active' && member.welfarePackage)
+      member.welfareMember !== false &&
+      (
+        member.planLabel === 'Association + Welfare' ||
+        (member.welfareStatus === 'active' && member.welfarePackage)
+      )
     ) {
       member.plan = 'both';
       member.associationMember = true;
@@ -183,6 +192,7 @@
 
   function isWelfareMember(member) {
     if (!member) return false;
+    if (member.welfareMember === false) return false;
     return (
       member.plan === 'welfare' ||
       member.plan === 'both' ||
@@ -1739,8 +1749,19 @@
     });
   }
 
-  function showWelfareSection(member) {
-    const isWelfare = isWelfareMember(member);
+  async function showWelfareSection(member) {
+    const isPreview = sessionStorage.getItem('taunet_preview') === '1';
+    let live = member;
+    if (!isPreview && window.taunetMembersAuth?.getSessionMember) {
+      try {
+        const sessionMember = await window.taunetMembersAuth.getSessionMember();
+        if (sessionMember) {
+          live = sessionMember;
+          setMember(sessionMember);
+        }
+      } catch (_) { /* keep local copy if the network fails */ }
+    }
+    const isWelfare = isWelfareMember(live);
     const welfareGate = document.getElementById('welfare-gate');
     const welfareContent = document.getElementById('welfare-content');
 
@@ -1751,7 +1772,7 @@
       welfareGate.setAttribute('hidden', '');
       welfareContent.hidden = false;
       welfareContent.removeAttribute('hidden');
-      initWelfarePortal(member);
+      initWelfarePortal(live);
     } else {
       welfareGate.hidden = false;
       welfareGate.removeAttribute('hidden');
@@ -1878,7 +1899,7 @@
     }
   }
 
-  function initDashboard() {
+  async function initDashboard() {
     initLogout();
 
     const member = requireAuth();
@@ -1887,7 +1908,7 @@
     try {
       populateMemberFields(member);
 
-      showWelfareSection(member);
+      await showWelfareSection(member);
 
       initWelfareRegister(member);
 
@@ -2016,7 +2037,7 @@
 
     // Preview mode still works without Auth
     if (applyPreviewMode()) {
-      initDashboard();
+      await initDashboard();
       showPreviewBanner();
       initInquirySuccess();
       return;
@@ -2029,7 +2050,8 @@
         const sessionMember = await window.taunetMembersAuth.getSessionMember();
         if (sessionMember) {
           setMember(sessionMember);
-        } else if (!getMember()) {
+        } else {
+          clearMember();
           requireAuth();
           return;
         }
@@ -2048,7 +2070,7 @@
     const member = getMember();
     if (!requirePaidMembership(member)) return;
 
-    initDashboard();
+    await initDashboard();
     showPreviewBanner();
     initInquirySuccess();
   }
