@@ -238,6 +238,40 @@ function buildPasswordMail({ actionLink, fullName = '', kind = 'reset' }) {
 }
 
 /**
+ * Committee admin invite — create password, then sign in to the dashboard.
+ * @param {{ actionLink: string, fullName?: string }} opts
+ */
+function buildAdminInviteMail({ actionLink, fullName = '' }) {
+  const name = String(fullName || '').trim() || 'there';
+  const subject = 'Set your Taunet Nelel committee admin password';
+  const lead =
+    'You have been invited to the Taunet Nelel committee admin dashboard. Use the button below to create your own password, then sign in on the Admin tab.';
+  const shell = brandedShell({
+    eyebrow: 'Committee admin',
+    title: 'Create your admin password',
+    greeting: name,
+    lead,
+    ctaLabel: 'Set my password',
+    actionLink,
+    extraHtml:
+      '<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#666;">Open the link, then tap <strong>Continue</strong> on the website and choose a password (at least 8 characters). After that, sign in at Members → Admin. The link stays usable until you set a password (or until it expires — usually up to 24 hours). If you were not expecting this, ignore the email and tell IT.</p>',
+    extraText:
+      'Open the link, then tap Continue on the website and choose a password (at least 8 characters). ' +
+      'After that, sign in at Members → Admin. ' +
+      'The link stays usable until you set a password (or until it expires — usually up to 24 hours). ' +
+      'If you were not expecting this, ignore the email and tell IT.',
+  });
+
+  return {
+    subject,
+    html: shell.html,
+    text: shell.text,
+    tags: [{ name: 'category', value: 'admin_invite' }],
+    refId: `taunet-admin-invite-${Date.now()}`,
+  };
+}
+
+/**
  * Join / email confirmation (branded — replaces spammy Supabase default template).
  * @param {{ actionLink: string, fullName?: string }} opts
  */
@@ -334,6 +368,7 @@ module.exports = {
   sendResendBatch,
   sendMemberMail,
   buildPasswordMail,
+  buildAdminInviteMail,
   buildConfirmMail,
   buildCampaignMail,
   brandedShell,

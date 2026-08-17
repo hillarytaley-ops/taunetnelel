@@ -51,6 +51,18 @@ try {
   buildCampaignMail = null;
 }
 
+let sendCommitteeAdminInvite;
+let adminInviteOrigin;
+try {
+  ({
+    sendCommitteeAdminInvite,
+    requestOrigin: adminInviteOrigin
+  } = require('../lib/admin-invite'));
+} catch (_) {
+  sendCommitteeAdminInvite = null;
+  adminInviteOrigin = null;
+}
+
 let twilioConfigured;
 let sendSms;
 try {
@@ -1502,6 +1514,27 @@ module.exports = async function handler(req, res) {
             String(a.full_name).localeCompare(String(b.full_name), undefined, { sensitivity: 'base' })
           );
         return json(res, 200, { welfare, admins: committee });
+      }
+
+      if (resource === 'site-admins') {
+        const { data } = await sb(
+          'site_admins?select=email,full_name,created_at&order=full_name.asc,email.asc&limit=200'
+        );
+        const me = String(adminSession.email || '')
+          .toLowerCase()
+          .trim();
+        const rows = (data || []).map((row) => {
+          const email = String(row.email || '')
+            .toLowerCase()
+            .trim();
+          return {
+            email,
+            full_name: row.full_name || '',
+            created_at: row.created_at || null,
+            is_self: email === me
+          };
+        });
+        return json(res, 200, { rows, self: me });
       }
 
       if (resource === 'crm-fields') {
@@ -3037,6 +3070,88 @@ module.exports = async function handler(req, res) {
           })
         });
         return json(res, 200, { rows: data || [] });
+      }
+
+      if (resource === 'invite-admin') {
+        const email = String(body.email || '')
+          .trim()
+          .toLowerCase();
+        const fullName = String(body.full_name || '').trim().slice(0, 120);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+          return json(res, 400, { error: 'Enter a valid email address.' });
+        }
+        if (!fullName || fullName.length < 2) {
+          return json(res, 400, { error: 'Enter the committee member’s full name.' });
+        }
+        if (!sendCommitteeAdminInvite) {
+          return json(res, 500, {
+            error: 'Admin invite email is not available on this server. Contact IT.'
+          });
+        }
+
+        const { data: existingRows } = await sb(
+          `site_admins?email=eq.${encodeURIComponent(email)}&select=email,full_name&limit=1`
+        );
+        const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+        if (existing) {
+          await sb(`site_admins?email=eq.${encodeURIComponent(email)}`, {
+            method: 'PATCH',
+            prefer: 'return=minimal',
+            body: JSON.stringify({ full_name: fullName })
+          });
+        } else {
+          await sb('site_admins', {
+            method: 'POST',
+            prefer: 'return=minimal',
+            body: JSON.stringify({ email, full_name: fullName })
+          });
+        }
+
+        const origin = adminInviteOrigin ? adminInviteOrigin(req) : '';
+        const sent = await sendCommitteeAdminInvite({
+          email,
+          fullName,
+          origin
+        });
+        return json(res, 200, {
+          ok: true,
+          email,
+          full_name: fullName,
+          resent: Boolean(existing),
+          link_type: sent.linkType || null,
+          message: existing
+            ? `Invitation re-sent to ${email}. They can create or reset their password from the email.`
+            : `Invitation sent to ${email}. They can create their password from the email, then sign in on Members → Admin.`
+        });
+      }
+
+      if (resource === 'remove-admin') {
+        const email = String(body.email || '')
+          .trim()
+          .toLowerCase();
+        if (!email) return json(res, 400, { error: 'Choose a committee admin to remove.' });
+        const me = String(adminSession.email || '')
+          .toLowerCase()
+          .trim();
+        if (email === me) {
+          return json(res, 400, { error: 'You cannot remove your own admin access.' });
+        }
+        const { data: allAdmins } = await sb('site_admins?select=email&limit=200');
+        const count = Array.isArray(allAdmins) ? allAdmins.length : 0;
+        if (count <= 1) {
+          return json(res, 400, { error: 'Keep at least one committee admin on the list.' });
+        }
+        const { data: target } = await sb(
+          `site_admins?email=eq.${encodeURIComponent(email)}&select=email&limit=1`
+        );
+        if (!Array.isArray(target) || !target.length) {
+          return json(res, 404, { error: 'That committee admin was not found.' });
+        }
+        await sb(`site_admins?email=eq.${encodeURIComponent(email)}`, {
+          method: 'DELETE',
+          prefer: 'return=minimal'
+        });
+        return json(res, 200, { ok: true, email });
       }
 
       return json(res, 400, { error: 'Unknown POST resource' });

@@ -482,6 +482,55 @@ body[data-page="site-admin"] {
   background: #fff;
 }
 
+.admin-invite-form {
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.admin-invite-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-invite-form .form-group {
+  margin: 0;
+}
+
+.admin-invite-form .form-group label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #3d2314;
+}
+
+.admin-invite-form input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(139, 69, 19, 0.2);
+  border-radius: 10px;
+  font: inherit;
+  background: #fffdf9;
+}
+
+.admin-invite-form #admin-invite-status {
+  margin: 0.65rem 0 0;
+}
+
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+@media (max-width: 720px) {
+  .admin-invite-form__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-recent-list {
   list-style: none;
   margin: 0;
@@ -637,6 +686,10 @@ body[data-page="site-admin"] {
   color: #6b4a36;
   font-size: 0.88rem;
   line-height: 1.5;
+}
+
+.admin-muted.is-error {
+  color: #7a2020;
 }
 
 .admin-status {

@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=16">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817o">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260817p">
 </head>
 <body data-page="site-admin">
 
@@ -67,6 +67,7 @@
         <button type="button" data-admin-nav="ithelp">IT Help chat</button>
         <button type="button" data-admin-nav="business">Business Hub</button>
         <button type="button" data-admin-nav="gallery">Gallery</button>
+        <button type="button" data-admin-nav="admins">Onboard admins</button>
         <button type="button" data-admin-nav="newsletter">Newsletter</button>
         <button type="button" data-admin-nav="announcements">Announcements</button>
         <button type="button" data-admin-nav="pages">Pages &amp; tools</button>
@@ -155,6 +156,7 @@
               <button type="button" data-admin-jump="followup">Email / SMS / pipeline</button>
               <button type="button" data-admin-jump="inbox">Welfare team inbox</button>
               <button type="button" data-admin-jump="claims">Welfare claims</button>
+              <button type="button" data-admin-jump="admins">Onboard admin</button>
               <a href="../index.html">View public site</a>
             </div>
           </div>
@@ -952,6 +954,42 @@
         </div>
       </section>
 
+      <section class="site-admin__panel" data-admin-panel="admins">
+        <p class="admin-muted">
+          Invite a committee member by email. They receive a link from <strong>members@taunetnelel.org</strong>
+          to create their own password, then sign in at Members → Admin.
+        </p>
+        <form id="admin-invite-form" class="admin-card admin-invite-form">
+          <div class="admin-invite-form__grid">
+            <div class="form-group">
+              <label for="admin-invite-name">Full name</label>
+              <input id="admin-invite-name" name="full_name" type="text" required maxlength="120" placeholder="e.g. Jane Kiprotich" autocomplete="name">
+            </div>
+            <div class="form-group">
+              <label for="admin-invite-email">Email</label>
+              <input id="admin-invite-email" name="email" type="email" required maxlength="254" placeholder="committee@example.com" autocomplete="off">
+            </div>
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">Send invitation</button>
+          <p id="admin-invite-status" class="admin-muted" hidden></p>
+        </form>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-admins-body">
+              <tr><td colspan="4" class="admin-empty">Open this tab to load committee admins.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="site-admin__panel" data-admin-panel="pages">
         <div class="admin-links">
           <a href="../community.html#business">Community / Business<span>Public business hub</span></a>
@@ -964,7 +1002,8 @@
           <a href="../gallery.html">Gallery<span>Public albums</span></a>
           <a href="../help.html">IT Help chat<span>Public member IT chat</span></a>
           <a href="../members/auth.html?tab=signin">Members login<span>Unified sign-in / join</span></a>
-          <a href="../members/auth.html?tab=admin">Committee auth<span>Admin PIN entry</span></a>
+          <a href="../members/auth.html?tab=admin">Committee auth<span>Admin sign-in</span></a>
+          <a href="./index.html#admins">Onboard admins<span>Invite committee members by email</span></a>
           <a href="../about.html">About<span>Static leadership content</span></a>
           <a href="https://supabase.com/dashboard/project/wgecdsdeeirzdvshdfwo" target="_blank" rel="noopener">Supabase dashboard<span>SQL, Auth, Table Editor</span></a>
         </div>
@@ -980,6 +1019,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817o"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817p"></script>
 </body>
 </html>

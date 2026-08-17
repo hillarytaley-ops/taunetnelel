@@ -17,6 +17,7 @@
     ithelp: { panel: 'ithelp', group: 'general' },
     business: { panel: 'business', group: 'general' },
     gallery: { panel: 'gallery', group: 'general' },
+    admins: { panel: 'admins', group: 'general' },
     newsletter: { panel: 'newsletter', group: 'general' },
     announcements: { panel: 'announcements', group: 'general' },
     pages: { panel: 'pages', group: 'general' },
@@ -40,6 +41,7 @@
     ithelp: 'IT Help chat',
     business: 'Business Hub',
     gallery: 'Gallery',
+    admins: 'Onboard admins',
     newsletter: 'Newsletter',
     announcements: 'Announcements',
     pages: 'Pages & tools',
@@ -63,6 +65,7 @@
     ithelp: 'Live portal IT chat. Reply here — members see it in the website chat.',
     business: 'Edit business cards, news, and blog posts.',
     gallery: 'Bulk upload photos, create albums, and publish them on the public gallery.',
+    admins: 'Invite committee members by email so they can create a password and sign in to this dashboard.',
     newsletter: 'Event update subscribers from the Contact page.',
     announcements: 'Messages shown on the members dashboard.',
     pages: 'Shortcuts to public pages and committee tools.',
@@ -1887,6 +1890,56 @@
     URL.revokeObjectURL(url);
   }
 
+  async function loadSiteAdmins() {
+    const body = document.getElementById('admin-admins-body');
+    if (!body) return;
+    try {
+      const data = await adminApi('site-admins');
+      const rows = data.rows || [];
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="4" class="admin-empty">No committee admins on the list yet.</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows
+        .map((row) => {
+          const email = escapeHtml(row.email || '');
+          const name = escapeHtml(row.full_name || '—');
+          const self = row.is_self
+            ? '<span class="admin-muted">You</span>'
+            : `<button type="button" class="btn btn--sm btn--ghost" data-admin-remove="${escapeHtml(row.email || '')}">Remove</button>`;
+          return `<tr>
+            <td>${name}</td>
+            <td>${email}</td>
+            <td>${escapeHtml(formatDate(row.created_at))}</td>
+            <td class="admin-row-actions">
+              <button type="button" class="btn btn--sm btn--ghost" data-admin-resend="${escapeHtml(row.email || '')}" data-admin-resend-name="${escapeHtml(row.full_name || '')}">Resend invite</button>
+              ${self}
+            </td>
+          </tr>`;
+        })
+        .join('');
+    } catch (err) {
+      body.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err.message || 'Could not load committee admins.')}</td></tr>`;
+    }
+  }
+
+  function setInviteStatus(message, isError) {
+    const status = document.getElementById('admin-invite-status');
+    if (!status) return;
+    status.hidden = !message;
+    status.classList.toggle('is-error', Boolean(isError));
+    status.textContent = message || '';
+  }
+
+  async function inviteSiteAdmin({ fullName, email }) {
+    const data = await adminApi('invite-admin', {
+      method: 'POST',
+      body: { full_name: fullName, email }
+    });
+    await loadSiteAdmins();
+    return data;
+  }
+
   async function loadAnnouncementsAdmin() {
     const body = document.getElementById('admin-announcements-body');
     if (!body) return;
@@ -2834,6 +2887,7 @@
       if (panelId === 'claims') await loadClaims();
       if (panelId === 'sponsors') await loadSponsors();
       if (panelId === 'gallery') await loadGallery();
+      if (panelId === 'admins') await loadSiteAdmins();
       if (panelId === 'newsletter') await loadNewsletter();
       if (panelId === 'announcements') await loadAnnouncementsAdmin();
       if (status) status.hidden = true;
@@ -3080,6 +3134,71 @@
     });
 
     document.getElementById('admin-announcement-form')?.addEventListener('submit', createAnnouncement);
+
+    document.getElementById('admin-invite-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const fullName = String(form.querySelector('[name="full_name"]')?.value || '').trim();
+      const email = String(form.querySelector('[name="email"]')?.value || '').trim();
+      const submit = form.querySelector('button[type="submit"]');
+      if (!fullName || fullName.length < 2) {
+        setInviteStatus('Enter the committee member’s full name.', true);
+        return;
+      }
+      if (!email) {
+        setInviteStatus('Enter their email address.', true);
+        return;
+      }
+      if (submit) submit.disabled = true;
+      setInviteStatus('Sending invitation…', false);
+      try {
+        const data = await inviteSiteAdmin({ fullName, email });
+        form.reset();
+        setInviteStatus(data.message || `Invitation sent to ${email}.`, false);
+      } catch (err) {
+        setInviteStatus(err.message || 'Could not send the invitation.', true);
+      } finally {
+        if (submit) submit.disabled = false;
+      }
+    });
+
+    document.getElementById('admin-admins-body')?.addEventListener('click', async (event) => {
+      const resend = event.target.closest('[data-admin-resend]');
+      const remove = event.target.closest('[data-admin-remove]');
+      if (resend) {
+        const email = String(resend.getAttribute('data-admin-resend') || '').trim();
+        const fullName = String(resend.getAttribute('data-admin-resend-name') || '').trim() || email;
+        if (!email) return;
+        resend.disabled = true;
+        setInviteStatus(`Sending invitation to ${email}…`, false);
+        try {
+          const data = await inviteSiteAdmin({ fullName, email });
+          setInviteStatus(data.message || `Invitation sent to ${email}.`, false);
+        } catch (err) {
+          setInviteStatus(err.message || 'Could not resend the invitation.', true);
+        } finally {
+          resend.disabled = false;
+        }
+        return;
+      }
+      if (remove) {
+        const email = String(remove.getAttribute('data-admin-remove') || '').trim();
+        if (!email) return;
+        if (!window.confirm(`Remove ${email} from the committee admin list? They will no longer be able to open this dashboard.`)) {
+          return;
+        }
+        remove.disabled = true;
+        try {
+          await adminApi('remove-admin', { method: 'POST', body: { email } });
+          setInviteStatus(`${email} was removed from the admin list.`, false);
+          await loadSiteAdmins();
+        } catch (err) {
+          setInviteStatus(err.message || 'Could not remove that admin.', true);
+        } finally {
+          remove.disabled = false;
+        }
+      }
+    });
 
     document.getElementById('admin-gallery-upload-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();

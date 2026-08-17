@@ -438,7 +438,7 @@
       throw err;
     }
 
-    const keepType = otpType === 'signup' ? 'signup' : 'recovery';
+    const keepType = otpType === 'signup' ? 'signup' : otpType === 'invite' ? 'invite' : 'recovery';
     window.history.replaceState(
       {},
       document.title,

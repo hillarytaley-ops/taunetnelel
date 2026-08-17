@@ -348,6 +348,7 @@
     const title = document.getElementById('reset-panel-title');
     const lead = document.getElementById('reset-panel-lead');
     const confirmMode = purpose === 'signup' || purpose === 'confirm';
+    const inviteMode = purpose === 'invite' || authLinkType() === 'invite';
 
     if (setForm) setForm.hidden = mode !== 'set';
     if (requestForm) requestForm.hidden = mode !== 'request';
@@ -355,25 +356,33 @@
 
     if (title) {
       if (confirmMode && mode === 'activate') title.textContent = 'Confirm your email';
+      else if (inviteMode && mode === 'set') title.textContent = 'Create your admin password';
       else if (mode === 'set') title.textContent = 'Choose a new password';
-      else title.textContent = 'Reset your password';
+      else title.textContent = inviteMode ? 'Finish your admin invite' : 'Reset your password';
     }
     if (lead) {
       if (confirmMode && mode === 'activate') {
         lead.textContent =
           'Tap Continue to confirm your email. This step keeps email scanners from using up your link.';
+      } else if (inviteMode && mode === 'set') {
+        lead.textContent =
+          'Choose a password for the committee admin dashboard (at least 8 characters). After saving, you can sign in on the Admin tab.';
       } else if (mode === 'set') {
         lead.textContent =
           'Enter a new password for your member account, then continue to the dashboard.';
       } else if (mode === 'activate') {
-        lead.textContent =
-          'Tap Continue to open the password form. This step keeps email scanners from using up your link.';
+        lead.textContent = inviteMode
+          ? 'Tap Continue to open the password form and finish your committee admin invite.'
+          : 'Tap Continue to open the password form. This step keeps email scanners from using up your link.';
       } else {
-        lead.textContent =
-          'Your email link expired or was already used. Enter your email and we will send a fresh reset link.';
+        lead.textContent = inviteMode
+          ? 'Your invite link expired or was already used. Enter your email and we will send a fresh password link.'
+          : 'Your email link expired or was already used. Enter your email and we will send a fresh reset link.';
       }
     }
-    document.title = (confirmMode ? 'Confirm email' : 'Reset password') + ' | Taunet Nelel';
+    document.title =
+      (confirmMode ? 'Confirm email' : inviteMode ? 'Admin invite' : 'Reset password') +
+      ' | Taunet Nelel';
 
     const activateBtn = activateForm?.querySelector('button[type="submit"]');
     if (activateBtn && confirmMode && mode === 'activate') {
@@ -390,7 +399,8 @@
   }
 
   function isPasswordRecoveryContext(callbackType) {
-    return authLinkType(callbackType) === 'recovery';
+    const type = authLinkType(callbackType);
+    return type === 'recovery' || type === 'invite';
   }
 
   function isSignupConfirmContext(callbackType) {
