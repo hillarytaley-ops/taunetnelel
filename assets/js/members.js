@@ -1160,7 +1160,8 @@
       (values || []).forEach((row) => {
         valueMap[row.field_key] = row.value_text || '';
       });
-      host.innerHTML = renderer.renderForm(fields, valueMap, { namePrefix: 'crm' });
+      host.innerHTML = renderer.renderForm(fields, valueMap, { namePrefix: 'crm', openGroup: 'beneficiary' });
+      renderer.enhanceForm?.(form);
       form._crmFields = fields;
       if (form.dataset.bound === '1') return;
       form.dataset.bound = '1';

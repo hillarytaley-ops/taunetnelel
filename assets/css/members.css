@@ -772,19 +772,111 @@
   color: var(--color-text-muted);
 }
 
+.crm-jump {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  background: #fffdf9;
+  border: 1px solid rgba(139, 69, 19, 0.12);
+  border-radius: 12px;
+}
+
+.crm-jump__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #6b4a36);
+}
+
+.crm-jump__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.crm-jump__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 69, 19, 0.18);
+  background: #fff;
+  color: #3d2314;
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+.crm-jump__link span {
+  color: #6b4a36;
+  font-size: 0.72rem;
+}
+
+.crm-jump__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.crm-jump__toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #8b4513;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
 .crm-group {
   border: 1px solid rgba(139, 69, 19, 0.12);
   border-radius: 12px;
-  padding: 0.9rem 1rem 1rem;
-  margin: 0 0 1rem;
+  padding: 0;
+  margin: 0 0 0.65rem;
   background: #fffdf9;
 }
 
-.crm-group legend {
+.crm-group__summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.85rem 1rem;
   font-family: "DM Sans", sans-serif;
   font-weight: 700;
-  color: var(--color-text);
-  padding: 0 0.35rem;
+  color: var(--color-text, #3d2314);
+}
+
+.crm-group__summary::-webkit-details-marker {
+  display: none;
+}
+
+.crm-group__summary::after {
+  content: "▾";
+  color: #8b4513;
+  transition: transform 0.15s ease;
+}
+
+.crm-group:not([open]) .crm-group__summary::after {
+  transform: rotate(-90deg);
+}
+
+.crm-group__meta {
+  margin-left: auto;
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #6b4a36);
+}
+
+.crm-group__hint,
+.crm-group__grid {
+  padding: 0 1rem 1rem;
 }
 
 .crm-group__hint {

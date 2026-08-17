@@ -119,6 +119,10 @@
     </div>`;
   }
 
+  function filledCount(list, valueMap) {
+    return list.filter((field) => String(valueMap[field.field_key] || '').trim()).length;
+  }
+
   function renderForm(fields, values, opts) {
     const options = opts || {};
     const valueMap = values || {};
@@ -126,16 +130,62 @@
     if (!groups.length) {
       return '<p class="crm-empty">No fields in this library yet.</p>';
     }
-    return groups
+    const preferred = options.openGroup || (groups.some(([key]) => key === 'beneficiary') ? 'beneficiary' : groups[0][0]);
+    const jump = `<nav class="crm-jump" aria-label="Welfare record sections">
+      <p class="crm-jump__label">Jump to</p>
+      <div class="crm-jump__list">
+        ${groups
+          .map(([group, list]) => {
+            const filled = filledCount(list, valueMap);
+            return `<a class="crm-jump__link" href="#crm-group-${escapeHtml(group)}">${escapeHtml(GROUP_LABELS[group] || group)} <span>${filled}/${list.length}</span></a>`;
+          })
+          .join('')}
+      </div>
+      <div class="crm-jump__actions">
+        <button type="button" class="crm-jump__toggle" data-crm-expand="1">Expand all</button>
+        <button type="button" class="crm-jump__toggle" data-crm-expand="0">Collapse all</button>
+      </div>
+    </nav>`;
+    const panels = groups
       .map(([group, list]) => {
         const sensitive = list.some((field) => field.is_sensitive);
-        return `<fieldset class="crm-group${sensitive ? ' crm-group--sensitive' : ''}">
-          <legend>${escapeHtml(GROUP_LABELS[group] || group)}</legend>
+        const open = group === preferred ? ' open' : '';
+        const filled = filledCount(list, valueMap);
+        return `<details class="crm-group${sensitive ? ' crm-group--sensitive' : ''}" id="crm-group-${escapeHtml(group)}"${open}>
+          <summary class="crm-group__summary">
+            <span class="crm-group__title">${escapeHtml(GROUP_LABELS[group] || group)}</span>
+            <span class="crm-group__meta">${filled}/${list.length} filled</span>
+          </summary>
           ${GROUP_HINTS[group] ? `<p class="crm-group__hint">${escapeHtml(GROUP_HINTS[group])}</p>` : ''}
           <div class="crm-group__grid">${list.map((field) => renderField(field, valueMap[field.field_key], options)).join('')}</div>
-        </fieldset>`;
+        </details>`;
       })
       .join('');
+    return jump + panels;
+  }
+
+  function enhanceForm(root) {
+    if (!root) return;
+    root.querySelectorAll('.crm-jump__link').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const id = String(link.getAttribute('href') || '').replace('#', '');
+        const panel = id ? root.querySelector(`#${CSS.escape(id)}`) : null;
+        if (!panel) return;
+        event.preventDefault();
+        root.querySelectorAll('details.crm-group').forEach((el) => {
+          el.open = el === panel;
+        });
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    root.querySelectorAll('[data-crm-expand]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const open = btn.dataset.crmExpand === '1';
+        root.querySelectorAll('details.crm-group').forEach((el) => {
+          el.open = open;
+        });
+      });
+    });
   }
 
   function readFormValues(form, fields, namePrefix) {
@@ -164,6 +214,7 @@
     parseOptions,
     groupFields,
     renderForm,
+    enhanceForm,
     readFormValues
   };
 })(window);

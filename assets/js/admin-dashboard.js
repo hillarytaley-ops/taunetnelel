@@ -1708,6 +1708,7 @@
       </form>`;
 
     const form = document.getElementById('crm-record-form');
+    renderer?.enhanceForm?.(form);
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const message = document.getElementById('crm-record-message');
