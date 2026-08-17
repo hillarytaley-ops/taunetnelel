@@ -3,7 +3,7 @@
  * Ticket prices come from Admin (events.ticket_prices / fee_cents), with catalog fallback.
  *
  * GET  ?event=men-s-camp-2026-08-01
- * POST { event_id, ticket: 'single'|'couple'|…, full_name, email, phone? }
+ * POST { event_id, ticket: 'member'|…, full_name, email, phone?, member_number? }
  */
 const {
   createAndEmailInvoice,
@@ -248,6 +248,60 @@ async function findProfileIdByEmail(email) {
   }
 }
 
+function normalizeMemberNumber(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .toUpperCase();
+}
+
+/** Confirm Membership ID exists on profiles or the Association member list. */
+async function findMembershipByNumber(memberNumber) {
+  const normalized = normalizeMemberNumber(memberNumber);
+  if (!normalized) return null;
+
+  const tryExact = async (table, select) => {
+    const rows = await sb(
+      `${table}?member_number=eq.${encodeURIComponent(normalized)}&select=${select}&limit=1`
+    );
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  };
+
+  const tryIlike = async (table, select) => {
+    const rows = await sb(
+      `${table}?member_number=ilike.${encodeURIComponent(normalized)}&select=${select}&limit=5`
+    );
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return (
+      rows.find((row) => normalizeMemberNumber(row.member_number) === normalized) || rows[0]
+    );
+  };
+
+  try {
+    const fromProfiles =
+      (await tryExact('profiles', 'id,member_number,email,full_name')) ||
+      (await tryIlike('profiles', 'id,member_number,email,full_name'));
+    if (fromProfiles) {
+      return { source: 'profiles', ...fromProfiles, member_number: normalized };
+    }
+  } catch {
+    /* column or RLS edge — fall through */
+  }
+
+  try {
+    const fromImports =
+      (await tryExact('member_imports', 'id,member_number,email,full_name')) ||
+      (await tryIlike('member_imports', 'id,member_number,email,full_name'));
+    if (fromImports) {
+      return { source: 'member_imports', ...fromImports, member_number: normalized };
+    }
+  } catch {
+    /* fall through */
+  }
+
+  return null;
+}
+
 function catalogPayload(catalog) {
   return {
     event: {
@@ -315,6 +369,8 @@ module.exports = async function handler(req, res) {
       .trim()
       .toLowerCase();
     const phone = String(body.phone || '').trim();
+    const memberNumberRaw = String(body.member_number || '').trim();
+    const memberNumber = normalizeMemberNumber(memberNumberRaw);
 
     const catalog = await loadEventCatalog(eventId);
     if (!catalog) {
@@ -332,6 +388,22 @@ module.exports = async function handler(req, res) {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return json(res, 400, { error: 'Please enter a valid email address.' });
+    }
+
+    let membership = null;
+    if (ticket.id === 'member') {
+      if (!memberNumber) {
+        return json(res, 400, {
+          error: 'Please enter your Membership ID for the Member ticket.',
+        });
+      }
+      membership = await findMembershipByNumber(memberNumber);
+      if (!membership) {
+        return json(res, 400, {
+          error:
+            'Membership ID not found. Check your Association member ID, or choose Non-member.',
+        });
+      }
     }
 
     rateLimit(`email:${email}`, 5, 60 * 60 * 1000);
@@ -369,7 +441,9 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const userId = await findProfileIdByEmail(email);
+    const userId =
+      (membership?.source === 'profiles' && membership.id) ||
+      (await findProfileIdByEmail(email));
     const invoice = await createAndEmailInvoice({
       kind: 'event',
       email,
@@ -387,6 +461,8 @@ module.exports = async function handler(req, res) {
         ticket_label: ticket.label,
         phone: phone || null,
         price_source: catalog.source || null,
+        member_number: membership?.member_number || null,
+        membership_source: membership?.source || null,
       },
     });
 

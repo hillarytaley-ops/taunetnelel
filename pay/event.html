@@ -102,6 +102,21 @@
               </label>
             </fieldset>
 
+            <div class="form-group" id="pay-member-id-group">
+              <label for="pay-member-id">Membership ID</label>
+              <input
+                type="text"
+                id="pay-member-id"
+                name="member_number"
+                autocomplete="off"
+                placeholder="e.g. TN-1042"
+                inputmode="text"
+              >
+              <p class="pay-portal__fine" style="margin-top:0.35rem;">
+                Required for the Member (80%) ticket. Use the ID from your Association membership record.
+              </p>
+            </div>
+
             <div class="form-group">
               <label for="pay-name">Full name</label>
               <input type="text" id="pay-name" name="full_name" required autocomplete="name" placeholder="Your full name">
@@ -194,6 +209,6 @@
   </footer>
 
   <script src="../assets/js/main.js?v=13"></script>
-  <script src="../assets/js/pay-event.js?v=3"></script>
+  <script src="../assets/js/pay-event.js?v=4"></script>
 </body>
 </html>

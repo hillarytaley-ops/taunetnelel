@@ -57,6 +57,24 @@
     return form?.querySelector('input[name="ticket"]:checked')?.value || 'member';
   }
 
+  function syncMemberIdField() {
+    const group = document.getElementById('pay-member-id-group');
+    const input = document.getElementById('pay-member-id');
+    const needsId = selectedTicket() === 'member';
+    if (group) group.hidden = !needsId;
+    if (input) {
+      input.required = needsId;
+      if (!needsId) input.value = '';
+    }
+  }
+
+  function bindTicketChangeHandlers() {
+    form?.querySelectorAll('input[name="ticket"]').forEach((radio) => {
+      radio.addEventListener('change', syncMemberIdField);
+    });
+    syncMemberIdField();
+  }
+
   function syncSummaryFromCatalog(data) {
     const event = data.event || {};
     const tickets = Array.isArray(data.tickets) ? data.tickets : [];
@@ -120,6 +138,7 @@
               );
             })
             .join('');
+        bindTicketChangeHandlers();
       }
     }
   }
@@ -205,7 +224,7 @@
       syncSummaryFromCatalog(data);
       if (data.payment && data.payment.configured === false) {
         showStatus(
-          'PayID / bank details are not configured yet. Please contact info@taunetnelel.org.',
+          'Bank details are not configured yet. Please contact info@taunetnelel.org.',
           true
         );
       }
@@ -245,6 +264,7 @@
     const fullName = String(form.full_name?.value || '').trim();
     const email = String(form.email?.value || '').trim();
     const phone = String(form.phone?.value || '').trim();
+    const memberNumber = String(form.member_number?.value || '').trim();
     const ticket = selectedTicket();
 
     if (!fullName || fullName.length < 2) {
@@ -253,6 +273,11 @@
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showStatus('Please enter a valid email address.', true);
+      return;
+    }
+    if (ticket === 'member' && !memberNumber) {
+      showStatus('Please enter your Membership ID for the Member ticket.', true);
+      document.getElementById('pay-member-id')?.focus();
       return;
     }
 
@@ -273,6 +298,7 @@
           full_name: fullName,
           email,
           phone: phone || undefined,
+          member_number: ticket === 'member' ? memberNumber : undefined,
         }),
       });
       const data = await resp.json().catch(() => ({}));
@@ -290,5 +316,6 @@
     }
   });
 
+  bindTicketChangeHandlers();
   loadCatalog();
 })();
