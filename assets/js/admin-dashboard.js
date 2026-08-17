@@ -2981,12 +2981,13 @@
       const shell = document.getElementById('admin-shell');
       setAdminNavOpen(!shell?.classList.contains('is-nav-open'));
     });
+    document.getElementById('admin-nav-close')?.addEventListener('click', () => setAdminNavOpen(false));
     backdrop?.addEventListener('click', () => setAdminNavOpen(false));
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') setAdminNavOpen(false);
     });
     window.addEventListener('resize', () => {
-      if (window.innerWidth > 860) setAdminNavOpen(false);
+      if (window.innerWidth > 1024) setAdminNavOpen(false);
     });
 
     els.nav.forEach((btn) => {
