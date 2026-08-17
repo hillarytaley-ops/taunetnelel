@@ -5,24 +5,77 @@
 (function () {
   'use strict';
 
-  const PANELS = [
-    'overview',
-    'enquiries',
-    'ithelp',
-    'members',
-    'crm',
-    'followup',
-    'claims',
-    'imports',
-    'business',
-    'events',
-    'invoices',
-    'sponsors',
-    'gallery',
-    'newsletter',
-    'announcements',
-    'pages'
-  ];
+  const LEGACY_NAV = {
+    members: 'association-members',
+    imports: 'association-list',
+    invoices: 'association-invoices'
+  };
+
+  const NAV_MAP = {
+    overview: { panel: 'overview', group: 'general' },
+    enquiries: { panel: 'enquiries', group: 'general' },
+    ithelp: { panel: 'ithelp', group: 'general' },
+    business: { panel: 'business', group: 'general' },
+    gallery: { panel: 'gallery', group: 'general' },
+    newsletter: { panel: 'newsletter', group: 'general' },
+    announcements: { panel: 'announcements', group: 'general' },
+    pages: { panel: 'pages', group: 'general' },
+    'welfare-members': { panel: 'members', group: 'welfare', scope: 'welfare' },
+    'welfare-list': { panel: 'imports', group: 'welfare', scope: 'welfare' },
+    crm: { panel: 'crm', group: 'welfare' },
+    followup: { panel: 'followup', group: 'welfare' },
+    claims: { panel: 'claims', group: 'welfare' },
+    'welfare-invoices': { panel: 'invoices', group: 'welfare', scope: 'welfare' },
+    'association-members': { panel: 'members', group: 'association', scope: 'association' },
+    'association-list': { panel: 'imports', group: 'association', scope: 'association' },
+    events: { panel: 'events', group: 'association' },
+    'association-invoices': { panel: 'invoices', group: 'association', scope: 'association' },
+    sponsors: { panel: 'sponsors', group: 'association' }
+  };
+
+  const NAV_TITLES = {
+    overview: 'Overview',
+    enquiries: 'Enquiries',
+    ithelp: 'IT Help chat',
+    business: 'Business Hub',
+    gallery: 'Gallery',
+    newsletter: 'Newsletter',
+    announcements: 'Announcements',
+    pages: 'Pages & tools',
+    'welfare-members': 'Welfare members',
+    'welfare-list': 'Welfare list',
+    crm: 'CRM records',
+    followup: 'Follow-up',
+    claims: 'Welfare claims',
+    'welfare-invoices': 'Welfare invoices',
+    'association-members': 'Association members',
+    'association-list': 'Association list',
+    events: 'Events',
+    'association-invoices': 'Association invoices',
+    sponsors: 'Sponsors'
+  };
+
+  const NAV_BLURBS = {
+    overview: 'Your committee home — counts, alerts, and shortcuts.',
+    enquiries: 'Contact, membership, and other form submissions.',
+    ithelp: 'Live portal IT chat. Reply here — members see it in the website chat.',
+    business: 'Edit business cards, news, and blog posts.',
+    gallery: 'Bulk upload photos, create albums, and publish them on the public gallery.',
+    newsletter: 'Event update subscribers from the Contact page.',
+    announcements: 'Messages shown on the members dashboard.',
+    pages: 'Shortcuts to public pages and committee tools.',
+    'welfare-members': 'Signed-in Social Welfare members, including people on Association + Welfare.',
+    'welfare-list': 'Imported Social Welfare membership list.',
+    crm: 'Welfare register. Sensitive bank, income, and ID fields stay Admin-only.',
+    followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
+    claims: 'Bereavement and hardship claims lodged on the Welfare tab.',
+    'welfare-invoices': '$300 Association + Welfare invoices — mark paid when the deposit lands.',
+    'association-members': 'Signed-in Association members who are not on Social Welfare.',
+    'association-list': 'Imported Association (ordinary) membership list.',
+    events: 'Published events for the public site and members.',
+    'association-invoices': '$50 Association invoices and event fees — mark paid when the deposit lands.',
+    sponsors: 'Sponsor listings for the public sponsorship page.'
+  };
 
   const BOOTSTRAP_PIN_KEY = 'taunet_admin_bootstrap_pin';
 
@@ -52,7 +105,9 @@
     followupBound: false,
     followupTab: 'email',
     pipelineData: null,
-    businessEditor: null
+    businessEditor: null,
+    navId: 'overview',
+    listScope: ''
   };
 
   const els = {
@@ -110,57 +165,60 @@
     return Boolean(document.querySelector(`[data-admin-panel="${id}"]`));
   }
 
+  function resolveNav(id) {
+    const raw = String(id || 'overview').replace(/^#/, '');
+    const mapped = LEGACY_NAV[raw] || raw;
+    if (NAV_MAP[mapped]) {
+      return { navId: mapped, scope: '', ...NAV_MAP[mapped] };
+    }
+    if (panelExists(mapped)) {
+      return { navId: mapped, panel: mapped, group: 'general', scope: '' };
+    }
+    return { navId: 'overview', panel: 'overview', group: 'general', scope: '' };
+  }
+
   function setPanel(id) {
-    // Prefer DOM panels over the static list so new sections (e.g. invoices) always open
-    const next = panelExists(id) ? id : panelExists('overview') ? 'overview' : (PANELS.includes(id) ? id : 'overview');
+    const nav = resolveNav(id);
+    state.navId = nav.navId;
+    state.listScope = nav.scope || '';
+    if (nav.panel === 'imports') {
+      state.importFilter = nav.scope === 'welfare' ? 'welfare_any' : nav.scope === 'association' ? 'association' : 'all';
+    }
+
     document.querySelectorAll('[data-admin-nav]').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.adminNav === next);
+      btn.classList.toggle('is-active', btn.dataset.adminNav === nav.navId);
     });
     document.querySelectorAll('[data-admin-panel]').forEach((panel) => {
-      panel.classList.toggle('is-active', panel.dataset.adminPanel === next);
+      panel.classList.toggle('is-active', panel.dataset.adminPanel === nav.panel);
     });
+    document.querySelectorAll('details[data-admin-group]').forEach((el) => {
+      el.open = el.dataset.adminGroup === nav.group;
+    });
+
     const title = document.getElementById('admin-panel-title');
     const blurb = document.getElementById('admin-panel-blurb');
-    const titles = {
-      overview: 'Overview',
-      enquiries: 'Enquiries',
-      ithelp: 'IT Help chat',
-      members: 'Member profiles',
-      crm: 'CRM records',
-      followup: 'Follow-up',
-      imports: 'Association & Welfare',
-      business: 'Business Hub',
-      events: 'Events',
-      invoices: 'Invoices',
-      sponsors: 'Sponsors',
-      gallery: 'Gallery',
-      newsletter: 'Newsletter',
-      announcements: 'Announcements',
-      pages: 'Pages & tools'
-    };
-    const blurbs = {
-      overview: 'Your committee home — counts, alerts, and shortcuts.',
-      enquiries: 'Contact, membership, and other form submissions.',
-      ithelp: 'Live portal IT chat. Reply here — members see it in the website chat.',
-      members: 'People who have registered or signed in online.',
-      crm: 'Mambo Mob-style member register. Sensitive bank, income, and ID fields stay Admin-only.',
-      followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
-      imports: 'Association and Welfare membership lists.',
-      business: 'Edit business cards, news, and blog posts.',
-      events: 'Published events for the public site and members.',
-      invoices: 'PayID / bank invoices — mark paid when the deposit lands.',
-      sponsors: 'Sponsor listings for the public sponsorship page.',
-      gallery: 'Bulk upload photos, create albums, and publish them on the public gallery.',
-      newsletter: 'Event update subscribers from the Contact page.',
-      announcements: 'Messages shown on the members dashboard.',
-      pages: 'Shortcuts to public pages and committee tools.'
-    };
-    if (title) title.textContent = titles[next] || 'Admin';
-    if (blurb) blurb.textContent = blurbs[next] || '';
-    history.replaceState(null, '', `#${next}`);
-    if (next !== 'ithelp') stopItHelpPoll();
-    if (next === 'enquiries') renderEnquiries();
-    if (next === 'ithelp') renderItHelp();
+    if (title) title.textContent = NAV_TITLES[nav.navId] || 'Admin';
+    if (blurb) blurb.textContent = NAV_BLURBS[nav.navId] || '';
+
+    const membersIntro = document.getElementById('admin-members-intro');
+    if (membersIntro && nav.panel === 'members') {
+      membersIntro.innerHTML =
+        nav.scope === 'welfare'
+          ? 'Signed-in Social Welfare members (including Association + Welfare). Open <strong>CRM record</strong> for next of kin and committee-only fields.'
+          : 'Signed-in Association members who are not on Social Welfare. Use <strong>Approve welfare</strong> after reviewing a welfare registration. Open <strong>CRM record</strong> for the register.';
+    }
+    const invoicesIntro = document.getElementById('admin-invoices-intro');
+    if (invoicesIntro && nav.panel === 'invoices') {
+      invoicesIntro.textContent =
+        nav.scope === 'welfare'
+          ? '$300 Association + Welfare invoices. Mark paid when the bank deposit lands.'
+          : '$50 Association invoices and event fees. Mark paid when the bank deposit lands.';
+    }
+
+    history.replaceState(null, '', `#${nav.navId}`);
+    if (nav.panel !== 'ithelp') stopItHelpPoll();
+    if (nav.panel === 'enquiries') renderEnquiries();
+    if (nav.panel === 'ithelp') renderItHelp();
     setAdminNavOpen(false);
   }
 
@@ -543,21 +601,35 @@
     const rows = data.rows || [];
     const body = document.getElementById('admin-members-body');
     if (!body) return;
-    if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">No profiles yet.</td></tr>`;
+    const scope = state.listScope;
+    const filtered =
+      scope === 'welfare'
+        ? rows.filter((row) => row.welfare_member)
+        : scope === 'association'
+          ? rows.filter((row) => !row.welfare_member)
+          : rows;
+    if (!filtered.length) {
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">${
+        scope === 'welfare'
+          ? 'No signed-in Social Welfare members yet.'
+          : scope === 'association'
+            ? 'No signed-in Association-only members yet.'
+            : 'No profiles yet.'
+      }</td></tr>`;
       return;
     }
-    body.innerHTML = rows
+    body.innerHTML = filtered
       .map((row) => {
         const plan = row.plan || 'basic';
         const chipClass = plan === 'both' ? 'both' : plan === 'welfare' ? 'welfare' : '';
+        const showApprove = scope !== 'welfare' && !row.welfare_member;
         return `<tr>
           <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}</div></td>
           <td><span class="admin-chip admin-chip--${chipClass}">${escapeHtml(plan)}</span></td>
           <td>${row.association_member ? 'Yes' : 'No'}</td>
           <td>
             ${row.welfare_member ? 'Yes' : 'No'}
-            ${!row.welfare_member ? `<div class="admin-actions" style="margin-top:0.35rem"><button type="button" data-approve-welfare="${escapeHtml(row.id)}">Approve welfare</button></div>` : ''}
+            ${showApprove ? `<div class="admin-actions" style="margin-top:0.35rem"><button type="button" data-approve-welfare="${escapeHtml(row.id)}">Approve welfare</button></div>` : ''}
           </td>
           <td class="admin-detail">${escapeHtml(formatDate(row.created_at))}</td>
           <td><div class="admin-actions"><button type="button" data-open-crm="${escapeHtml(row.id)}">CRM record</button></div></td>
@@ -589,17 +661,35 @@
   }
 
   async function loadImports() {
+    const filterSelect = document.getElementById('imports-filter');
+    if (filterSelect) {
+      const scope = state.listScope;
+      Array.from(filterSelect.options).forEach((opt) => {
+        const value = opt.value;
+        if (scope === 'welfare') {
+          opt.hidden = !['welfare', 'welfare_any', 'both', 'pending'].includes(value);
+        } else if (scope === 'association') {
+          opt.hidden = !['association', 'association_any', 'pending'].includes(value);
+        } else {
+          opt.hidden = false;
+        }
+      });
+      if (![...filterSelect.options].some((opt) => opt.value === state.importFilter && !opt.hidden)) {
+        state.importFilter = scope === 'welfare' ? 'welfare_any' : scope === 'association' ? 'association' : 'all';
+      }
+      filterSelect.value = state.importFilter;
+    }
     const data = await adminApi('imports', { filter: state.importFilter || 'all' });
     const stats = data.stats;
     let statsHtml = '';
     if (stats) {
       const cards = [
-        { key: 'all', value: stats.total, label: 'Total imported' },
-        { key: 'both', value: stats.association_and_welfare, label: 'Association + Welfare' },
-        { key: 'association', value: stats.association_only, label: 'Association only' },
-        { key: 'welfare', value: stats.welfare_only, label: 'Welfare only' },
-        { key: 'pending', value: stats.pending_invite, label: 'Pending invite' }
-      ];
+        { key: 'all', value: stats.total, label: 'Total imported', groups: [''] },
+        { key: 'both', value: stats.association_and_welfare, label: 'Association + Welfare', groups: ['', 'welfare'] },
+        { key: 'association', value: stats.association_only, label: 'Association only', groups: ['', 'association'] },
+        { key: 'welfare', value: stats.welfare_only, label: 'Welfare only', groups: ['', 'welfare'] },
+        { key: 'pending', value: stats.pending_invite, label: 'Pending invite', groups: ['', 'welfare', 'association'] }
+      ].filter((c) => c.groups.includes(state.listScope || ''));
       statsHtml = `<div class="admin-stats">${cards
         .map(
           (c) => `<button type="button" class="admin-stat admin-stat--btn${
@@ -1509,13 +1599,24 @@
     const statusFilter = document.getElementById('admin-invoice-filter')?.value || 'all';
     body.innerHTML = `<tr><td colspan="7" class="admin-empty">Loading…</td></tr>`;
     const data = await adminApi('invoices', { status: statusFilter });
-    const rows = data.rows || [];
+    let rows = data.rows || [];
+    if (state.listScope === 'welfare') {
+      rows = rows.filter((row) => row.kind === 'welfare');
+    } else if (state.listScope === 'association') {
+      rows = rows.filter((row) => row.kind === 'association' || row.kind === 'event' || row.kind === 'donation');
+    }
     if (data.warning && !rows.length) {
       body.innerHTML = `<tr><td colspan="7" class="admin-empty">${escapeHtml(data.warning)}</td></tr>`;
       return;
     }
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No invoices for “${escapeHtml(statusFilter)}”. Check Supabase → invoices, or choose All invoices.</td></tr>`;
+      const scopeLabel =
+        state.listScope === 'welfare'
+          ? 'welfare'
+          : state.listScope === 'association'
+            ? 'association / event'
+            : statusFilter;
+      body.innerHTML = `<tr><td colspan="7" class="admin-empty">No invoices for “${escapeHtml(scopeLabel)}”. Check Supabase → invoices, or choose All invoices.</td></tr>`;
       return;
     }
     body.innerHTML = rows
@@ -1750,11 +1851,12 @@
     const select = document.getElementById('crm-member-select');
     if (!select) return;
     const q = String(query || '').trim().toLowerCase();
-    const filtered = (rows || []).filter((row) => {
-      if (!q) return true;
-      return `${row.full_name || ''} ${row.email || ''}`.toLowerCase().includes(q);
-    });
     const current = state.crmProfileId;
+    const filtered = (rows || []).filter((row) => {
+      const hay = `${row.full_name || ''} ${row.email || ''}`.toLowerCase();
+      if (q) return hay.includes(q);
+      return row.welfare_member || row.id === current;
+    });
     select.innerHTML =
       `<option value="">Select a member…</option>` +
       filtered
@@ -2303,8 +2405,13 @@
   }
 
   async function refreshPanel(id) {
-    if (id === 'business' || id === 'pages') {
-      if (id === 'business') ensureBusinessEditor();
+    const nav = resolveNav(id);
+    const panelId = nav.panel;
+    state.navId = nav.navId;
+    state.listScope = nav.scope || '';
+
+    if (panelId === 'business' || panelId === 'pages') {
+      if (panelId === 'business') ensureBusinessEditor();
       return;
     }
 
@@ -2312,9 +2419,9 @@
       return;
     }
 
-    if (id !== 'ithelp') stopItHelpPoll();
+    if (panelId !== 'ithelp') stopItHelpPoll();
 
-    if (id === 'overview') {
+    if (panelId === 'overview') {
       try {
         await loadOverview();
       } catch (_) { /* ignore */ }
@@ -2328,22 +2435,22 @@
       status.textContent = 'Loading…';
     }
     try {
-      if (id === 'enquiries') await loadEnquiries();
-      if (id === 'ithelp') {
+      if (panelId === 'enquiries') await loadEnquiries();
+      if (panelId === 'ithelp') {
         await loadItHelp();
         startItHelpPoll();
       }
-      if (id === 'members') await loadMembers();
-      if (id === 'crm') await loadCrm();
-      if (id === 'followup') await loadFollowup();
-      if (id === 'imports') await loadImports();
-      if (id === 'events') await loadEvents();
-      if (id === 'invoices') await loadInvoices();
-      if (id === 'claims') await loadClaims();
-      if (id === 'sponsors') await loadSponsors();
-      if (id === 'gallery') await loadGallery();
-      if (id === 'newsletter') await loadNewsletter();
-      if (id === 'announcements') await loadAnnouncementsAdmin();
+      if (panelId === 'members') await loadMembers();
+      if (panelId === 'crm') await loadCrm();
+      if (panelId === 'followup') await loadFollowup();
+      if (panelId === 'imports') await loadImports();
+      if (panelId === 'events') await loadEvents();
+      if (panelId === 'invoices') await loadInvoices();
+      if (panelId === 'claims') await loadClaims();
+      if (panelId === 'sponsors') await loadSponsors();
+      if (panelId === 'gallery') await loadGallery();
+      if (panelId === 'newsletter') await loadNewsletter();
+      if (panelId === 'announcements') await loadAnnouncementsAdmin();
       if (status) status.hidden = true;
     } catch (err) {
       console.error(err);
@@ -2351,7 +2458,7 @@
         status.hidden = false;
         status.classList.add('is-error');
         status.textContent =
-          id === 'crm' || id === 'followup' || id === 'claims'
+          panelId === 'crm' || panelId === 'followup' || panelId === 'claims'
             ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
             : err.message ||
               'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
@@ -2386,7 +2493,7 @@
 
     document.getElementById('admin-refresh')?.addEventListener('click', () => {
       const active = document.querySelector('[data-admin-nav].is-active');
-      refreshPanel(active?.dataset.adminNav || active?.getAttribute('data-admin-nav') || 'overview');
+      refreshPanel(state.navId || active?.dataset.adminNav || 'overview');
       setAdminNavOpen(false);
     });
 
@@ -2401,7 +2508,7 @@
     window.addEventListener('hashchange', () => {
       if (!state.isAdmin) return;
       const id = (location.hash || '#overview').replace(/^#/, '');
-      if (panelExists(id)) jumpToPanel(id);
+      jumpToPanel(id);
     });
 
     document.getElementById('enquiry-filter')?.addEventListener('change', (e) => {
