@@ -41,7 +41,10 @@ body[data-page="site-admin"] {
   top: 0;
   max-height: 100vh;
   max-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .site-admin__nav-brand {
@@ -51,7 +54,6 @@ body[data-page="site-admin"] {
   margin-bottom: 0.85rem;
   padding: 0 0.35rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
 }
 
 .site-admin__nav-brand-row {
@@ -101,13 +103,6 @@ body[data-page="site-admin"] {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  padding-right: 0.15rem;
 }
 
 .site-admin__nav-label {
@@ -230,13 +225,12 @@ body[data-page="site-admin"] {
 }
 
 .site-admin__nav-foot {
-  margin-top: auto;
+  margin-top: 0.75rem;
   padding-top: 0.85rem;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  flex-shrink: 0;
 }
 
 .site-admin__nav-foot-label {
@@ -1215,7 +1209,10 @@ body[data-page="site-admin"] {
     padding-top: max(1rem, env(safe-area-inset-top));
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
     padding-left: max(0.85rem, env(safe-area-inset-left));
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transform: translateX(-105%);
     visibility: hidden;
     pointer-events: none;
@@ -1255,10 +1252,8 @@ body[data-page="site-admin"] {
   }
 
   .site-admin__nav-menu {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    flex: none;
+    overflow: visible;
   }
 
   .site-admin__nav-group > summary,
@@ -1281,7 +1276,7 @@ body[data-page="site-admin"] {
     width: 100%;
     flex-direction: column;
     flex-wrap: nowrap;
-    margin-top: auto;
+    margin-top: 0.75rem;
   }
 
   .site-admin__nav-foot-label {
