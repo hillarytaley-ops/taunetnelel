@@ -842,11 +842,11 @@
       '>' +
       `<div class="home-path__media">` +
       (imageSrc
-        ? `<img src="${imageSrc}" alt="${title}" width="640" height="400" loading="lazy">`
+        ? `<img src="${imageSrc}" alt="${title}" width="640" loading="lazy">`
         : '') +
-      dateLabel +
       `</div>` +
       `<div class="home-path__body">` +
+      dateLabel +
       `<h3>${heading}</h3>` +
       `<p>${blurb}</p>` +
       `<span class="home-path__cta">${cta}</span>` +

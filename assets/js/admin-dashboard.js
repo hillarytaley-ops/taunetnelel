@@ -149,16 +149,31 @@
     return '../members/auth.html?tab=admin&next=' + encodeURIComponent('../admin/');
   }
 
+  const MELBOURNE_TZ = 'Australia/Melbourne';
+
   function formatDate(value) {
     if (!value) return '—';
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleString(undefined, {
+    return d.toLocaleString('en-AU', {
+      timeZone: MELBOURNE_TZ,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+    });
+  }
+
+  function formatDateOnly(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString('en-AU', {
+      timeZone: MELBOURNE_TZ,
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   }
 
@@ -2141,7 +2156,7 @@
           )}</td>
           <td>${escapeHtml(amount)}</td>
           <td><span class="admin-chip admin-chip--${status === 'paid' ? 'reviewed' : status === 'pending' ? 'new' : ''}">${escapeHtml(status)}</span></td>
-          <td class="admin-detail">${escapeHtml(formatDate(row.due_at))}</td>
+          <td class="admin-detail">${escapeHtml(formatDateOnly(row.due_at))}</td>
           <td><div class="admin-actions">${actions}</div></td>
         </tr>`;
       })

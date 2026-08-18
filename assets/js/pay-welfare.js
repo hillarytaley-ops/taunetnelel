@@ -57,6 +57,7 @@
   function formatDue(iso) {
     try {
       return new Date(iso).toLocaleDateString('en-AU', {
+        timeZone: 'Australia/Melbourne',
         year: 'numeric',
         month: 'short',
         day: 'numeric',

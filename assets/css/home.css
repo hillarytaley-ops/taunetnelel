@@ -383,22 +383,24 @@ body[data-page="home"] .hero__visual.animate-on-load {
 
 .home-path__media {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  background: #f3ebe1;
 }
 
 .home-path img,
 .home-path__media img {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
+  object-position: center top;
   display: block;
   border-radius: 0;
+  background: #f3ebe1;
 }
 
 .home-path__date {
-  position: absolute;
-  left: 0.75rem;
-  bottom: 0.75rem;
+  display: inline-block;
+  margin: 0 0 0.45rem;
   padding: 0.35rem 0.6rem;
   border-radius: 6px;
   background: rgba(61, 35, 20, 0.88);
@@ -470,7 +472,9 @@ body[data-page="home"] .hero__visual.animate-on-load {
 
   .home-path img,
   .home-path__media img {
-    aspect-ratio: 16 / 10;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
   }
 }
 
@@ -636,19 +640,17 @@ body[data-page="home"] .home-links .btn--outline:hover {
 }
 
 .home-event-card__media {
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
+  overflow: visible;
+  background: #f3ebe1;
 }
 
 .home-event-card__media img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
-}
-
-.home-event-card:hover .home-event-card__media img {
-  transform: scale(1.04);
+  height: auto;
+  object-fit: contain;
+  object-position: center top;
+  display: block;
+  background: #f3ebe1;
 }
 
 .home-event-card__body {

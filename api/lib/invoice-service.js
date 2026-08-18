@@ -18,6 +18,56 @@ const BANK_BSB = (process.env.BANK_BSB || '').trim();
 const BANK_ACCOUNT = (process.env.BANK_ACCOUNT_NUMBER || process.env.BANK_ACCOUNT || '').trim();
 const BANK_ACCOUNT_NAME = (process.env.BANK_ACCOUNT_NAME || ORG_LEGAL_NAME).trim();
 const INVOICE_DUE_DAYS = Math.max(1, Number(process.env.INVOICE_DUE_DAYS || 14) || 14);
+const MELBOURNE_TZ = 'Australia/Melbourne';
+
+function melbourneYmd(date) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MELBOURNE_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const n = (type) => Number(parts.find((p) => p.type === type)?.value);
+  return { y: n('year'), m: n('month'), d: n('day') };
+}
+
+/** Interpret a Melbourne wall-clock time as a UTC Date. */
+function melbourneLocalToDate(y, m, d, hour = 23, minute = 59, second = 59) {
+  const utcGuess = Date.UTC(y, m - 1, d, hour, minute, second);
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: MELBOURNE_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  });
+  const parts = {};
+  for (const p of dtf.formatToParts(new Date(utcGuess))) {
+    if (p.type !== 'literal') parts[p.type] = p.value;
+  }
+  const asUtcFromWall = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour),
+    Number(parts.minute),
+    Number(parts.second)
+  );
+  return new Date(utcGuess - (asUtcFromWall - utcGuess));
+}
+
+function addMelbourneCalendarDaysEndOfDay(from, days) {
+  const { y, m, d } = melbourneYmd(from);
+  const shifted = new Date(Date.UTC(y, m - 1, d + days, 12, 0, 0));
+  return melbourneLocalToDate(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth() + 1,
+    shifted.getUTCDate()
+  );
+}
 
 const KIND_DEFAULTS = {
   association: {
@@ -405,7 +455,7 @@ async function createAndEmailInvoice({
       ? dueAt
       : typeof dueAt === 'string' && dueAt
         ? new Date(dueAt)
-        : new Date(issued.getTime() + INVOICE_DUE_DAYS * 24 * 60 * 60 * 1000);
+        : addMelbourneCalendarDaysEndOfDay(issued, INVOICE_DUE_DAYS);
   const payReference = invoiceNumber.replace(/-/g, '');
 
   const row = {
@@ -459,9 +509,13 @@ function getPublicPaymentDetails() {
 }
 
 function addMonthsMelbourne(baseDate, months) {
-  const d = new Date(baseDate.getTime());
-  d.setUTCMonth(d.getUTCMonth() + months);
-  return d;
+  const { y, m, d } = melbourneYmd(baseDate);
+  const shifted = new Date(Date.UTC(y, m - 1 + months, d, 12, 0, 0));
+  return melbourneLocalToDate(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth() + 1,
+    shifted.getUTCDate()
+  );
 }
 
 /**
@@ -507,7 +561,7 @@ async function createWelfarePayCheckout({
     `welf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const issued = new Date();
   const dueDates = [
-    new Date(issued.getTime() + 14 * 24 * 60 * 60 * 1000),
+    addMelbourneCalendarDaysEndOfDay(issued, INVOICE_DUE_DAYS),
     addMonthsMelbourne(issued, 1),
     addMonthsMelbourne(issued, 2),
   ];

@@ -77,10 +77,13 @@
     return `$${(Number(cents || 0) / 100).toFixed(2)}`;
   }
 
+  const MELBOURNE_TZ = 'Australia/Melbourne';
+
   function formatDateTime(value) {
     if (!value) return '—';
     try {
-      return new Date(value).toLocaleString(undefined, {
+      return new Date(value).toLocaleString('en-AU', {
+        timeZone: MELBOURNE_TZ,
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -95,7 +98,8 @@
   function formatDate(value) {
     if (!value) return '—';
     try {
-      return new Date(value).toLocaleDateString(undefined, {
+      return new Date(value).toLocaleDateString('en-AU', {
+        timeZone: MELBOURNE_TZ,
         year: 'numeric',
         month: 'short',
         day: 'numeric',
