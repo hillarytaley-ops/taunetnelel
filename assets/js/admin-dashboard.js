@@ -77,7 +77,7 @@
     claims: 'Bereavement and hardship claims lodged on the Welfare tab, including supporting files.',
     'welfare-invoices': '$300 Association + Welfare invoices — mark paid when the deposit lands.',
     'association-members': 'Signed-in Association members who are not on Social Welfare.',
-    'association-list': 'Imported Association (ordinary) membership list.',
+    'association-list': 'Mambo Mob general / Association membership list, including people who are also on Welfare.',
     events: 'Published events for the public site and members.',
     'association-invoices': '$50 Association invoices and event fees — mark paid when the deposit lands.',
     sponsors: 'Sponsor listings for the public sponsorship page.'
@@ -197,7 +197,7 @@
     state.navId = nav.navId;
     state.listScope = nav.scope || '';
     if (nav.panel === 'imports') {
-      state.importFilter = nav.scope === 'welfare' ? 'welfare_any' : nav.scope === 'association' ? 'association' : 'all';
+      state.importFilter = nav.scope === 'welfare' ? 'welfare_any' : nav.scope === 'association' ? 'association_any' : 'all';
     }
 
     document.querySelectorAll('[data-admin-nav]').forEach((btn) => {
@@ -1034,13 +1034,13 @@
         if (scope === 'welfare') {
           opt.hidden = !['welfare', 'welfare_any', 'both', 'pending'].includes(value);
         } else if (scope === 'association') {
-          opt.hidden = !['association', 'association_any', 'pending'].includes(value);
+          opt.hidden = !['association', 'association_any', 'both', 'pending'].includes(value);
         } else {
           opt.hidden = false;
         }
       });
       if (![...filterSelect.options].some((opt) => opt.value === state.importFilter && !opt.hidden)) {
-        state.importFilter = scope === 'welfare' ? 'welfare_any' : scope === 'association' ? 'association' : 'all';
+        state.importFilter = scope === 'welfare' ? 'welfare_any' : scope === 'association' ? 'association_any' : 'all';
       }
       filterSelect.value = state.importFilter;
     }
@@ -1051,6 +1051,7 @@
       const cards = [
         { key: 'all', value: stats.total, label: 'Total imported', groups: [''] },
         { key: 'both', value: stats.association_and_welfare, label: 'Association + Welfare', groups: ['', 'welfare'] },
+        { key: 'association_any', value: stats.association_member_total, label: 'All Association (general)', groups: ['', 'association'] },
         { key: 'association', value: stats.association_only, label: 'Association only', groups: ['', 'association'] },
         { key: 'welfare', value: stats.welfare_only, label: 'Welfare only', groups: ['', 'welfare'] },
         { key: 'pending', value: stats.pending_invite, label: 'Pending invite', groups: ['', 'welfare', 'association'] }
@@ -1109,6 +1110,7 @@
       countEl.hidden = false;
       const labels = {
         all: 'Total imported',
+        association_any: 'All Association (general)',
         association: 'Association only',
         welfare: 'Welfare only',
         both: 'Association + Welfare',
