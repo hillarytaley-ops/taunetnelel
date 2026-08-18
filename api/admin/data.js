@@ -1179,6 +1179,111 @@ async function countRows(table, query = '') {
   return Number.isFinite(n) ? n : 0;
 }
 
+function parseCsvText(text) {
+  const rows = [];
+  let row = [];
+  let cur = '';
+  let inQuotes = false;
+  const source = String(text || '').replace(/^\uFEFF/, '');
+  for (let i = 0; i < source.length; i += 1) {
+    const c = source[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (source[i + 1] === '"') {
+          cur += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ',' || c === '\t') {
+      row.push(cur);
+      cur = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && source[i + 1] === '\n') i += 1;
+      row.push(cur);
+      cur = '';
+      if (row.some((cell) => String(cell).trim())) rows.push(row);
+      row = [];
+    } else {
+      cur += c;
+    }
+  }
+  row.push(cur);
+  if (row.some((cell) => String(cell).trim())) rows.push(row);
+  return rows;
+}
+
+function csvHeaderKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_/]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function csvPick(record, aliases) {
+  for (const alias of aliases) {
+    if (record[alias] != null && String(record[alias]).trim()) {
+      return String(record[alias]).trim();
+    }
+  }
+  return '';
+}
+
+function parseMamboMemberCsv(text) {
+  const table = parseCsvText(text);
+  if (table.length < 2) return [];
+  const headers = table[0].map(csvHeaderKey);
+  const records = [];
+  for (let i = 1; i < table.length; i += 1) {
+    const record = {};
+    headers.forEach((key, idx) => {
+      record[key] = table[i][idx] || '';
+    });
+    records.push(record);
+  }
+  return records
+    .map((record) => {
+      const email = csvPick(record, ['email', 'email address', 'contact email', 'e-mail']).toLowerCase();
+      const firstName = csvPick(record, ['first name', 'firstname', 'first']);
+      const lastName = csvPick(record, ['last name', 'lastname', 'last']);
+      const fullName =
+        csvPick(record, ['contact name', 'full name', 'name', 'contact']) ||
+        [firstName, lastName].filter(Boolean).join(' ').trim();
+      const phone = csvPick(record, [
+        'phone',
+        'phone number',
+        'mobile',
+        'mobile phone',
+        'mobile number',
+        'cell phone'
+      ]);
+      return {
+        email,
+        first_name: firstName.slice(0, 80),
+        last_name: lastName.slice(0, 80),
+        full_name: (fullName || email.split('@')[0] || 'Member').slice(0, 160),
+        phone: phone.slice(0, 40)
+      };
+    })
+    .filter((row) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email) && row.email.length <= 254);
+}
+
+function membershipFromFlags(association, welfare) {
+  if (association && welfare) {
+    return { plan: 'both', membership_label: 'Association + Welfare' };
+  }
+  if (welfare) {
+    return { plan: 'welfare', membership_label: 'Welfare' };
+  }
+  return { plan: 'basic', membership_label: 'Association' };
+}
+
 /** Same rows as supabase/migrations/014_seed_events.sql */
 const SEED_EVENTS = [
   {
@@ -2832,6 +2937,107 @@ module.exports = async function handler(req, res) {
           email: row.email || null,
           full_name: row.full_name || null,
           revoked_logins: revokedLogins
+        });
+      }
+
+      if (resource === 'import-mambo-csv') {
+        const csvText = String(body.csv || '');
+        if (csvText.length < 20) {
+          return json(res, 400, {
+            error: 'Paste or upload a Mambo Mob / HighLevel Contacts CSV (needs an Email column).'
+          });
+        }
+        if (csvText.length > 1_500_000) {
+          return json(res, 400, { error: 'CSV is too large. Export Contacts in smaller batches.' });
+        }
+        const incoming = parseMamboMemberCsv(csvText);
+        if (!incoming.length) {
+          return json(res, 400, {
+            error: 'No valid emails found. Use the HighLevel Contacts export CSV (Email column required).'
+          });
+        }
+
+        const { data: existingRows } = await sb(
+          'member_imports?select=id,email,full_name,first_name,last_name,phone,association_member,welfare_member,plan,membership_label,status&order=email.asc&limit=4000'
+        );
+        const byEmail = new Map();
+        (existingRows || []).forEach((row) => {
+          const key = String(row.email || '')
+            .toLowerCase()
+            .trim();
+          if (key) byEmail.set(key, row);
+        });
+
+        let added = 0;
+        let updated = 0;
+        let unchanged = 0;
+        const seen = new Set();
+
+        for (const person of incoming) {
+          if (seen.has(person.email)) continue;
+          seen.add(person.email);
+          const existing = byEmail.get(person.email);
+          if (existing) {
+            const welfare = Boolean(existing.welfare_member);
+            const association = true;
+            const meta = membershipFromFlags(association, welfare);
+            const next = {
+              full_name: person.full_name || existing.full_name,
+              first_name: person.first_name || existing.first_name || null,
+              last_name: person.last_name || existing.last_name || null,
+              phone: person.phone || existing.phone || null,
+              association_member: true,
+              welfare_member: welfare,
+              plan: meta.plan,
+              membership_label: meta.membership_label,
+              updated_at: new Date().toISOString()
+            };
+            const same =
+              String(existing.full_name || '') === String(next.full_name || '') &&
+              String(existing.phone || '') === String(next.phone || '') &&
+              Boolean(existing.association_member) === true &&
+              Boolean(existing.welfare_member) === welfare;
+            if (same) {
+              unchanged += 1;
+              continue;
+            }
+            await sb(`member_imports?id=eq.${encodeURIComponent(existing.id)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify(next)
+            });
+            updated += 1;
+          } else {
+            const meta = membershipFromFlags(true, false);
+            await sb('member_imports', {
+              method: 'POST',
+              prefer: 'return=minimal',
+              body: JSON.stringify({
+                email: person.email,
+                full_name: person.full_name,
+                first_name: person.first_name || null,
+                last_name: person.last_name || null,
+                phone: person.phone || null,
+                association_member: true,
+                welfare_member: false,
+                plan: meta.plan,
+                membership_label: meta.membership_label,
+                status: 'pending_invite',
+                tags: 'mambo-mob'
+              })
+            });
+            added += 1;
+          }
+        }
+
+        return json(res, 200, {
+          ok: true,
+          scanned: seen.size,
+          added,
+          updated,
+          unchanged,
+          skipped_no_email: Math.max(0, parseCsvText(csvText).length - 1 - incoming.length),
+          message: `Mambo Mob list applied. Added ${added}, updated ${updated}, already current ${unchanged}. Website Welfare flags were not changed, and nobody was deleted.`
         });
       }
 

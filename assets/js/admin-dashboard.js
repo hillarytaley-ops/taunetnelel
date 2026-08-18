@@ -3186,6 +3186,43 @@
       renderImports();
     });
 
+    document.getElementById('admin-mambo-csv-pick')?.addEventListener('click', () => {
+      document.getElementById('admin-mambo-csv')?.click();
+    });
+    document.getElementById('admin-mambo-csv')?.addEventListener('change', async (event) => {
+      const input = event.target;
+      const file = input.files && input.files[0];
+      const status = document.getElementById('admin-mambo-import-status');
+      const nameEl = document.getElementById('admin-mambo-csv-name');
+      const pick = document.getElementById('admin-mambo-csv-pick');
+      if (!file) return;
+      if (nameEl) nameEl.textContent = file.name;
+      if (status) {
+        status.hidden = false;
+        status.classList.remove('is-error');
+        status.textContent = 'Updating the website list from Mambo Mob. Welfare flags will stay as they are…';
+      }
+      try {
+        const csv = await file.text();
+        setButtonBusy(pick, true, { busy: 'Updating…' });
+        const data = await adminApi('import-mambo-csv', { method: 'POST', body: { csv } });
+        setButtonBusy(pick, false, { done: 'List updated', stay: true });
+        if (status) {
+          status.classList.remove('is-error');
+          status.textContent = data.message || 'Member list updated from Mambo Mob.';
+        }
+        await loadImports();
+      } catch (err) {
+        setButtonBusy(pick, false, { fail: 'Not updated' });
+        if (status) {
+          status.classList.add('is-error');
+          status.textContent = err.message || 'Could not update the member list.';
+        }
+      } finally {
+        input.value = '';
+      }
+    });
+
     document.getElementById('admin-seed-events')?.addEventListener('click', () => {
       seedEventsFromSite();
     });

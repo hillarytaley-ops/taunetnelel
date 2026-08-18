@@ -638,6 +638,23 @@
           Association (ordinary) and Welfare are stored as <strong>separate</strong> memberships.
           Someone on both lists appears under <strong>Both</strong> — they are not collapsed to welfare-only.
         </p>
+        <div class="admin-card admin-card--flush" style="margin:0.85rem 0 1rem;padding:0.9rem 1rem;">
+          <div class="admin-section-title">
+            <h2>Update from Mambo Mob</h2>
+          </div>
+          <p class="admin-muted" style="margin:0 0 0.7rem;">
+            Website <strong>Welfare members stay as they are</strong>. Upload the Mambo Mob / HighLevel
+            <strong>Contacts CSV</strong> to refresh names, phones, and Association members.
+            Nobody is deleted. HighLevel’s Import button cannot do this — use <strong>Bulk Actions</strong>
+            (or the three dots next to + Add Contact) to export the CSV, then choose it here.
+          </p>
+          <div class="admin-toolbar" style="margin:0;">
+            <input type="file" id="admin-mambo-csv" accept=".csv,text/csv,text/plain" hidden>
+            <button type="button" class="btn btn--sm btn--primary" id="admin-mambo-csv-pick">Choose Contacts CSV</button>
+            <span class="admin-muted" id="admin-mambo-csv-name">No file chosen</span>
+          </div>
+          <p class="admin-status" id="admin-mambo-import-status" role="status" hidden></p>
+        </div>
         <div class="admin-toolbar">
           <select id="imports-filter" aria-label="Filter by membership type">
             <option value="all">All members</option>
@@ -1025,6 +1042,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260817t"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260817v"></script>
 </body>
 </html>
