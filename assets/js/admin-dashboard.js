@@ -385,8 +385,8 @@
         'stat-enquiries': data.enquiries,
         'stat-new': data.newEnquiries,
         'stat-ithelp': data.itHelpOpen,
-        'stat-profiles': data.profiles,
-        'stat-imports': data.imports,
+        'stat-association': data.associationMembers,
+        'stat-welfare': data.welfareMembers,
         'stat-newsletter': data.newsletter
       };
       Object.entries(map).forEach(([id, value]) => {

@@ -1500,10 +1500,10 @@ module.exports = async function handler(req, res) {
       }
 
       if (resource === 'overview') {
-        const [enquiries, profiles, imports, newsletter] = await Promise.all([
+        const [enquiries, associationMembers, welfareMembers, newsletter] = await Promise.all([
           countRows('form_submissions'),
-          countRows('profiles'),
-          countRows('member_imports'),
+          countRows('member_imports', 'association_member=eq.true'),
+          countRows('member_imports', 'welfare_member=eq.true'),
           countRows('newsletter_subscribers')
         ]);
         // status column comes from migration 009; tolerate older schemas
@@ -1531,8 +1531,8 @@ module.exports = async function handler(req, res) {
         return json(res, 200, {
           enquiries,
           newEnquiries,
-          profiles,
-          imports,
+          associationMembers,
+          welfareMembers,
           newsletter,
           itHelpOpen,
           welfareInboxUnread
@@ -1791,7 +1791,7 @@ module.exports = async function handler(req, res) {
       if (resource === 'imports') {
         const filter = url.searchParams.get('filter') || 'all';
         let query =
-          'member_imports?select=id,member_number,full_name,email,plan,membership_label,status,association_member,welfare_member&order=member_number.asc&limit=600';
+          'member_imports?select=id,member_number,full_name,email,plan,membership_label,status,association_member,welfare_member&order=member_number.asc&limit=2000';
         if (filter === 'association') {
           query += '&association_member=eq.true&welfare_member=eq.false';
         } else if (filter === 'welfare') {
