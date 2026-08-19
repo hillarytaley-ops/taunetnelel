@@ -70,14 +70,14 @@
     announcements: 'Messages shown on the members dashboard.',
     pages: 'Shortcuts to public pages and committee tools.',
     'welfare-members': 'Signed-in Social Welfare members, including people on Association + Welfare.',
-    'welfare-list': 'Imported Social Welfare membership list.',
+    'welfare-list': 'Mambo Mob Welfare Contacts list. The first number is every Welfare member (including people also on Association).',
     crm: 'Welfare register. Sensitive bank, income, and ID fields stay Admin-only.',
     followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
     inbox: 'Private committee chat and member Team inbox. Choose a conversation below.',
     claims: 'Bereavement and hardship claims lodged on the Welfare tab, including supporting files.',
     'welfare-invoices': '$300 Association + Welfare invoices — mark paid when the deposit lands.',
     'association-members': 'Signed-in Association members who are not on Social Welfare.',
-    'association-list': 'Mambo Mob general / Association membership list, including people who are also on Welfare.',
+    'association-list': 'Mambo Mob General / Association Contacts list. The first number is every Association member (including people also on Welfare).',
     events: 'Published events for the public site and members.',
     'association-invoices': '$50 Association invoices and event fees — mark paid when the deposit lands.',
     sponsors: 'Sponsor listings for the public sponsorship page.'
@@ -1047,9 +1047,9 @@
       Array.from(filterSelect.options).forEach((opt) => {
         const value = opt.value;
         if (scope === 'welfare') {
-          opt.hidden = !['welfare', 'welfare_any', 'both', 'pending'].includes(value);
+          opt.hidden = !['welfare', 'welfare_any', 'both'].includes(value);
         } else if (scope === 'association') {
-          opt.hidden = !['association', 'association_any', 'both', 'pending'].includes(value);
+          opt.hidden = !['association', 'association_any', 'both'].includes(value);
         } else {
           opt.hidden = false;
         }
@@ -1063,14 +1063,25 @@
     const stats = data.stats;
     let statsHtml = '';
     if (stats) {
-      const cards = [
-        { key: 'all', value: stats.total, label: 'Total imported', groups: [''] },
-        { key: 'both', value: stats.association_and_welfare, label: 'Association + Welfare', groups: ['', 'welfare'] },
-        { key: 'association_any', value: stats.association_member_total, label: 'All Association (general)', groups: ['', 'association'] },
-        { key: 'association', value: stats.association_only, label: 'Association only', groups: ['', 'association'] },
-        { key: 'welfare', value: stats.welfare_only, label: 'Welfare only', groups: ['', 'welfare'] },
-        { key: 'pending', value: stats.pending_invite, label: 'Pending invite', groups: ['', 'welfare', 'association'] }
-      ].filter((c) => c.groups.includes(state.listScope || ''));
+      const scope = state.listScope || '';
+      const cards =
+        scope === 'welfare'
+          ? [
+              { key: 'welfare_any', value: stats.welfare_member_total, label: 'All Welfare', hint: 'Mambo Mob list' },
+              { key: 'both', value: stats.association_and_welfare, label: 'Also on Association' },
+              { key: 'welfare', value: stats.welfare_only, label: 'Welfare only' }
+            ]
+          : scope === 'association'
+            ? [
+                { key: 'association_any', value: stats.association_member_total, label: 'All Association', hint: 'Mambo Mob list' },
+                { key: 'both', value: stats.association_and_welfare, label: 'Also on Welfare' },
+                { key: 'association', value: stats.association_only, label: 'Association only' }
+              ]
+            : [
+                { key: 'all', value: stats.total, label: 'Total imported' },
+                { key: 'association_any', value: stats.association_member_total, label: 'All Association' },
+                { key: 'welfare_any', value: stats.welfare_member_total, label: 'All Welfare' }
+              ];
       statsHtml = `<div class="admin-stats">${cards
         .map(
           (c) => `<button type="button" class="admin-stat admin-stat--btn${
@@ -1078,7 +1089,7 @@
           }" data-import-filter="${c.key}" aria-pressed="${state.importFilter === c.key}">
           <strong>${c.value ?? '—'}</strong>
           <span>${c.label}</span>
-          <em class="admin-stat__hint">Click to show list</em>
+          <em class="admin-stat__hint">${escapeHtml(c.hint || 'Click to show list')}</em>
         </button>`
         )
         .join('')}</div>`;
@@ -1125,12 +1136,11 @@
       countEl.hidden = false;
       const labels = {
         all: 'Total imported',
-        association_any: 'All Association (general)',
+        association_any: 'All Association (Mambo)',
         association: 'Association only',
         welfare: 'Welfare only',
-        both: 'Association + Welfare',
-        association_any: 'All with association',
-        welfare_any: 'All with welfare',
+        both: state.listScope === 'welfare' ? 'Also on Association' : 'Also on Welfare',
+        welfare_any: 'All Welfare (Mambo)',
         pending: 'Pending invite'
       };
       countEl.textContent = `Showing ${rows.length} — ${labels[state.importFilter] || state.importFilter}`;
