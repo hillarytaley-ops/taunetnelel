@@ -2027,6 +2027,10 @@
         renderMemberRegistrations(member);
       }
 
+      if (window.taunetMemberEventBookings) {
+        await window.taunetMemberEventBookings.init(member);
+      }
+
       loadAnnouncements(member);
       loadMemberResources();
 

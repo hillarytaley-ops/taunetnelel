@@ -460,6 +460,7 @@ module.exports = async function handler(req, res) {
         source: 'pay_portal_event',
         event_id: catalog.id,
         event_title: catalog.title,
+        event_location: catalog.location || null,
         ticket: ticket.id,
         ticket_label: ticket.label,
         phone: phone || null,
@@ -484,7 +485,7 @@ module.exports = async function handler(req, res) {
         amount_cents: ticket.amount_cents,
         amount_label: formatAud(ticket.amount_cents),
       },
-      message: `Booking payment ${invoice.invoice_number} is ready. Pay by bank transfer using your reference. A paid receipt is emailed only after the Treasurer confirms payment.`,
+      message: `Booking payment ${invoice.invoice_number} is ready. Pay by bank transfer using your reference, then upload a screenshot of the receipt. We will email you as soon as the screenshot is received. Your paid receipt and ticket are sent after the Treasurer confirms the deposit.`,
       invoice: {
         id: invoice.id,
         invoice_number: invoice.invoice_number,

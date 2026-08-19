@@ -2121,11 +2121,18 @@
     }
     body.innerHTML = rows
       .map((row) => {
+        const meta = row.meta && typeof row.meta === 'object' ? row.meta : {};
+        const proofUrl = String(meta.proof_url || '').trim();
+        const proofNote = proofUrl
+          ? `<div class="admin-detail"><a href="${escapeHtml(proofUrl)}" target="_blank" rel="noopener">View payment screenshot</a></div>`
+          : meta.proof_uploaded_at
+            ? '<div class="admin-detail">Screenshot on file</div>'
+            : '';
         const amount = `$${(Number(row.amount_cents || 0) / 100).toFixed(2)}`;
         const status = String(row.status || 'pending');
         const actions =
           status === 'pending'
-            ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="paid">Mark paid</button>
+            ? `<button type="button" data-invoice-status="${escapeHtml(row.id)}" data-kind="${escapeHtml(row.kind || '')}" data-next="paid">Mark paid</button>
                <button type="button" data-invoice-status="${escapeHtml(row.id)}" data-next="void">Void</button>
                <button type="button" data-invoice-delete="${escapeHtml(row.id)}">Delete</button>`
             : status === 'paid'
@@ -2142,6 +2149,7 @@
           <td>
             ${escapeHtml(row.full_name || '—')}
             <div class="admin-detail">${escapeHtml(row.email || '')}</div>
+            ${proofNote}
           </td>
           <td>${escapeHtml(
             row.kind === 'donation'
@@ -2175,7 +2183,11 @@
           }).then((result) => {
             if (next === 'paid') {
               if (result?.receipt_emailed) {
-                alert('Marked paid. Paid invoice PDF emailed to the member.');
+                alert(
+                  btn.dataset.kind === 'event'
+                    ? 'Marked paid. Confirmation, receipt, and ticket emailed to the buyer — in that order.'
+                    : 'Marked paid. Paid invoice PDF emailed to the member.'
+                );
               } else if (result?.receipt_error) {
                 alert(
                   'Marked paid, but the receipt email failed: ' + result.receipt_error

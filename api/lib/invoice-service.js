@@ -2,7 +2,7 @@
  * Shared invoice create + Resend email helpers.
  */
 
-const { buildInvoicePdf } = require('./invoice-pdf');
+const { buildInvoicePdf, buildEventTicketPdf } = require('./invoice-pdf');
 const { sendResendEmail, assertResendConfigured } = require('./member-mail');
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
@@ -346,6 +346,146 @@ async function sendPaidInvoiceReceiptEmail(invoice) {
     tags: [{ name: 'category', value: 'invoice-paid' }],
     refId: `taunet-paid-${paidInvoice.invoice_number}`,
   });
+}
+
+function eventMeta(invoice) {
+  const meta = invoice?.meta && typeof invoice.meta === 'object' ? invoice.meta : {};
+  return {
+    eventTitle: meta.event_title || invoice?.description || 'Event',
+    eventLocation: meta.event_location || '',
+    ticketLabel: meta.ticket_label || 'Admission',
+  };
+}
+
+function buildTransferLodgedHtml(invoice) {
+  const amount = formatAud(invoice.amount_cents);
+  const info = eventMeta(invoice);
+  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
+  <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
+  <h1 style="font-size:22px;margin:0 0 12px;">Transfer received — screenshot on file</h1>
+  <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
+  <p>Thank you. We have your payment screenshot. This email confirms that you have <strong>transferred ${amount} AUD</strong> to the Taunet Nelel bank account for:</p>
+  <p><strong>${escapeHtml(info.eventTitle)}</strong><br>
+  Ticket: ${escapeHtml(info.ticketLabel)}<br>
+  Invoice: <strong>${escapeHtml(invoice.invoice_number)}</strong><br>
+  Reference: <strong>${escapeHtml(invoice.pay_reference || '—')}</strong></p>
+  <p>Bank transfers can take a few days to appear. The Treasurer will confirm the deposit when it lands. After that you will receive, in order: payment confirmation, a paid receipt, and your event ticket.</p>
+  <p style="font-size:13px;color:#555;">Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
+  <p style="font-size:13px;color:#666;">Taunet Nelel · Victoria, Australia</p>
+</body></html>`;
+}
+
+async function sendTransferLodgedEmail(invoice) {
+  assertResendConfigured();
+  const amount = formatAud(invoice.amount_cents);
+  const info = eventMeta(invoice);
+  return sendResendEmail({
+    to: invoice.email,
+    subject: `Transfer screenshot received — ${invoice.invoice_number} — Taunet Nelel`,
+    html: buildTransferLodgedHtml(invoice),
+    text:
+      `Transfer received — screenshot on file\n\n` +
+      `Hello ${invoice.full_name || 'there'},\n\n` +
+      `We have your payment screenshot. This confirms you transferred ${amount} AUD to the Taunet Nelel bank account for ${info.eventTitle}.\n` +
+      `Invoice: ${invoice.invoice_number}\n` +
+      `Reference: ${invoice.pay_reference || '—'}\n\n` +
+      `The Treasurer will confirm the deposit when it lands. Then you will receive payment confirmation, a paid receipt, and your event ticket.\n\n` +
+      `Questions: info@taunetnelel.org\n`,
+    tags: [{ name: 'category', value: 'event-transfer-lodged' }],
+    refId: `taunet-lodged-${invoice.invoice_number}-${Date.now()}`,
+  });
+}
+
+function buildEventPaymentConfirmedHtml(invoice) {
+  const amount = formatAud(invoice.amount_cents);
+  const info = eventMeta(invoice);
+  const paidWhen = invoice.paid_at ? formatDateTime(invoice.paid_at) : formatDateTime(new Date());
+  return `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
+  <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
+  <h1 style="font-size:22px;margin:0 0 12px;">Payment confirmed</h1>
+  <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
+  <p>The Treasurer has confirmed that <strong>${amount} AUD</strong> has been received in the Taunet Nelel bank account.</p>
+  <p><strong>${escapeHtml(info.eventTitle)}</strong><br>
+  Ticket: ${escapeHtml(info.ticketLabel)}<br>
+  Invoice: <strong>${escapeHtml(invoice.invoice_number)}</strong><br>
+  Received: ${escapeHtml(paidWhen)}<br>
+  Reference: ${escapeHtml(invoice.pay_reference || '—')}</p>
+  <p>Your paid receipt and event ticket will follow in the next two emails.</p>
+  <p style="font-size:13px;color:#555;">Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
+  <p style="font-size:13px;color:#666;">Taunet Nelel · Victoria, Australia</p>
+</body></html>`;
+}
+
+async function sendEventPaymentConfirmedEmail(invoice) {
+  assertResendConfigured();
+  const amount = formatAud(invoice.amount_cents);
+  return sendResendEmail({
+    to: invoice.email,
+    subject: `Payment confirmed — ${invoice.invoice_number} — Taunet Nelel`,
+    html: buildEventPaymentConfirmedHtml(invoice),
+    text:
+      `Payment confirmed\n\n` +
+      `The Treasurer has confirmed that ${amount} AUD has been received in the Taunet Nelel bank account.\n` +
+      `Invoice: ${invoice.invoice_number}\n` +
+      `Reference: ${invoice.pay_reference || ''}\n\n` +
+      `Your paid receipt and event ticket will follow in the next two emails.\n`,
+    tags: [{ name: 'category', value: 'event-payment-confirmed' }],
+    refId: `taunet-event-confirmed-${invoice.invoice_number}-${Date.now()}`,
+  });
+}
+
+async function sendEventTicketEmail(invoice) {
+  assertResendConfigured();
+  const info = eventMeta(invoice);
+  const pdf = buildEventTicketPdf({
+    orgName: ORG_LEGAL_NAME,
+    eventTitle: info.eventTitle,
+    eventLocation: info.eventLocation,
+    ticketLabel: info.ticketLabel,
+    guestName: invoice.full_name || invoice.email,
+    guestEmail: invoice.email,
+    invoiceNumber: invoice.invoice_number,
+    payReference: invoice.pay_reference,
+    amountLabel: formatAud(invoice.amount_cents),
+  });
+  return sendResendEmail({
+    to: invoice.email,
+    subject: `Your event ticket — ${invoice.invoice_number} — Taunet Nelel`,
+    html: `<!DOCTYPE html><html><body style="font-family:Arial,Helvetica,sans-serif;color:#222;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
+  <p style="margin:0 0 4px;color:#8B4513;font-size:13px;">Taunet Nelel</p>
+  <h1 style="font-size:22px;margin:0 0 12px;">Your event ticket</h1>
+  <p>Hello ${escapeHtml(invoice.full_name || 'there')},</p>
+  <p>Your place is confirmed. Please keep the attached ticket and present it at the door.</p>
+  <p><strong>${escapeHtml(info.eventTitle)}</strong><br>
+  Ticket: ${escapeHtml(info.ticketLabel)}<br>
+  Invoice: <strong>${escapeHtml(invoice.invoice_number)}</strong></p>
+  <p style="font-size:13px;color:#555;">Questions: <a href="mailto:info@taunetnelel.org">info@taunetnelel.org</a></p>
+  <p style="font-size:13px;color:#666;">Taunet Nelel · Victoria, Australia</p>
+</body></html>`,
+    text:
+      `Your event ticket\n\n` +
+      `${info.eventTitle}\n` +
+      `Ticket: ${info.ticketLabel}\n` +
+      `Invoice: ${invoice.invoice_number}\n` +
+      `Please present the attached ticket at the door.\n`,
+    attachments: [
+      {
+        filename: `${invoice.invoice_number}-ticket.pdf`,
+        content: pdf.toString('base64'),
+      },
+    ],
+    tags: [{ name: 'category', value: 'event-ticket' }],
+    refId: `taunet-ticket-${invoice.invoice_number}-${Date.now()}`,
+  });
+}
+
+/**
+ * After Admin marks an event invoice paid: confirmation, then receipt, then ticket.
+ */
+async function sendEventPaidSequence(invoice) {
+  await sendEventPaymentConfirmedEmail(invoice);
+  await sendPaidInvoiceReceiptEmail(invoice);
+  await sendEventTicketEmail(invoice);
 }
 
 async function createAndEmailInvoice({
@@ -755,6 +895,8 @@ module.exports = {
   createWelfarePayCheckout,
   sendInvoiceEmail,
   sendPaidInvoiceReceiptEmail,
+  sendTransferLodgedEmail,
+  sendEventPaidSequence,
   sendInvoiceReminderEmail,
   processInvoiceReminders,
   welfareSeriesFullyPaid,

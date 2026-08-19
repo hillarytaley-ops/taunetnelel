@@ -7,7 +7,8 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=7">
-  <link rel="stylesheet" href="../assets/css/members.css?v=32">
+  <link rel="stylesheet" href="../assets/css/members.css?v=33">
+  <link rel="stylesheet" href="../assets/css/member-invoices.css?v=2">
 </head>
 <body>
   <div class="members-mobile-header">
@@ -67,11 +68,11 @@
           <div class="event-phases-dashboard" data-events-dashboard></div>
           <a href="events.html" style="font-size:0.9rem;margin-top:0.75rem;display:inline-block;">View all my events →</a>
         </div>
-        <div class="dash-card dash-card--registrations">
-          <h2>My Registrations</h2>
-          <ul class="dash-list" data-member-registrations>
-            <li><span>Taunet Nelel Gala 2026</span><span class="status-chip status-chip--active">Confirmed</span></li>
-          </ul>
+        <div class="dash-card dash-card--registrations dash-card--full">
+          <h2>My event bookings</h2>
+          <div data-member-event-bookings>
+            <p class="muted">Loading your bookings…</p>
+          </div>
           <a href="events.html" style="font-size:0.9rem;margin-top:0.75rem;display:inline-block;">View all events →</a>
         </div>
         <div class="dash-card dash-card--benefits">
@@ -129,6 +130,8 @@
   <script src="../assets/js/supabase-init.js?v=4"></script>
   <script src="../assets/js/events-supabase.js?v=5"></script>
   <script src="../assets/js/members-auth.js?v=17"></script>
-  <script src="../assets/js/members.js?v=42"></script>
+  <script src="../assets/js/invoices.js?v=4"></script>
+  <script src="../assets/js/member-event-bookings.js?v=1"></script>
+  <script src="../assets/js/members.js?v=49"></script>
 </body>
 </html>

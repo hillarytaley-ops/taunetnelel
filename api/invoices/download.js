@@ -3,7 +3,7 @@
  * GET /api/invoices/download?id=<invoice-uuid>
  * Auth: Bearer <supabase access_token>
  */
-const { buildInvoicePdf } = require('../lib/invoice-pdf');
+const { buildInvoicePdf, buildEventTicketPdf } = require('../lib/invoice-pdf');
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -133,6 +133,38 @@ module.exports = async function handler(req, res) {
         .toLowerCase() === email;
     if (!owns) {
       return json(res, 403, { error: 'You can only download your own invoices.' });
+    }
+
+    const type = String(url.searchParams.get('type') || 'invoice').toLowerCase();
+    const wantsTicket = type === 'ticket';
+    if (wantsTicket) {
+      if (invoice.kind !== 'event') {
+        return json(res, 400, { error: 'Tickets are only available for event bookings.' });
+      }
+      if (String(invoice.status || '').toLowerCase() !== 'paid') {
+        return json(res, 400, {
+          error: 'Your ticket is emailed and available to download after the Treasurer confirms the deposit.',
+        });
+      }
+      const meta = invoice.meta && typeof invoice.meta === 'object' ? invoice.meta : {};
+      const pdf = buildEventTicketPdf({
+        orgName: ORG_LEGAL_NAME,
+        eventTitle: meta.event_title || invoice.description || 'Event',
+        eventLocation: meta.event_location || '',
+        ticketLabel: meta.ticket_label || 'Admission',
+        guestName: invoice.full_name || invoice.email,
+        guestEmail: invoice.email,
+        invoiceNumber: invoice.invoice_number,
+        payReference: invoice.pay_reference,
+        amountLabel: formatAud(invoice.amount_cents),
+      });
+      const filename = `${invoice.invoice_number || 'ticket'}-ticket.pdf`;
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(pdf);
+      return;
     }
 
     const pdf = buildInvoicePdf({

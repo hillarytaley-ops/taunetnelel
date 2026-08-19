@@ -27,10 +27,12 @@ const CRM_FIELD_GROUPS = new Set([
 const rateBuckets = new Map();
 
 let sendPaidInvoiceReceiptEmail;
+let sendEventPaidSequence;
 try {
-  ({ sendPaidInvoiceReceiptEmail } = require('../lib/invoice-service'));
+  ({ sendPaidInvoiceReceiptEmail, sendEventPaidSequence } = require('../lib/invoice-service'));
 } catch (_) {
   sendPaidInvoiceReceiptEmail = null;
+  sendEventPaidSequence = null;
 }
 
 let sendResendBatch;
@@ -1874,7 +1876,7 @@ module.exports = async function handler(req, res) {
         const status = url.searchParams.get('status') || 'all';
         // Quote status column — PostgREST can mis-parse unquoted "status" in some setups
         let query =
-          'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at&order=issued_at.desc&limit=300';
+          'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at,meta&order=issued_at.desc&limit=300';
         if (status === 'pending' || status === 'paid' || status === 'void') {
           query += `&status=eq.${encodeURIComponent(status)}`;
         }
@@ -1886,7 +1888,7 @@ module.exports = async function handler(req, res) {
           // Fallback: load all, filter in memory if column filter fails
           try {
             const { data } = await sb(
-              'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at&order=issued_at.desc&limit=300'
+              'invoices?select=id,invoice_number,email,full_name,kind,description,amount_cents,currency,status,pay_reference,event_id,issued_at,due_at,paid_at,meta&order=issued_at.desc&limit=300'
             );
             let rows = Array.isArray(data) ? data : [];
             if (status === 'pending' || status === 'paid' || status === 'void') {
@@ -2887,10 +2889,17 @@ module.exports = async function handler(req, res) {
           return json(res, 400, { error: 'Invoice has no member email' });
         }
         try {
-          await sendPaidInvoiceReceiptEmail(invoice);
+          if (invoice.kind === 'event' && typeof sendEventPaidSequence === 'function') {
+            await sendEventPaidSequence(invoice);
+          } else {
+            await sendPaidInvoiceReceiptEmail(invoice);
+          }
           return json(res, 200, {
             ok: true,
-            message: `Paid invoice PDF emailed to ${invoice.email}.`,
+            message:
+              invoice.kind === 'event'
+                ? `Payment confirmation, receipt, and ticket emailed to ${invoice.email}.`
+                : `Paid invoice PDF emailed to ${invoice.email}.`,
           });
         } catch (mailErr) {
           console.error('invoice-receipt email', mailErr);
@@ -3612,7 +3621,11 @@ module.exports = async function handler(req, res) {
         let receiptError = null;
         if (status === 'paid' && invoice?.email && typeof sendPaidInvoiceReceiptEmail === 'function') {
           try {
-            await sendPaidInvoiceReceiptEmail(invoice);
+            if (invoice.kind === 'event' && typeof sendEventPaidSequence === 'function') {
+              await sendEventPaidSequence(invoice);
+            } else {
+              await sendPaidInvoiceReceiptEmail(invoice);
+            }
             receiptEmailed = true;
           } catch (mailErr) {
             console.error('invoice-status paid receipt email', mailErr);

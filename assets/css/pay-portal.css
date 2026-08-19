@@ -121,6 +121,51 @@ body[data-page="pay-donate"] {
   max-width: 26rem;
 }
 
+.pay-portal__note--warn {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  max-width: 28rem;
+  background: rgba(196, 98, 28, 0.1);
+  border: 1px solid rgba(196, 98, 28, 0.28);
+  border-radius: 10px;
+  color: #5c2e10;
+}
+
+.pay-portal__proof {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.1rem 1.15rem;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(139, 69, 19, 0.16);
+  border-radius: 12px;
+}
+
+.pay-portal__proof h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  color: var(--color-brown, #5c2e10);
+}
+
+.pay-portal__proof p {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #5a4b3c;
+}
+
+.pay-portal__file {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #5c2e10;
+}
+
+.pay-portal__file input {
+  font-weight: 500;
+}
+
 .pay-portal__banner {
   position: relative;
   flex: 1 1 auto;

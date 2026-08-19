@@ -39,7 +39,7 @@
     const { data, error } = await client
       .from('invoices')
       .select(
-        'id,invoice_number,kind,description,amount_cents,status,pay_reference,issued_at,due_at,paid_at,full_name,email'
+        'id,invoice_number,kind,description,amount_cents,status,pay_reference,issued_at,due_at,paid_at,full_name,email,meta'
       )
       .order('issued_at', { ascending: false })
       .limit(50);
@@ -47,10 +47,13 @@
     return data || [];
   }
 
-  async function downloadPdf(invoiceId) {
+  async function downloadPdf(invoiceId, type) {
     const token = await getAccessToken();
+    const kind = String(type || 'invoice').toLowerCase() === 'ticket' ? 'ticket' : 'invoice';
     const resp = await fetch(
-      '/api/invoices/download?id=' + encodeURIComponent(invoiceId),
+      '/api/invoices/download?id=' +
+        encodeURIComponent(invoiceId) +
+        (kind === 'ticket' ? '&type=ticket' : ''),
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -109,10 +112,33 @@
     }
   }
 
+  async function uploadEventProof(invoiceId, email, file) {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Could not read that file.'));
+      reader.readAsDataURL(file);
+    });
+    const resp = await fetch('/api/pay/event-proof', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        invoice_id: invoiceId,
+        email,
+        file_name: file.name,
+        data_url: dataUrl,
+      }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'Could not upload the screenshot.');
+    return data;
+  }
+
   global.taunetInvoices = {
     createInvoice,
     listMyInvoices,
     downloadPdf,
+    uploadEventProof,
     formatAud,
     formatDateTime,
     formatDate,

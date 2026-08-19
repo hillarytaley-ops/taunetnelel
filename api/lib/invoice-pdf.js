@@ -47,55 +47,20 @@ function loadLogoJpeg() {
  *   bankAccountName?: string,
  * }} data
  */
-function buildInvoicePdf(data) {
-  const status = String(data.status || 'pending').toLowerCase();
-  const isPaid = status === 'paid';
+function isHighlightLine(line) {
+  return (
+    line.startsWith('INVOICE ') ||
+    line === 'EVENT TICKET' ||
+    line.startsWith('Amount:') ||
+    line.startsWith('Amount paid:')
+  );
+}
+
+function buildPdfFromLines(lines) {
   const logo = loadLogoJpeg();
-
-  const lines = [];
-  lines.push(data.orgName || 'Taunet Nelel Incorporated');
-  lines.push(data.abn ? `ABN: ${data.abn}` : 'Association invoice (GST not itemised)');
-  lines.push('');
-  lines.push(`INVOICE ${data.invoiceNumber}`);
-  lines.push(`Status: ${isPaid ? 'PAID' : status.toUpperCase()}`);
-  lines.push(`Issued: ${data.issuedAt || '—'}`);
-  if (isPaid && data.paidAt) {
-    lines.push(`Paid: ${data.paidAt}`);
-  } else {
-    lines.push(`Due: ${data.dueAt || '—'}`);
-  }
-  lines.push('');
-  lines.push(`Bill to: ${data.billToName || 'Member'}`);
-  if (data.billToEmail) lines.push(data.billToEmail);
-  lines.push('');
-  lines.push('Description');
-  lines.push(data.description || 'Membership fee');
-  lines.push('');
-  lines.push(`Amount: ${data.amountLabel} AUD`);
-  lines.push('');
-  if (isPaid) {
-    lines.push('Payment received. Thank you for supporting Taunet Nelel.');
-    lines.push(`Payment reference: ${data.payReference || '—'}`);
-  } else {
-    lines.push('Pay by bank transfer (EFT)');
-    if (data.payid) lines.push(`PayID: ${data.payid}`);
-    if (data.bankName) lines.push(`Bank: ${data.bankName}`);
-    if (data.bankBsb) lines.push(`BSB: ${data.bankBsb}`);
-    if (data.bankAccount) lines.push(`Account: ${data.bankAccount}`);
-    if (data.bankAccountName) lines.push(`Account name: ${data.bankAccountName}`);
-    lines.push(`Payment reference: ${data.payReference || '—'}`);
-    lines.push('');
-    lines.push('Please use the payment reference so we can match your deposit.');
-  }
-  lines.push('');
-  lines.push('Questions: info@taunetnelel.org');
-  lines.push('www.taunetnelel.org');
-
-  // Content stream: optional logo image then text
   const content = [];
   let textStartY = 780;
   if (logo) {
-    // Draw logo at top (display ~120pt wide, ~52pt tall)
     content.push('q');
     content.push('120 0 0 52 50 770 cm');
     content.push('/Im1 Do');
@@ -112,7 +77,7 @@ function buildInvoicePdf(data) {
       content.push('/F2 16 Tf');
       content.push(`(${escapePdfText(line)}) Tj`);
       content.push('/F1 11 Tf');
-    } else if (line.startsWith('INVOICE ') || line.startsWith('Amount:')) {
+    } else if (isHighlightLine(line)) {
       content.push('T*');
       content.push('/F2 13 Tf');
       content.push(`(${escapePdfText(line)}) Tj`);
@@ -168,8 +133,77 @@ function buildInvoicePdf(data) {
     return assemblePdf(objects);
   }
 
-  // Assemble with binary JPEG object carefully using Buffers
   return assemblePdfWithJpeg(objects, logo, readJpegSize(logo) || { w: 320, h: 140 }, stream, streamLen);
+}
+
+function buildInvoicePdf(data) {
+  const status = String(data.status || 'pending').toLowerCase();
+  const isPaid = status === 'paid';
+  const lines = [];
+  lines.push(data.orgName || 'Taunet Nelel Incorporated');
+  lines.push(data.abn ? `ABN: ${data.abn}` : 'Association invoice (GST not itemised)');
+  lines.push('');
+  lines.push(`INVOICE ${data.invoiceNumber}`);
+  lines.push(`Status: ${isPaid ? 'PAID' : status.toUpperCase()}`);
+  lines.push(`Issued: ${data.issuedAt || '—'}`);
+  if (isPaid && data.paidAt) {
+    lines.push(`Paid: ${data.paidAt}`);
+  } else {
+    lines.push(`Due: ${data.dueAt || '—'}`);
+  }
+  lines.push('');
+  lines.push(`Bill to: ${data.billToName || 'Member'}`);
+  if (data.billToEmail) lines.push(data.billToEmail);
+  lines.push('');
+  lines.push('Description');
+  lines.push(data.description || 'Membership fee');
+  lines.push('');
+  lines.push(`Amount: ${data.amountLabel} AUD`);
+  lines.push('');
+  if (isPaid) {
+    lines.push('Payment received. Thank you for supporting Taunet Nelel.');
+    lines.push(`Payment reference: ${data.payReference || '—'}`);
+  } else {
+    lines.push('Pay by bank transfer (EFT)');
+    if (data.payid) lines.push(`PayID: ${data.payid}`);
+    if (data.bankName) lines.push(`Bank: ${data.bankName}`);
+    if (data.bankBsb) lines.push(`BSB: ${data.bankBsb}`);
+    if (data.bankAccount) lines.push(`Account: ${data.bankAccount}`);
+    if (data.bankAccountName) lines.push(`Account name: ${data.bankAccountName}`);
+    lines.push(`Payment reference: ${data.payReference || '—'}`);
+    lines.push('');
+    lines.push('Please use the payment reference so we can match your deposit.');
+  }
+  lines.push('');
+  lines.push('Questions: info@taunetnelel.org');
+  lines.push('www.taunetnelel.org');
+  return buildPdfFromLines(lines);
+}
+
+function buildEventTicketPdf(data) {
+  const lines = [
+    data.orgName || 'Taunet Nelel Incorporated',
+    'EVENT TICKET',
+    '',
+    data.eventTitle || 'Event',
+    data.eventWhen ? `When: ${data.eventWhen}` : '',
+    data.eventLocation ? `Where: ${data.eventLocation}` : '',
+    '',
+    `Ticket: ${data.ticketLabel || 'Admission'}`,
+    `Guest: ${data.guestName || 'Guest'}`,
+    data.guestEmail || '',
+    '',
+    `Invoice: ${data.invoiceNumber || '—'}`,
+    `Reference: ${data.payReference || '—'}`,
+    `Amount paid: ${data.amountLabel || '—'} AUD`,
+    'Status: PAID — please present this ticket at the door',
+    '',
+    'This ticket is valid after the Treasurer confirmed your bank transfer.',
+    '',
+    'Questions: info@taunetnelel.org',
+    'www.taunetnelel.org',
+  ];
+  return buildPdfFromLines(lines);
 }
 
 function readJpegSize(buf) {
@@ -258,4 +292,4 @@ function assemblePdfWithJpeg(textObjects, jpegBuf, dims, stream, streamLen) {
   return Buffer.concat([body, Buffer.from(xref, 'utf8')]);
 }
 
-module.exports = { buildInvoicePdf };
+module.exports = { buildInvoicePdf, buildEventTicketPdf };

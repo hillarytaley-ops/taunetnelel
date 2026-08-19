@@ -229,7 +229,14 @@
         ? data.message ||
           'This ticket is free. No bank payment is required.'
         : (data.message || 'Bank transfer details are shown above.') +
-          ' A paid receipt PDF is emailed only after Admin confirms your payment.';
+          ' Upload your receipt screenshot next. After the Treasurer confirms the deposit, you will receive payment confirmation, a paid receipt, and your ticket.';
+    }
+
+    const proofForm = document.getElementById('pay-proof-form');
+    if (proofForm) {
+      proofForm.hidden = isFree;
+      proofForm.dataset.invoiceId = invoice.id || '';
+      proofForm.dataset.email = data.email || form?.email?.value || '';
     }
 
     const bankBlock = document.getElementById('pay-bank-block');
@@ -352,13 +359,81 @@
       if (!resp.ok) {
         throw new Error(data.error || 'Could not start event payment.');
       }
-      renderInstructions(data);
+      renderInstructions({ ...data, email });
     } catch (err) {
       showStatus(err.message || 'Could not start event payment.', true);
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.textContent = original;
+      }
+    }
+  });
+
+  document.getElementById('pay-proof-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const proofForm = event.currentTarget;
+    const statusProof = document.getElementById('pay-proof-status');
+    const submitProof = document.getElementById('pay-proof-submit');
+    const fileInput = document.getElementById('pay-proof-file');
+    const file = fileInput?.files?.[0];
+    const invoiceId = proofForm.dataset.invoiceId || '';
+    const email = proofForm.dataset.email || '';
+
+    function setProofStatus(message, isError) {
+      if (!statusProof) return;
+      statusProof.hidden = false;
+      statusProof.textContent = message;
+      statusProof.classList.toggle('is-error', Boolean(isError));
+    }
+
+    if (!file) {
+      setProofStatus('Please choose a screenshot of your bank receipt.', true);
+      return;
+    }
+    if (!invoiceId || !email) {
+      setProofStatus('Booking details are missing. Refresh and book again.', true);
+      return;
+    }
+
+    const original = submitProof?.textContent || 'Upload screenshot';
+    if (submitProof) {
+      submitProof.disabled = true;
+      submitProof.textContent = 'Uploading…';
+    }
+    setProofStatus('Uploading your screenshot…', false);
+
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read that file.'));
+        reader.readAsDataURL(file);
+      });
+      const resp = await fetch('/api/pay/event-proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoice_id: invoiceId,
+          email,
+          file_name: file.name,
+          data_url: dataUrl,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.error || 'Could not upload the screenshot.');
+      setProofStatus(
+        data.message ||
+          'Screenshot received. Check your email — we have confirmed your transfer is on file.',
+        false
+      );
+      if (fileInput) fileInput.value = '';
+      if (submitProof) submitProof.textContent = 'Uploaded';
+    } catch (err) {
+      setProofStatus(err.message || 'Could not upload the screenshot.', true);
+      if (submitProof) {
+        submitProof.disabled = false;
+        submitProof.textContent = original;
       }
     }
   });

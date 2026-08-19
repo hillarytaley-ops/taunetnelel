@@ -1,5 +1,9 @@
 /* Member invoice cards (Membership → Payment history) */
 
+.muted {
+  color: #7a6354;
+}
+
 .member-invoice-list {
   display: grid;
   gap: 1rem;
@@ -135,8 +139,39 @@
   color: #6b4a36;
 }
 
-@media (max-width: 640px) {
-  .member-invoice__meta {
-    grid-template-columns: 1fr;
-  }
+.member-event-booking__advice {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #5a4b3c;
+  padding: 0.85rem 1rem;
+  background: rgba(196, 98, 28, 0.08);
+  border: 1px solid rgba(196, 98, 28, 0.22);
+  border-radius: 10px;
+}
+
+.member-event-booking__next {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #5a4b3c;
+}
+
+.member-event-booking__file {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5c2e10;
+}
+
+.member-event-booking__status {
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+  color: #1f7a52;
+}
+
+.member-event-booking__status.is-error {
+  color: #9a2f12;
 }

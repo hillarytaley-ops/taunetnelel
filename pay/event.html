@@ -8,7 +8,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=22">
-  <link rel="stylesheet" href="../assets/css/pay-portal.css?v=3">
+  <link rel="stylesheet" href="../assets/css/pay-portal.css?v=5">
 </head>
 <body data-page="pay-event">
 
@@ -57,9 +57,10 @@
         <ul class="pay-portal__perks" id="pay-event-perks">
           <li>Bank account details shown on the next step</li>
           <li>Use your unique payment reference</li>
-          <li>Treasurer confirms payment — then you get a paid receipt</li>
+          <li>Upload a screenshot of your bank receipt after you pay</li>
+          <li>Treasurer confirms the deposit — then you get confirmation, receipt, and ticket</li>
         </ul>
-        <p class="pay-portal__note">No card details are collected on this site. Pay in your banking app.</p>
+        <p class="pay-portal__note pay-portal__note--warn">Bank transfers can take a few days to appear on the Taunet account. Please pay <strong>at least 5 days before the event</strong> so we have time to confirm your payment and email your receipt and ticket.</p>
         <figure class="pay-portal__banner" id="pay-event-banner" hidden>
           <img id="pay-event-banner-img" alt="" width="720" height="900">
         </figure>
@@ -68,7 +69,7 @@
       <section class="pay-portal__card" aria-labelledby="pay-event-heading">
         <div id="pay-step-form">
           <h2 id="pay-event-heading">Book your place</h2>
-          <p class="pay-portal__intro">Enter your details and ticket type. We show <strong>bank account details</strong> on the next screen.</p>
+          <p class="pay-portal__intro">Enter your details and ticket type. We show <strong>bank account details</strong> on the next screen. Because this is a bank transfer, money may take longer to reach the Taunet account — pay <strong>5 days early</strong> if you can.</p>
 
           <form id="pay-event-form" class="pay-portal__form" novalidate>
             <input type="hidden" name="event_id" id="pay-event-id" value="men-s-camp-2026-08-01">
@@ -135,7 +136,7 @@
             <button type="submit" class="btn btn--primary pay-portal__submit" id="pay-submit">
               Book &amp; show bank details
             </button>
-            <p class="pay-portal__fine">You will pay in your banking app. Include the payment reference exactly.</p>
+            <p class="pay-portal__fine">You will pay in your banking app. Include the payment reference exactly. After you pay, upload a screenshot of the receipt.</p>
             <p id="pay-form-status" class="pay-portal__status" role="status" aria-live="polite" hidden></p>
           </form>
         </div>
@@ -143,7 +144,7 @@
         <div id="pay-step-instructions" hidden>
           <p class="pay-portal__badge">Booking ready · pay now</p>
           <h2 id="pay-out-heading">Pay by bank transfer</h2>
-          <p class="pay-portal__intro">Bank account details are shown below. Include the <strong>payment reference</strong> exactly so we can match your deposit.</p>
+          <p class="pay-portal__intro">Bank account details are shown below. Include the <strong>payment reference</strong> exactly so we can match your deposit. Bank transfers can take a few days — paying <strong>5 days before the event</strong> is best.</p>
 
           <dl class="pay-portal__facts">
             <div>
@@ -187,8 +188,20 @@
             <li>Enter the BSB and account details above.</li>
             <li>Pay the <strong>amount</strong> shown for your ticket.</li>
             <li>Paste the <strong>payment reference</strong> in the description field.</li>
-            <li>After the Treasurer marks your invoice paid, you will receive a paid receipt by email.</li>
+            <li>Upload a screenshot of your bank receipt below. We email you straight away to confirm the transfer is on file.</li>
+            <li>When the money lands, the Treasurer marks you paid. You then receive confirmation, a paid receipt, and your event ticket — in that order.</li>
           </ol>
+
+          <form id="pay-proof-form" class="pay-portal__proof" hidden>
+            <h3>Upload payment screenshot</h3>
+            <p>After you have paid, upload a screenshot of the bank receipt. We will email you immediately confirming your transfer to the Taunet Nelel account.</p>
+            <label class="pay-portal__file">
+              <span>Receipt screenshot</span>
+              <input id="pay-proof-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required>
+            </label>
+            <button type="submit" class="btn btn--primary" id="pay-proof-submit">Upload screenshot</button>
+            <p id="pay-proof-status" class="pay-portal__status" role="status" aria-live="polite" hidden></p>
+          </form>
 
           <p class="pay-portal__email-note" id="pay-email-note"></p>
 
@@ -212,6 +225,6 @@
   </footer>
 
   <script src="../assets/js/main.js?v=16"></script>
-  <script src="../assets/js/pay-event.js?v=5"></script>
+  <script src="../assets/js/pay-event.js?v=6"></script>
 </body>
 </html>
