@@ -1230,19 +1230,49 @@
     });
   }
 
+  function melbourneParts(date) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Australia/Melbourne',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const n = (type) => parts.find((p) => p.type === type)?.value || '00';
+    return { y: n('year'), m: n('month'), d: n('day'), h: n('hour'), min: n('minute'), s: n('second') };
+  }
+
   function toDatetimeLocalValue(value) {
     if (!value) return '';
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return '';
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const p = melbourneParts(d);
+    return `${p.y}-${p.m}-${p.d}T${p.h}:${p.min}`;
   }
 
   function fromDatetimeLocalValue(value) {
-    if (!value) return '';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toISOString();
+    const text = String(value || '').trim();
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return text;
+    const y = Number(match[1]);
+    const mo = Number(match[2]);
+    const day = Number(match[3]);
+    const h = Number(match[4]);
+    const mi = Number(match[5]);
+    const utcGuess = Date.UTC(y, mo - 1, day, h, mi, 0);
+    const shown = melbourneParts(new Date(utcGuess));
+    const asUtcFromWall = Date.UTC(
+      Number(shown.y),
+      Number(shown.m) - 1,
+      Number(shown.d),
+      Number(shown.h),
+      Number(shown.min),
+      Number(shown.s)
+    );
+    return new Date(utcGuess - (asUtcFromWall - utcGuess)).toISOString();
   }
 
   function inferBoardPhase(row) {
@@ -1348,10 +1378,34 @@
         const phaseValue = row.phase_override || 'auto';
         return `<tr data-event-id="${escapeHtml(row.id)}">
           <td>
-            <strong>${escapeHtml(row.title || '—')}</strong>
-            <div class="admin-detail">${escapeHtml(row.location || '')}${row.gallery_url ? `<br><a href="../${escapeHtml(row.gallery_url)}">Gallery link</a>` : ''}</div>
+            <div class="admin-event-edit">
+              <label>Title
+                <input type="text" maxlength="160" value="${escapeHtml(row.title || '')}" data-event-title="${escapeHtml(row.id)}" aria-label="Event title">
+              </label>
+              <label>Location
+                <input type="text" maxlength="160" value="${escapeHtml(row.location || '')}" data-event-location="${escapeHtml(row.id)}" aria-label="Event location">
+              </label>
+              <label>Summary
+                <textarea rows="2" maxlength="500" data-event-summary="${escapeHtml(row.id)}" aria-label="Event summary">${escapeHtml(row.summary || '')}</textarea>
+              </label>
+              <label>Meta line
+                <input type="text" maxlength="200" value="${escapeHtml(row.meta || '')}" data-event-meta="${escapeHtml(row.id)}" aria-label="Event meta line">
+              </label>
+              ${row.gallery_url ? `<div class="admin-detail"><a href="../${escapeHtml(row.gallery_url)}">Gallery link</a></div>` : ''}
+              <button type="button" class="btn btn--ghost btn--sm" data-event-save-details="${escapeHtml(row.id)}">Save details</button>
+              <div class="admin-detail" data-event-details-status="${escapeHtml(row.id)}"></div>
+            </div>
           </td>
-          <td class="admin-detail">${escapeHtml(formatDate(row.start_at))}${row.end_at ? `<br>→ ${escapeHtml(formatDate(row.end_at))}` : ''}</td>
+          <td>
+            <div class="admin-event-edit">
+              <label>Starts (Melbourne)
+                <input type="datetime-local" value="${escapeHtml(toDatetimeLocalValue(row.start_at))}" data-event-start="${escapeHtml(row.id)}" aria-label="Event start">
+              </label>
+              <label>Ends (Melbourne)
+                <input type="datetime-local" value="${escapeHtml(toDatetimeLocalValue(row.end_at || row.start_at))}" data-event-end="${escapeHtml(row.id)}" aria-label="Event end">
+              </label>
+            </div>
+          </td>
           <td>
             <select data-event-phase="${escapeHtml(row.id)}" aria-label="Board placement for ${escapeHtml(row.title || 'event')}">
               <option value="auto"${phaseValue === 'auto' || !row.phase_override ? ' selected' : ''}>Auto (${escapeHtml(board)})</option>
@@ -1416,6 +1470,54 @@
         } catch (err) {
           alert(err.message || 'Could not move event. Run migration 017 if phase_override is missing.');
           await loadEvents();
+        }
+      });
+    });
+
+    body.querySelectorAll('[data-event-save-details]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.eventSaveDetails;
+        const esc = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id.replace(/"/g, '\\"');
+        const title = String(body.querySelector(`[data-event-title="${esc}"]`)?.value || '').trim();
+        const location = String(body.querySelector(`[data-event-location="${esc}"]`)?.value || '').trim();
+        const summary = String(body.querySelector(`[data-event-summary="${esc}"]`)?.value || '').trim();
+        const meta = String(body.querySelector(`[data-event-meta="${esc}"]`)?.value || '').trim();
+        const startRaw = String(body.querySelector(`[data-event-start="${esc}"]`)?.value || '').trim();
+        const endRaw = String(body.querySelector(`[data-event-end="${esc}"]`)?.value || '').trim();
+        const statusEl = body.querySelector(`[data-event-details-status="${esc}"]`);
+        if (!title) {
+          alert('Please enter an event title.');
+          return;
+        }
+        if (!startRaw) {
+          alert('Please enter a start date and time (Melbourne).');
+          return;
+        }
+        const startAt = fromDatetimeLocalValue(startRaw);
+        const endAt = endRaw ? fromDatetimeLocalValue(endRaw) : startAt;
+        btn.disabled = true;
+        if (statusEl) statusEl.textContent = 'Saving…';
+        try {
+          await adminApi('event-update', {
+            method: 'PATCH',
+            body: {
+              id,
+              title,
+              location,
+              summary,
+              meta,
+              start_at: startAt,
+              end_at: endAt,
+            }
+          });
+          if (statusEl) statusEl.textContent = 'Details saved.';
+          await loadEvents();
+        } catch (err) {
+          const message = err.message || 'Could not save event details.';
+          if (statusEl) statusEl.textContent = message;
+          alert(message);
+        } finally {
+          btn.disabled = false;
         }
       });
     });
