@@ -70,7 +70,7 @@
     announcements: 'Messages shown on the members dashboard.',
     pages: 'Shortcuts to public pages and committee tools.',
     'welfare-members': 'Signed-in Social Welfare members, including people on Association + Welfare.',
-    'welfare-list': 'Mambo Mob Welfare Contacts list. The first number is every Welfare member (including people also on Association).',
+    'welfare-list': 'Committee Welfare register. The first number is every Welfare member (including people also on Association).',
     crm: 'Welfare register. Sensitive bank, income, and ID fields stay Admin-only.',
     followup: 'Email campaigns, SMS, welfare pipeline, calendar, and the join-welfare funnel.',
     inbox: 'Private committee chat and member Team inbox. Choose a conversation below.',
@@ -1067,7 +1067,7 @@
       const cards =
         scope === 'welfare'
           ? [
-              { key: 'welfare_any', value: stats.welfare_member_total, label: 'All Welfare', hint: 'Mambo Mob list' },
+              { key: 'welfare_any', value: stats.welfare_member_total, label: 'All Welfare', hint: 'Committee register' },
               { key: 'both', value: stats.association_and_welfare, label: 'Also on Association' },
               { key: 'welfare', value: stats.welfare_only, label: 'Welfare only' }
             ]
@@ -1140,7 +1140,7 @@
         association: 'Association only',
         welfare: 'Welfare only',
         both: state.listScope === 'welfare' ? 'Also on Association' : 'Also on Welfare',
-        welfare_any: 'All Welfare (Mambo)',
+        welfare_any: 'All Welfare (register)',
         pending: 'Pending invite'
       };
       countEl.textContent = `Showing ${rows.length} — ${labels[state.importFilter] || state.importFilter}`;
