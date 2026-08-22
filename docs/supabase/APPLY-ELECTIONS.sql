@@ -10,6 +10,8 @@ create table if not exists public.election_cycles (
   opens_at timestamptz,
   closes_at timestamptz,
   is_open boolean not null default true,
+  phase text not null default 'eoi'
+    check (phase in ('eoi', 'nomination', 'voting', 'closed')),
   created_at timestamptz not null default now()
 );
 
@@ -38,6 +40,7 @@ create table if not exists public.election_expressions (
     check (status in ('submitted', 'withdrawn', 'noted')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  nominated boolean not null default false,
   constraint election_expressions_one_per_post
     unique (cycle_id, position_id, email)
 );
@@ -60,7 +63,7 @@ insert into public.election_cycles (slug, title, summary, opens_at, closes_at, i
 values (
   '2026-agm',
   'Taunet Nelel Elections 2026',
-  'Association and Welfare members may express interest to vie for a committee position. This is an expression of interest only — it is not the ballot.',
+  'Elections have three stages: Expression of Interest, Nomination of those who expressed interest, then Voting.',
   now(),
   timestamptz '2026-12-31 23:59:59+11',
   true
@@ -95,7 +98,52 @@ set
   sort_order = excluded.sort_order,
   is_open = true;
 
+alter table public.election_cycles
+  add column if not exists phase text not null default 'eoi';
+alter table public.election_cycles
+  drop constraint if exists election_cycles_phase_check;
+alter table public.election_cycles
+  add constraint election_cycles_phase_check
+  check (phase in ('eoi', 'nomination', 'voting', 'closed'));
+alter table public.election_expressions
+  add column if not exists nominated boolean not null default false;
+
+create table if not exists public.election_nominations (
+  id uuid primary key default gen_random_uuid(),
+  cycle_id uuid not null references public.election_cycles (id) on delete cascade,
+  position_id text not null references public.election_positions (id) on delete cascade,
+  expression_id uuid not null references public.election_expressions (id) on delete cascade,
+  nominator_email text not null,
+  created_at timestamptz not null default now(),
+  constraint election_nominations_one_nominator
+    unique (cycle_id, position_id, nominator_email)
+);
+
+create table if not exists public.election_votes (
+  id uuid primary key default gen_random_uuid(),
+  cycle_id uuid not null references public.election_cycles (id) on delete cascade,
+  position_id text not null references public.election_positions (id) on delete cascade,
+  expression_id uuid not null references public.election_expressions (id) on delete cascade,
+  voter_email text not null,
+  created_at timestamptz not null default now(),
+  constraint election_votes_one_choice
+    unique (cycle_id, position_id, voter_email, expression_id)
+);
+
+create index if not exists election_nominations_cycle_idx
+  on public.election_nominations (cycle_id, position_id);
+create index if not exists election_votes_cycle_idx
+  on public.election_votes (cycle_id, position_id);
+
+alter table public.election_nominations enable row level security;
+alter table public.election_votes enable row level security;
+revoke all on table public.election_nominations from anon, authenticated;
+revoke all on table public.election_votes from anon, authenticated;
+grant all on table public.election_nominations to service_role;
+grant all on table public.election_votes to service_role;
+
 select
   (select title from public.election_cycles where slug = '2026-agm') as cycle,
+  (select phase from public.election_cycles where slug = '2026-agm') as phase,
   (select count(*) from public.election_positions) as positions,
   (select count(*) from public.election_expressions) as expressions;

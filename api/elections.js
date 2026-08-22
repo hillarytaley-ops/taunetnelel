@@ -1,8 +1,8 @@
 /**
- * Elections expressions of interest.
+ * Elections: EOI → nomination (from EOI list) → voting (nominated candidates).
  * GET  /api/elections           public cycle + positions
- * GET  /api/elections?mine=1    signed-in member's expressions
- * POST /api/elections           submit interest { position_id, statement, phone? }
+ * GET  /api/elections?mine=1    signed-in member: own EOIs, nominees, votes
+ * POST /api/elections           { action: eoi|nominate|vote, ... }
  */
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -111,9 +111,16 @@ async function requireUser(req) {
 }
 
 async function loadCycle() {
-  const { data } = await sb(
-    'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
-  );
+  let data;
+  try {
+    ({ data } = await sb(
+      'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open,phase&limit=1'
+    ));
+  } catch (_) {
+    ({ data } = await sb(
+      'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
+    ));
+  }
   const cycle = Array.isArray(data) ? data[0] : data;
   if (!cycle) {
     const err = new Error(
@@ -122,15 +129,23 @@ async function loadCycle() {
     err.status = 503;
     throw err;
   }
+  if (!cycle.phase) cycle.phase = cycle.is_open ? 'eoi' : 'closed';
   return cycle;
 }
 
-function cycleAccepting(cycle) {
-  if (!cycle?.is_open) return false;
-  const now = Date.now();
-  if (cycle.opens_at && now < Date.parse(cycle.opens_at)) return false;
-  if (cycle.closes_at && now > Date.parse(cycle.closes_at)) return false;
-  return true;
+function publicCycle(cycle) {
+  const phase = cycle.phase || 'eoi';
+  return {
+    title: cycle.title,
+    summary: cycle.summary,
+    opens_at: cycle.opens_at,
+    closes_at: cycle.closes_at,
+    is_open: cycle.is_open !== false,
+    phase,
+    accepting: cycle.is_open !== false && phase === 'eoi',
+    acceptingNomination: cycle.is_open !== false && phase === 'nomination',
+    acceptingVote: cycle.is_open !== false && phase === 'voting',
+  };
 }
 
 function eligibleFor(position, profile) {
@@ -139,6 +154,25 @@ function eligibleFor(position, profile) {
   if (position.eligibility === 'welfare') return welfare;
   if (position.eligibility === 'association') return association;
   return association || welfare;
+}
+
+async function loadProfile(user) {
+  const { data: profiles } = await sb(
+    `profiles?id=eq.${encodeURIComponent(user.id)}&select=id,full_name,email,phone,association_member,welfare_member&limit=1`
+  );
+  return Array.isArray(profiles) ? profiles[0] : profiles;
+}
+
+async function countBy(table, cycleId) {
+  const { data } = await sb(
+    `${table}?cycle_id=eq.${encodeURIComponent(cycleId)}&select=position_id,expression_id`
+  );
+  const map = {};
+  (data || []).forEach((row) => {
+    const key = `${row.position_id}:${row.expression_id}`;
+    map[key] = (map[key] || 0) + 1;
+  });
+  return map;
 }
 
 module.exports = async function handler(req, res) {
@@ -163,31 +197,202 @@ module.exports = async function handler(req, res) {
       );
       const url = new URL(req.url, 'http://localhost');
       let mine = [];
+      let myNominations = [];
+      let myVotes = [];
+      let expressions = [];
+      const phase = cycle.phase || 'eoi';
+
       if (url.searchParams.get('mine') === '1') {
         const user = await requireUser(req);
         const email = String(user.email || '').toLowerCase();
-        const { data } = await sb(
-          `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&email=eq.${encodeURIComponent(email)}&select=id,position_id,status,statement,created_at&order=created_at.desc`
-        );
-        mine = data || [];
+        try {
+          const { data } = await sb(
+            `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&email=eq.${encodeURIComponent(email)}&select=id,position_id,status,nominated,statement,created_at&order=created_at.desc`
+          );
+          mine = data || [];
+        } catch (_) {
+          const { data } = await sb(
+            `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&email=eq.${encodeURIComponent(email)}&select=id,position_id,status,statement,created_at&order=created_at.desc`
+          );
+          mine = data || [];
+        }
+        try {
+          const { data: noms } = await sb(
+            `election_nominations?cycle_id=eq.${encodeURIComponent(cycle.id)}&nominator_email=eq.${encodeURIComponent(email)}&select=position_id,expression_id`
+          );
+          myNominations = noms || [];
+        } catch (_) {
+          myNominations = [];
+        }
+        try {
+          const { data: votes } = await sb(
+            `election_votes?cycle_id=eq.${encodeURIComponent(cycle.id)}&voter_email=eq.${encodeURIComponent(email)}&select=position_id,expression_id`
+          );
+          myVotes = votes || [];
+        } catch (_) {
+          myVotes = [];
+        }
+
+        if (phase === 'nomination' || phase === 'voting' || phase === 'closed') {
+          try {
+            const { data: pool } = await sb(
+              `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&status=neq.withdrawn&select=id,position_id,full_name,statement,nominated,status&order=full_name.asc`
+            );
+            expressions = (pool || []).map((row) => ({
+              id: row.id,
+              position_id: row.position_id,
+              full_name: row.full_name,
+              statement: row.statement || '',
+              nominated: Boolean(row.nominated),
+            }));
+            if (phase === 'voting' || phase === 'closed') {
+              expressions = expressions.filter((row) => row.nominated);
+            }
+          } catch (_) {
+            expressions = [];
+          }
+        }
       }
+
+      let results = null;
+      if (phase === 'closed') {
+        try {
+          results = await countBy('election_votes', cycle.id);
+        } catch (_) {
+          results = {};
+        }
+      }
+
       return json(res, 200, {
-        cycle: {
-          title: cycle.title,
-          summary: cycle.summary,
-          opens_at: cycle.opens_at,
-          closes_at: cycle.closes_at,
-          accepting: cycleAccepting(cycle),
-        },
+        cycle: publicCycle(cycle),
         positions: positions || [],
         mine,
+        expressions,
+        myNominations,
+        myVotes,
+        results,
       });
     }
 
     if (req.method === 'POST') {
-      rateLimit(`elections-post:${clientIp(req)}`, 12, 60_000);
+      rateLimit(`elections-post:${clientIp(req)}`, 20, 60_000);
       const user = await requireUser(req);
       const body = await readBody(req);
+      const action = String(body.action || 'eoi').trim();
+      const cycle = await loadCycle();
+      const profile = await loadProfile(user);
+      if (!profile) {
+        return json(res, 403, {
+          error: 'No member profile found. Sign in with the email on the membership list.',
+        });
+      }
+      const email = String(profile.email || user.email || '').toLowerCase();
+
+      if (action === 'nominate') {
+        if (cycle.is_open === false || cycle.phase !== 'nomination') {
+          return json(res, 409, { error: 'Nomination is not open.' });
+        }
+        const expressionId = String(body.expression_id || '').trim();
+        if (!expressionId) return json(res, 400, { error: 'Choose someone who expressed interest.' });
+        const { data: expRows } = await sb(
+          `election_expressions?id=eq.${encodeURIComponent(expressionId)}&cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,status,full_name&limit=1`
+        );
+        const expression = Array.isArray(expRows) ? expRows[0] : expRows;
+        if (!expression || expression.status === 'withdrawn') {
+          return json(res, 400, { error: 'That expression of interest is not available.' });
+        }
+        const { data: posRows } = await sb(
+          `election_positions?id=eq.${encodeURIComponent(expression.position_id)}&select=id,title,eligibility&limit=1`
+        );
+        const position = Array.isArray(posRows) ? posRows[0] : posRows;
+        if (!eligibleFor(position, profile)) {
+          return json(res, 403, { error: `Only eligible members can nominate for ${position.title}.` });
+        }
+        const { data: existing } = await sb(
+          `election_nominations?cycle_id=eq.${encodeURIComponent(cycle.id)}&position_id=eq.${encodeURIComponent(expression.position_id)}&nominator_email=eq.${encodeURIComponent(email)}&select=id&limit=1`
+        );
+        const row = Array.isArray(existing) ? existing[0] : existing;
+        if (row?.id) {
+          await sb(`election_nominations?id=eq.${encodeURIComponent(row.id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ expression_id: expression.id }),
+          });
+        } else {
+          await sb('election_nominations', {
+            method: 'POST',
+            body: JSON.stringify({
+              cycle_id: cycle.id,
+              position_id: expression.position_id,
+              expression_id: expression.id,
+              nominator_email: email,
+            }),
+          });
+        }
+        return json(res, 200, {
+          ok: true,
+          message: `You nominated ${expression.full_name} for ${position.title}.`,
+        });
+      }
+
+      if (action === 'vote') {
+        if (cycle.is_open === false || cycle.phase !== 'voting') {
+          return json(res, 409, { error: 'Voting is not open.' });
+        }
+        const positionId = String(body.position_id || '').trim();
+        const choiceIds = Array.isArray(body.expression_ids)
+          ? body.expression_ids.map((id) => String(id || '').trim()).filter(Boolean)
+          : [String(body.expression_id || '').trim()].filter(Boolean);
+        if (!positionId || !choiceIds.length) {
+          return json(res, 400, { error: 'Choose a candidate.' });
+        }
+        const { data: posRows } = await sb(
+          `election_positions?id=eq.${encodeURIComponent(positionId)}&select=id,title,seats,eligibility&limit=1`
+        );
+        const position = Array.isArray(posRows) ? posRows[0] : posRows;
+        if (!position) return json(res, 400, { error: 'Unknown position.' });
+        if (!eligibleFor(position, profile)) {
+          return json(res, 403, { error: `Only eligible members can vote for ${position.title}.` });
+        }
+        const seats = Math.max(1, Number(position.seats) || 1);
+        if (choiceIds.length > seats) {
+          return json(res, 400, { error: `You may choose up to ${seats} candidate(s) for ${position.title}.` });
+        }
+        const uniqueIds = [...new Set(choiceIds)];
+        for (const id of uniqueIds) {
+          const { data: expRows } = await sb(
+            `election_expressions?id=eq.${encodeURIComponent(id)}&cycle_id=eq.${encodeURIComponent(cycle.id)}&position_id=eq.${encodeURIComponent(positionId)}&nominated=eq.true&select=id,status&limit=1`
+          );
+          const expression = Array.isArray(expRows) ? expRows[0] : expRows;
+          if (!expression || expression.status === 'withdrawn') {
+            return json(res, 400, { error: 'You can only vote for nominated candidates.' });
+          }
+        }
+        const { data: previous } = await sb(
+          `election_votes?cycle_id=eq.${encodeURIComponent(cycle.id)}&position_id=eq.${encodeURIComponent(positionId)}&voter_email=eq.${encodeURIComponent(email)}&select=id`
+        );
+        for (const vote of previous || []) {
+          await sb(`election_votes?id=eq.${encodeURIComponent(vote.id)}`, { method: 'DELETE' });
+        }
+        for (const id of uniqueIds) {
+          await sb('election_votes', {
+            method: 'POST',
+            body: JSON.stringify({
+              cycle_id: cycle.id,
+              position_id: positionId,
+              expression_id: id,
+              voter_email: email,
+            }),
+          });
+        }
+        return json(res, 200, {
+          ok: true,
+          message: `Your vote for ${position.title} has been recorded.`,
+        });
+      }
+
+      if (cycle.is_open === false || cycle.phase !== 'eoi') {
+        return json(res, 409, { error: 'Expressions of interest are closed.' });
+      }
       const positionId = String(body.position_id || '').trim();
       const statement = String(body.statement || '').trim();
       const phone = String(body.phone || '').trim().slice(0, 40);
@@ -200,12 +405,6 @@ module.exports = async function handler(req, res) {
       if (statement.length > 2000) {
         return json(res, 400, { error: 'Keep your statement under 2,000 characters.' });
       }
-
-      const cycle = await loadCycle();
-      if (!cycleAccepting(cycle)) {
-        return json(res, 409, { error: 'Expressions of interest are closed.' });
-      }
-
       const { data: posRows } = await sb(
         `election_positions?id=eq.${encodeURIComponent(positionId)}&cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,title,board,eligibility,is_open&limit=1`
       );
@@ -213,27 +412,13 @@ module.exports = async function handler(req, res) {
       if (!position || position.is_open === false) {
         return json(res, 400, { error: 'That position is not open.' });
       }
-
-      const { data: profiles } = await sb(
-        `profiles?id=eq.${encodeURIComponent(user.id)}&select=id,full_name,email,phone,association_member,welfare_member&limit=1`
-      );
-      const profile = Array.isArray(profiles) ? profiles[0] : profiles;
-      if (!profile) {
-        return json(res, 403, {
-          error: 'No member profile found. Sign in with the email on the membership list.',
-        });
-      }
       if (!eligibleFor(position, profile)) {
         const need =
-          position.eligibility === 'welfare'
-            ? 'a Social Welfare member'
-            : 'an Association member';
+          position.eligibility === 'welfare' ? 'a Social Welfare member' : 'an Association member';
         return json(res, 403, {
           error: `Only ${need} can express interest for ${position.title}.`,
         });
       }
-
-      const email = String(profile.email || user.email || '').toLowerCase();
       const payload = {
         cycle_id: cycle.id,
         position_id: position.id,
@@ -245,7 +430,6 @@ module.exports = async function handler(req, res) {
         status: 'submitted',
         updated_at: new Date().toISOString(),
       };
-
       const { data: existing } = await sb(
         `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&position_id=eq.${encodeURIComponent(position.id)}&email=eq.${encodeURIComponent(email)}&select=id&limit=1`
       );
@@ -267,10 +451,9 @@ module.exports = async function handler(req, res) {
           body: JSON.stringify(payload),
         });
       }
-
       return json(res, 200, {
         ok: true,
-        message: `Your interest in ${position.title} has been recorded. The returning officer / committee will contact you.`,
+        message: `Your interest in ${position.title} has been recorded. Next comes nomination, then voting.`,
       });
     }
 
@@ -279,3 +462,4 @@ module.exports = async function handler(req, res) {
     return json(res, err.status || 500, { error: err.message || 'Could not save your interest.' });
   }
 };
+

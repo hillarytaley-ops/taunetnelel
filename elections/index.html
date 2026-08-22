@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Elections | Taunet Nelel</title>
   <meta name="robots" content="noindex, nofollow">
-  <meta name="description" content="Members express interest to vie for a Taunet Nelel committee position.">
+  <meta name="description" content="Taunet Nelel elections: expression of interest, nomination, then voting.">
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=22">
   <link rel="stylesheet" href="../assets/css/members.css?v=32">
-  <link rel="stylesheet" href="../assets/css/elections.css?v=1">
+  <link rel="stylesheet" href="../assets/css/elections.css?v=2">
 </head>
 <body class="elections-page">
   <header class="elections-bar">
@@ -24,7 +24,12 @@
     <div class="elections-hero">
       <p class="eyebrow">Members only</p>
       <h1 id="elections-title">Taunet Nelel Elections</h1>
-      <p class="lede" id="elections-lede">Association and Welfare members may express interest to vie for a committee position. This is an expression of interest only — it is not the ballot.</p>
+      <p class="lede" id="elections-lede">Three stages: Expression of Interest, Nomination of those who expressed interest, then Voting.</p>
+      <ol class="elections-steps" id="elections-steps">
+        <li data-step="eoi"><span>1</span> Expression of Interest</li>
+        <li data-step="nomination"><span>2</span> Nomination</li>
+        <li data-step="voting"><span>3</span> Voting</li>
+      </ol>
     </div>
 
     <section class="elections-card" id="elections-login" hidden>
@@ -46,14 +51,16 @@
 
     <section class="elections-card" id="elections-closed" hidden>
       <div class="elections-closed">
-        <h2>Expressions of interest are closed</h2>
+        <h2 id="elections-closed-title">This stage is closed</h2>
         <p class="elections-muted" id="elections-closed-text">The committee has not opened this cycle yet, or the window has ended.</p>
       </div>
+      <div id="elections-results" hidden></div>
     </section>
 
     <section class="elections-card" id="elections-form-card" hidden>
       <p id="elections-member" class="elections-muted"></p>
       <p class="elections-status" id="elections-status" hidden></p>
+      <p class="elections-muted">Tell the committee which office you wish to vie for. Nomination and voting come next, and only people on this list can be nominated or voted for.</p>
       <form id="elections-form" class="elections-form" novalidate>
         <div class="elections-boards">
           <div>
@@ -68,7 +75,7 @@
         <label for="elections-phone">Phone (optional)</label>
         <input type="tel" id="elections-phone" name="phone" autocomplete="tel">
         <label for="elections-statement">Why you wish to serve</label>
-        <textarea id="elections-statement" name="statement" maxlength="2000" required placeholder="A short statement for the committee (at least a few sentences)."></textarea>
+        <textarea id="elections-statement" name="statement" maxlength="2000" required placeholder="A short statement for members (at least a few sentences)."></textarea>
         <div class="elections-actions">
           <button type="submit" class="btn btn--primary">Submit interest</button>
           <button type="button" class="btn btn--ghost" id="elections-signout">Sign out</button>
@@ -79,11 +86,31 @@
         <ul id="elections-mine-list"></ul>
       </div>
     </section>
+
+    <section class="elections-card" id="elections-nominate-card" hidden>
+      <p id="elections-nominate-member" class="elections-muted"></p>
+      <p class="elections-status" id="elections-nominate-status" hidden></p>
+      <p class="elections-muted">Nominate one person per position from those who expressed interest. You may change your nomination while this stage is open.</p>
+      <div id="elections-nominate-boards" class="elections-boards"></div>
+      <div class="elections-actions">
+        <button type="button" class="btn btn--ghost" id="elections-nominate-signout">Sign out</button>
+      </div>
+    </section>
+
+    <section class="elections-card" id="elections-vote-card" hidden>
+      <p id="elections-vote-member" class="elections-muted"></p>
+      <p class="elections-status" id="elections-vote-status" hidden></p>
+      <p class="elections-muted">Vote among nominated candidates. Vote totals are hidden until the committee closes the election.</p>
+      <div id="elections-vote-boards" class="elections-boards"></div>
+      <div class="elections-actions">
+        <button type="button" class="btn btn--ghost" id="elections-vote-signout">Sign out</button>
+      </div>
+    </section>
   </div>
 
   <script src="../assets/js/supabase-config.js"></script>
   <script src="../assets/js/supabase-init.js"></script>
   <script src="../assets/js/members-auth.js?v=18"></script>
-  <script src="../assets/js/elections.js?v=1"></script>
+  <script src="../assets/js/elections.js?v=2"></script>
 </body>
 </html>

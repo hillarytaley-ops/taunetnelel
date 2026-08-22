@@ -670,6 +670,16 @@ body[data-page="site-admin"] {
   margin-bottom: 0.85rem;
 }
 
+.admin-elections-phases {
+  align-items: center;
+}
+
+.admin-elections-phases span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6b4a36;
+}
+
 .admin-toolbar label {
   font-size: 0.82rem;
   font-weight: 600;

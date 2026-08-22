@@ -83,7 +83,7 @@
     events: 'Published events for the public site and members.',
     'association-invoices': '$50 Association invoices and event fees — mark paid when the deposit lands.',
     sponsors: 'Sponsor listings for the public sponsorship page.',
-    elections: 'Members who expressed interest to vie for a committee position. This is not the ballot.'
+    elections: 'Three stages: Expression of Interest, Nomination of those who expressed interest, then Voting. Only EOI names can be nominated or placed on the ballot.'
   };
 
   const BOOTSTRAP_PIN_KEY = 'taunet_admin_bootstrap_pin';
@@ -1844,30 +1844,42 @@
     if (data.warning && cycleEl) cycleEl.textContent = data.warning;
     electionsCycle = data.cycle || null;
     const titles = Object.fromEntries((data.positions || []).map((p) => [p.id, `${p.board === 'welfare' ? 'Welfare' : 'Association'} · ${p.title}`]));
+    const phase = electionsCycle?.phase || (electionsCycle?.is_open ? 'eoi' : 'closed');
+    const phaseLabel = { eoi: 'EOI', nomination: 'Nomination', voting: 'Voting', closed: 'Closed' }[phase] || phase;
     if (cycleEl && electionsCycle) {
-      cycleEl.textContent = `${electionsCycle.title} — expressions ${electionsCycle.is_open ? 'OPEN' : 'CLOSED'}. Share /elections/ with members.`;
+      cycleEl.textContent = `${electionsCycle.title} — stage: ${phaseLabel}. Portal ${electionsCycle.is_open && phase !== 'closed' ? 'OPEN' : 'PAUSED'}. Share /elections/ with members.`;
     }
-    if (toggle) toggle.textContent = electionsCycle?.is_open ? 'Close expressions' : 'Open expressions';
+    document.querySelectorAll('[data-elections-phase]').forEach((btn) => {
+      btn.classList.toggle('btn--primary', btn.dataset.electionsPhase === phase);
+      btn.classList.toggle('btn--ghost', btn.dataset.electionsPhase !== phase);
+    });
+    if (toggle) toggle.textContent = electionsCycle?.is_open && phase !== 'closed' ? 'Pause elections' : 'Resume elections';
     const rows = data.rows || [];
+    const onBallot = rows.filter((row) => row.nominated).length;
     if (countEl) {
       countEl.hidden = false;
-      countEl.textContent = `${rows.length} expression(s) of interest`;
+      countEl.textContent = `${rows.length} expression(s) of interest · ${onBallot} on the ballot`;
     }
     if (!body) return;
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(data.warning || 'No expressions of interest yet.')}</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" class="admin-empty">${escapeHtml(data.warning || 'No expressions of interest yet.')}</td></tr>`;
       return;
     }
+    const showVotes = phase === 'voting' || phase === 'closed';
     body.innerHTML = rows
       .map((row) => {
         const when = row.created_at ? new Date(row.created_at).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }) : '—';
+        const ballotLabel = row.nominated ? 'Remove from ballot' : 'Place on ballot';
         return `<tr>
           <td>${escapeHtml(when)}</td>
           <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}${row.phone ? ` · ${escapeHtml(row.phone)}` : ''}</div></td>
           <td>${escapeHtml(titles[row.position_id] || row.position_id)}</td>
           <td>${escapeHtml(row.statement || '')}</td>
-          <td>${escapeHtml(row.status || '')}</td>
+          <td>${Number(row.nomination_count || 0)}</td>
+          <td>${showVotes ? Number(row.vote_count || 0) : '—'}</td>
+          <td>${row.nominated ? 'On ballot' : '—'}<div class="admin-detail">${escapeHtml(row.status || '')}</div></td>
           <td>
+            <button type="button" class="btn btn--sm btn--ghost" data-elections-ballot="${escapeHtml(row.id)}" data-nominated="${row.nominated ? '0' : '1'}">${ballotLabel}</button>
             <button type="button" class="btn btn--sm btn--ghost" data-elections-status="${escapeHtml(row.id)}" data-next="noted">Mark noted</button>
             <button type="button" class="btn btn--sm btn--ghost" data-elections-status="${escapeHtml(row.id)}" data-next="withdrawn">Withdraw</button>
           </td>
@@ -1879,6 +1891,15 @@
         await adminApi('elections-status', {
           method: 'POST',
           body: { id: btn.dataset.electionsStatus, status: btn.dataset.next }
+        });
+        await loadElections();
+      });
+    });
+    body.querySelectorAll('[data-elections-ballot]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await adminApi('elections-ballot', {
+          method: 'POST',
+          body: { id: btn.dataset.electionsBallot, nominated: btn.dataset.nominated === '1' }
         });
         await loadElections();
       });
@@ -3163,7 +3184,7 @@
         status.classList.add('is-error');
         status.textContent =
           panelId === 'elections'
-            ? `${err.message || 'Could not load elections.'} Run docs/supabase/APPLY-ELECTIONS.sql in the SQL Editor, then refresh.`
+            ? `${err.message || 'Could not load elections.'} Run docs/supabase/APPLY-ELECTIONS.sql in the SQL Editor (or APPLY-ELECTIONS-PHASES.sql if elections already exist), then refresh.`
             : panelId === 'crm' || panelId === 'followup' || panelId === 'claims' || panelId === 'inbox'
             ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-INBOX.sql (inbox/attachments) or APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
             : err.message ||
@@ -3577,6 +3598,19 @@
         body: { id: electionsCycle.id, is_open: !electionsCycle.is_open }
       });
       await loadElections();
+    });
+    document.querySelectorAll('[data-elections-phase]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!electionsCycle?.id) return;
+        const phase = btn.dataset.electionsPhase;
+        const labels = { eoi: 'Expression of Interest', nomination: 'Nomination', voting: 'Voting', closed: 'Closed' };
+        if (!window.confirm(`Switch the member portal to ${labels[phase] || phase}?`)) return;
+        await adminApi('elections-cycle', {
+          method: 'POST',
+          body: { id: electionsCycle.id, phase }
+        });
+        await loadElections();
+      });
     });
 
     els.logoutBtn?.addEventListener('click', async () => {

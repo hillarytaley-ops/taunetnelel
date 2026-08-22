@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=22">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260821b">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260822e">
 </head>
 <body data-page="site-admin">
 
@@ -1019,9 +1019,16 @@
 
       <section class="site-admin__panel" data-admin-panel="elections">
         <p class="admin-muted" id="admin-elections-cycle"></p>
+        <div class="admin-toolbar admin-elections-phases" id="admin-elections-phases">
+          <span>Stage</span>
+          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="eoi">EOI</button>
+          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="nomination">Nomination</button>
+          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="voting">Voting</button>
+          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="closed">Closed</button>
+        </div>
         <div class="admin-toolbar">
           <a class="btn btn--sm btn--primary" href="../elections/index.html" target="_blank" rel="noopener">Open member portal</a>
-          <button type="button" class="btn btn--sm btn--ghost" id="admin-elections-toggle">Close expressions</button>
+          <button type="button" class="btn btn--sm btn--ghost" id="admin-elections-toggle">Pause elections</button>
           <button type="button" class="btn btn--ghost btn--sm" id="admin-elections-refresh">Refresh</button>
         </div>
         <p class="admin-muted" id="admin-elections-count" hidden></p>
@@ -1033,12 +1040,14 @@
                 <th>Member</th>
                 <th>Position</th>
                 <th>Statement</th>
-                <th>Status</th>
+                <th>Nominations</th>
+                <th>Votes</th>
+                <th>Ballot</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="admin-elections-body">
-              <tr><td colspan="6" class="admin-empty">Open this tab to load expressions of interest.</td></tr>
+              <tr><td colspan="8" class="admin-empty">Open this tab to load expressions of interest.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1046,7 +1055,7 @@
 
       <section class="site-admin__panel" data-admin-panel="pages">
         <div class="admin-links">
-          <a href="../elections/index.html">Elections portal<span>Members express interest to vie for a position</span></a>
+          <a href="../elections/index.html">Elections portal<span>EOI, nomination, then voting</span></a>
           <a href="../community.html#business">Community / Business<span>Public business hub</span></a>
           <a href="../contact.html">Contact<span>Public enquiry form</span></a>
           <a href="../membership.html">Membership<span>Public join page</span></a>
@@ -1074,6 +1083,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260821b"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260822e"></script>
 </body>
 </html>

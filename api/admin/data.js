@@ -1916,22 +1916,74 @@ module.exports = async function handler(req, res) {
         let cycle = null;
         let positions = [];
         let rows = [];
+        let nominationCounts = {};
+        let voteCounts = {};
         try {
-          const [{ data: cycles }, { data: pos }] = await Promise.all([
-            sb(
-              'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
-            ),
-            sb(
-              'election_positions?select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc'
-            )
-          ]);
+          let cycles;
+          let pos;
+          try {
+            [{ data: cycles }, { data: pos }] = await Promise.all([
+              sb(
+                'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open,phase&limit=1'
+              ),
+              sb(
+                'election_positions?select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc'
+              )
+            ]);
+          } catch (_) {
+            [{ data: cycles }, { data: pos }] = await Promise.all([
+              sb(
+                'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
+              ),
+              sb(
+                'election_positions?select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc'
+              )
+            ]);
+          }
           cycle = Array.isArray(cycles) ? cycles[0] : cycles;
+          if (cycle && !cycle.phase) cycle.phase = cycle.is_open ? 'eoi' : 'closed';
           positions = pos || [];
           if (cycle?.id) {
-            const { data } = await sb(
-              `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,created_at&order=created_at.desc&limit=500`
-            );
-            rows = data || [];
+            let expressions = [];
+            try {
+              const { data } = await sb(
+                `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,nominated,created_at&order=created_at.desc&limit=500`
+              );
+              expressions = data || [];
+            } catch (_) {
+              const { data } = await sb(
+                `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,created_at&order=created_at.desc&limit=500`
+              );
+              expressions = data || [];
+            }
+            try {
+              const { data: noms } = await sb(
+                `election_nominations?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=position_id,expression_id`
+              );
+              (noms || []).forEach((row) => {
+                const key = `${row.position_id}:${row.expression_id}`;
+                nominationCounts[key] = (nominationCounts[key] || 0) + 1;
+              });
+            } catch (_) {
+              nominationCounts = {};
+            }
+            try {
+              const { data: votes } = await sb(
+                `election_votes?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=position_id,expression_id`
+              );
+              (votes || []).forEach((row) => {
+                const key = `${row.position_id}:${row.expression_id}`;
+                voteCounts[key] = (voteCounts[key] || 0) + 1;
+              });
+            } catch (_) {
+              voteCounts = {};
+            }
+            rows = expressions.map((row) => ({
+              ...row,
+              nominated: Boolean(row.nominated),
+              nomination_count: nominationCounts[`${row.position_id}:${row.id}`] || 0,
+              vote_count: voteCounts[`${row.position_id}:${row.id}`] || 0
+            }));
           }
         } catch (err) {
           return json(res, 200, {
@@ -2178,13 +2230,54 @@ module.exports = async function handler(req, res) {
       if (resource === 'elections-cycle') {
         const cycleId = String(body.id || '').trim();
         if (!cycleId) return json(res, 400, { error: 'Cycle id required' });
-        const isOpen = body.is_open !== false;
+        const patch = {};
+        if (Object.prototype.hasOwnProperty.call(body, 'is_open')) {
+          patch.is_open = body.is_open !== false;
+        }
+        if (body.phase) {
+          const phase = String(body.phase || '').trim();
+          if (!['eoi', 'nomination', 'voting', 'closed'].includes(phase)) {
+            return json(res, 400, { error: 'Phase must be eoi, nomination, voting, or closed.' });
+          }
+          patch.phase = phase;
+          patch.is_open = phase !== 'closed';
+        }
+        if (!Object.keys(patch).length) {
+          return json(res, 400, { error: 'Nothing to update' });
+        }
         await sb(`election_cycles?id=eq.${encodeURIComponent(cycleId)}`, {
           method: 'PATCH',
           prefer: 'return=minimal',
-          body: JSON.stringify({ is_open: isOpen })
+          body: JSON.stringify(patch)
         });
-        return json(res, 200, { ok: true, is_open: isOpen });
+        if (patch.phase === 'voting') {
+          const { data: already } = await sb(
+            `election_expressions?cycle_id=eq.${encodeURIComponent(cycleId)}&nominated=eq.true&status=neq.withdrawn&select=id&limit=1`
+          );
+          if (!already?.length) {
+            await sb(
+              `election_expressions?cycle_id=eq.${encodeURIComponent(cycleId)}&status=neq.withdrawn`,
+              {
+                method: 'PATCH',
+                prefer: 'return=minimal',
+                body: JSON.stringify({ nominated: true, updated_at: new Date().toISOString() })
+              }
+            );
+          }
+        }
+        return json(res, 200, { ok: true, ...patch });
+      }
+
+      if (resource === 'elections-ballot') {
+        const id = String(body.id || '').trim();
+        if (!id) return json(res, 400, { error: 'Expression id required' });
+        const nominated = body.nominated !== false;
+        await sb(`election_expressions?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ nominated, updated_at: new Date().toISOString() })
+        });
+        return json(res, 200, { ok: true, nominated });
       }
 
       if (resource === 'elections-status') {
