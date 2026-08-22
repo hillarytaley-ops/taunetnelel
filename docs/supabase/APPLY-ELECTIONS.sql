@@ -60,7 +60,7 @@ insert into public.election_cycles (slug, title, summary, opens_at, closes_at, i
 values (
   '2026-agm',
   'Taunet Nelel Elections 2026',
-  'Financial members may express interest to vie for a committee position. This is an expression of interest only — it is not the ballot.',
+  'Association and Welfare members may express interest to vie for a committee position. This is an expression of interest only — it is not the ballot.',
   now(),
   timestamptz '2026-12-31 23:59:59+11',
   true
@@ -69,7 +69,7 @@ on conflict (slug) do update
 set
   title = excluded.title,
   summary = excluded.summary,
-  is_open = true;
+  is_open = election_cycles.is_open;
 
 insert into public.election_positions (id, cycle_id, board, title, seats, eligibility, sort_order)
 select v.id, c.id, v.board, v.title, v.seats, v.eligibility, v.sort_order
