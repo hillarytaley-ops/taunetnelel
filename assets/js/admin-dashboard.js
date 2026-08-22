@@ -58,7 +58,7 @@
     events: 'Events',
     'association-invoices': 'Association invoices',
     sponsors: 'Sponsors',
-    elections: 'Elections'
+    elections: 'Election board'
   };
 
   const NAV_BLURBS = {
@@ -83,7 +83,7 @@
     events: 'Published events for the public site and members.',
     'association-invoices': '$50 Association invoices and event fees — mark paid when the deposit lands.',
     sponsors: 'Sponsor listings for the public sponsorship page.',
-    elections: 'Three stages: Expression of Interest, Nomination of those who expressed interest, then Voting. Only EOI names can be nominated or placed on the ballot.'
+    elections: 'Onboard the election board. They run Expression of Interest, Nomination, and Voting from /elections/board/. Committee admin does not run the election from this dashboard.'
   };
 
   const BOOTSTRAP_PIN_KEY = 'taunet_admin_bootstrap_pin';
@@ -1833,77 +1833,111 @@
       .join('');
   }
 
-  let electionsCycle = null;
+  let electionsAnalytics = null;
+  let electionsAnalyticsPositions = [];
 
-  async function loadElections() {
-    const data = await adminApi('elections');
-    const body = document.getElementById('admin-elections-body');
-    const cycleEl = document.getElementById('admin-elections-cycle');
-    const countEl = document.getElementById('admin-elections-count');
-    const toggle = document.getElementById('admin-elections-toggle');
-    if (data.warning && cycleEl) cycleEl.textContent = data.warning;
-    electionsCycle = data.cycle || null;
-    const titles = Object.fromEntries((data.positions || []).map((p) => [p.id, `${p.board === 'welfare' ? 'Welfare' : 'Association'} · ${p.title}`]));
-    const phase = electionsCycle?.phase || (electionsCycle?.is_open ? 'eoi' : 'closed');
-    const phaseLabel = { eoi: 'EOI', nomination: 'Nomination', voting: 'Voting', closed: 'Closed' }[phase] || phase;
-    if (cycleEl && electionsCycle) {
-      cycleEl.textContent = `${electionsCycle.title} — stage: ${phaseLabel}. Portal ${electionsCycle.is_open && phase !== 'closed' ? 'OPEN' : 'PAUSED'}. Share /elections/ with members.`;
+  async function loadElectionAnalytics() {
+    const host = document.getElementById('admin-elections-analytics');
+    const note = document.getElementById('admin-elections-analytics-note');
+    electionsAnalytics = null;
+    electionsAnalyticsPositions = [];
+    if (!host) return;
+    try {
+      const data = await adminApi('elections-analytics');
+      if (data.warning && note) {
+        note.hidden = false;
+        note.textContent = data.warning;
+      } else if (note) {
+        note.hidden = true;
+      }
+      const summary = data.analytics?.summary;
+      electionsAnalytics = data.analytics || null;
+      electionsAnalyticsPositions = data.positions || [];
+      if (!summary) {
+        host.hidden = true;
+        host.innerHTML = '';
+        return;
+      }
+      host.hidden = false;
+      const cards = [
+        ['EOIs', summary.expressions],
+        ['On ballot', summary.on_ballot],
+        ['Nominations', summary.nominations],
+        ['Nominators', summary.unique_nominators],
+        ['Votes', summary.votes],
+        ['Voters', summary.unique_voters]
+      ];
+      host.innerHTML = cards
+        .map(
+          ([label, value]) =>
+            `<button type="button" class="admin-stat admin-stat--btn" disabled>
+              <strong>${escapeHtml(String(value ?? 0))}</strong>
+              <span>${escapeHtml(label)}</span>
+            </button>`
+        )
+        .join('');
+    } catch (err) {
+      if (note) {
+        note.hidden = false;
+        note.textContent = err.message || 'Could not load election analytics.';
+      }
+      host.hidden = true;
     }
-    document.querySelectorAll('[data-elections-phase]').forEach((btn) => {
-      btn.classList.toggle('btn--primary', btn.dataset.electionsPhase === phase);
-      btn.classList.toggle('btn--ghost', btn.dataset.electionsPhase !== phase);
-    });
-    if (toggle) toggle.textContent = electionsCycle?.is_open && phase !== 'closed' ? 'Pause elections' : 'Resume elections';
-    const rows = data.rows || [];
-    const onBallot = rows.filter((row) => row.nominated).length;
-    if (countEl) {
-      countEl.hidden = false;
-      countEl.textContent = `${rows.length} expression(s) of interest · ${onBallot} on the ballot`;
-    }
+  }
+
+  async function loadElectionBoard() {
+    const body = document.getElementById('admin-election-board-body');
     if (!body) return;
-    if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="8" class="admin-empty">${escapeHtml(data.warning || 'No expressions of interest yet.')}</td></tr>`;
-      return;
+    try {
+      const data = await adminApi('election-board');
+      const rows = data.rows || [];
+      if (data.warning && !rows.length) {
+        body.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(data.warning)}</td></tr>`;
+        return;
+      }
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="4" class="admin-empty">No election board members yet. Invite returning officers above.</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows
+        .map((row) => {
+          const email = escapeHtml(row.email || '');
+          const name = escapeHtml(row.full_name || '—');
+          const sent = Boolean(row.invited_at) || wasInviteSent(row.email);
+          return `<tr>
+            <td>${name}</td>
+            <td>${email}</td>
+            <td>${escapeHtml(formatDate(row.created_at))}</td>
+            <td class="admin-row-actions">
+              <button type="button" class="btn btn--sm ${sent ? 'is-done' : 'btn--ghost'}" data-election-board-resend="${escapeHtml(row.email || '')}" data-election-board-resend-name="${escapeHtml(row.full_name || '')}" title="${sent ? 'Click to send the invite again' : 'Send invitation email'}">${sent ? 'Sent' : 'Resend invite'}</button>
+              <button type="button" class="btn btn--sm btn--ghost" data-election-board-remove="${escapeHtml(row.email || '')}">Remove</button>
+            </td>
+          </tr>`;
+        })
+        .join('');
+    } catch (err) {
+      body.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err.message || 'Could not load the election board. Run docs/supabase/APPLY-ELECTION-BOARD.sql.')}</td></tr>`;
     }
-    const showVotes = phase === 'voting' || phase === 'closed';
-    body.innerHTML = rows
-      .map((row) => {
-        const when = row.created_at ? new Date(row.created_at).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }) : '—';
-        const ballotLabel = row.nominated ? 'Remove from ballot' : 'Place on ballot';
-        return `<tr>
-          <td>${escapeHtml(when)}</td>
-          <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}${row.phone ? ` · ${escapeHtml(row.phone)}` : ''}</div></td>
-          <td>${escapeHtml(titles[row.position_id] || row.position_id)}</td>
-          <td>${escapeHtml(row.statement || '')}</td>
-          <td>${Number(row.nomination_count || 0)}</td>
-          <td>${showVotes ? Number(row.vote_count || 0) : '—'}</td>
-          <td>${row.nominated ? 'On ballot' : '—'}<div class="admin-detail">${escapeHtml(row.status || '')}</div></td>
-          <td>
-            <button type="button" class="btn btn--sm btn--ghost" data-elections-ballot="${escapeHtml(row.id)}" data-nominated="${row.nominated ? '0' : '1'}">${ballotLabel}</button>
-            <button type="button" class="btn btn--sm btn--ghost" data-elections-status="${escapeHtml(row.id)}" data-next="noted">Mark noted</button>
-            <button type="button" class="btn btn--sm btn--ghost" data-elections-status="${escapeHtml(row.id)}" data-next="withdrawn">Withdraw</button>
-          </td>
-        </tr>`;
-      })
-      .join('');
-    body.querySelectorAll('[data-elections-status]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        await adminApi('elections-status', {
-          method: 'POST',
-          body: { id: btn.dataset.electionsStatus, status: btn.dataset.next }
-        });
-        await loadElections();
-      });
+    await loadElectionAnalytics();
+  }
+
+  function setElectionBoardStatus(message, isError) {
+    const status = document.getElementById('admin-election-board-status');
+    if (!status) return;
+    status.hidden = !message;
+    status.classList.toggle('is-error', Boolean(isError));
+    status.textContent = message || '';
+    if (message) status.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  async function inviteElectionBoard({ fullName, email, refreshList }) {
+    const data = await adminApi('invite-election-board', {
+      method: 'POST',
+      body: { full_name: fullName, email }
     });
-    body.querySelectorAll('[data-elections-ballot]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        await adminApi('elections-ballot', {
-          method: 'POST',
-          body: { id: btn.dataset.electionsBallot, nominated: btn.dataset.nominated === '1' }
-        });
-        await loadElections();
-      });
-    });
+    markInviteSent(email);
+    if (refreshList !== false) await loadElectionBoard();
+    return data;
   }
 
   async function loadGallery() {
@@ -3171,7 +3205,7 @@
       if (panelId === 'invoices') await loadInvoices();
       if (panelId === 'claims') await loadClaims();
       if (panelId === 'sponsors') await loadSponsors();
-      if (panelId === 'elections') await loadElections();
+      if (panelId === 'elections') await loadElectionBoard();
       if (panelId === 'gallery') await loadGallery();
       if (panelId === 'admins') await loadSiteAdmins();
       if (panelId === 'newsletter') await loadNewsletter();
@@ -3184,7 +3218,7 @@
         status.classList.add('is-error');
         status.textContent =
           panelId === 'elections'
-            ? `${err.message || 'Could not load elections.'} Run docs/supabase/APPLY-ELECTIONS.sql in the SQL Editor (or APPLY-ELECTIONS-PHASES.sql if elections already exist), then refresh.`
+            ? `${err.message || 'Could not load the election board.'} Run docs/supabase/APPLY-ELECTION-BOARD.sql in the SQL Editor, then refresh.`
             : panelId === 'crm' || panelId === 'followup' || panelId === 'claims' || panelId === 'inbox'
             ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-INBOX.sql (inbox/attachments) or APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
             : err.message ||
@@ -3588,29 +3622,73 @@
   async function init() {
     bindNav();
 
-    document.getElementById('admin-elections-refresh')?.addEventListener('click', () => {
-      loadElections().catch(() => {});
+    document.getElementById('admin-elections-export')?.addEventListener('click', () => {
+      try {
+        if (!window.taunetElectionAnalytics) {
+          throw new Error('Export is not available. Refresh the page.');
+        }
+        window.taunetElectionAnalytics.downloadCsv(electionsAnalytics, electionsAnalyticsPositions);
+        setElectionBoardStatus('Analytics CSV downloaded.', false);
+      } catch (err) {
+        setElectionBoardStatus(err.message || 'Could not export analytics.', true);
+      }
     });
-    document.getElementById('admin-elections-toggle')?.addEventListener('click', async () => {
-      if (!electionsCycle?.id) return;
-      await adminApi('elections-cycle', {
-        method: 'POST',
-        body: { id: electionsCycle.id, is_open: !electionsCycle.is_open }
-      });
-      await loadElections();
+
+    document.getElementById('admin-election-board-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const submit = form.querySelector('button[type="submit"]');
+      const fullName = String(form.full_name?.value || '').trim();
+      const email = String(form.email?.value || '').trim().toLowerCase();
+      if (!fullName || !email) return;
+      setButtonBusy(submit, true, { busy: 'Sending invitation…' });
+      setElectionBoardStatus('Sending invitation…', false);
+      try {
+        const data = await inviteElectionBoard({ fullName, email });
+        form.reset();
+        setButtonBusy(submit, false, { done: 'Invitation sent', stay: true });
+        setElectionBoardStatus(data.message || `Invitation sent to ${email}.`, false);
+      } catch (err) {
+        setButtonBusy(submit, false, { fail: 'Not sent' });
+        setElectionBoardStatus(err.message || 'Could not send the invitation.', true);
+      }
     });
-    document.querySelectorAll('[data-elections-phase]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        if (!electionsCycle?.id) return;
-        const phase = btn.dataset.electionsPhase;
-        const labels = { eoi: 'Expression of Interest', nomination: 'Nomination', voting: 'Voting', closed: 'Closed' };
-        if (!window.confirm(`Switch the member portal to ${labels[phase] || phase}?`)) return;
-        await adminApi('elections-cycle', {
-          method: 'POST',
-          body: { id: electionsCycle.id, phase }
-        });
-        await loadElections();
-      });
+
+    document.getElementById('admin-election-board-body')?.addEventListener('click', async (event) => {
+      const resend = event.target.closest('[data-election-board-resend]');
+      const remove = event.target.closest('[data-election-board-remove]');
+      if (resend) {
+        const email = String(resend.getAttribute('data-election-board-resend') || '').trim();
+        const fullName = String(resend.getAttribute('data-election-board-resend-name') || '').trim() || email;
+        if (!email) return;
+        setButtonBusy(resend, true, { busy: 'Sending…' });
+        setElectionBoardStatus(`Sending invitation to ${email}…`, false);
+        try {
+          const data = await inviteElectionBoard({ fullName, email, refreshList: false });
+          setButtonBusy(resend, false, { done: 'Sent', stay: true });
+          setElectionBoardStatus(data.message || `Invitation sent to ${email}.`, false);
+        } catch (err) {
+          setButtonBusy(resend, false, { fail: 'Not sent' });
+          setElectionBoardStatus(err.message || 'Could not resend the invitation.', true);
+        }
+        return;
+      }
+      if (remove) {
+        const email = String(remove.getAttribute('data-election-board-remove') || '').trim();
+        if (!email) return;
+        if (!window.confirm(`Remove ${email} from the election board? They will no longer be able to run elections.`)) {
+          return;
+        }
+        setButtonBusy(remove, true, { busy: 'Removing…' });
+        try {
+          await adminApi('remove-election-board', { method: 'POST', body: { email } });
+          setElectionBoardStatus(`${email} was removed from the election board.`, false);
+          await loadElectionBoard();
+        } catch (err) {
+          setButtonBusy(remove, false, { fail: 'Not removed' });
+          setElectionBoardStatus(err.message || 'Could not remove that board member.', true);
+        }
+      }
     });
 
     els.logoutBtn?.addEventListener('click', async () => {

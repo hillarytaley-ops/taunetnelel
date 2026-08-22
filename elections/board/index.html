@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Election board | Taunet Nelel</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Election board administration for Taunet Nelel elections.">
+  <link rel="icon" href="../../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css?v=22">
+  <link rel="stylesheet" href="../../assets/css/members.css?v=32">
+  <link rel="stylesheet" href="../../assets/css/elections.css?v=4">
+</head>
+<body class="elections-page">
+  <header class="elections-bar">
+    <a href="./index.html">
+      <img src="../../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel">
+    </a>
+    <a href="../index.html">Member portal</a>
+  </header>
+
+  <div class="elections-wrap elections-wrap--wide">
+    <div class="elections-hero">
+      <p class="eyebrow">Election board</p>
+      <h1>Administer elections</h1>
+      <p class="lede">The election board runs Expression of Interest, Nomination, and Voting. Committee admin only onboards this board.</p>
+      <ol class="elections-steps" id="board-steps">
+        <li data-step="eoi"><span>1</span> Expression of Interest</li>
+        <li data-step="nomination"><span>2</span> Nomination</li>
+        <li data-step="voting"><span>3</span> Voting</li>
+      </ol>
+    </div>
+
+    <section class="elections-card" id="board-login" hidden>
+      <h2>Sign in to the election board</h2>
+      <p class="elections-muted">Use the email the committee invited. If you received an invite, create your password from that email first.</p>
+      <form class="login-form" id="board-login-form" novalidate>
+        <p class="auth-form__message" id="board-login-msg" role="status" hidden></p>
+        <div class="form-group">
+          <label for="board-email">Email</label>
+          <input type="email" id="board-email" name="email" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="board-password">Password</label>
+          <input type="password" id="board-password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn--primary login-submit">Sign in</button>
+      </form>
+    </section>
+
+    <section class="elections-card" id="board-desk" hidden>
+      <p class="elections-muted" id="board-officer"></p>
+      <p class="elections-muted" id="board-cycle"></p>
+      <p class="elections-status" id="board-status" hidden></p>
+      <div class="elections-actions elections-actions--wrap">
+        <span class="elections-muted">Stage</span>
+        <button type="button" class="btn btn--sm btn--ghost" data-board-phase="eoi">EOI</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-board-phase="nomination">Nomination</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-board-phase="voting">Voting</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-board-phase="closed">Closed</button>
+        <button type="button" class="btn btn--sm btn--ghost" id="board-pause">Pause elections</button>
+        <button type="button" class="btn btn--sm btn--ghost" id="board-refresh">Refresh</button>
+        <button type="button" class="btn btn--sm btn--primary" id="board-export">Export analytics CSV</button>
+        <button type="button" class="btn btn--sm btn--ghost" id="board-signout">Sign out</button>
+      </div>
+      <div id="board-analytics" class="elections-analytics"></div>
+      <p class="elections-muted" id="board-count"></p>
+      <div class="elections-table-wrap">
+        <table class="elections-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Member</th>
+              <th>Position</th>
+              <th>Statement</th>
+              <th>Nominations</th>
+              <th>Votes</th>
+              <th>Ballot</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="board-body">
+            <tr><td colspan="8">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="../../assets/js/supabase-config.js"></script>
+  <script src="../../assets/js/supabase-init.js"></script>
+  <script src="../../assets/js/members-auth.js?v=18"></script>
+  <script src="../../assets/js/election-analytics.js?v=1"></script>
+  <script src="../../assets/js/elections-board.js?v=2"></script>
+</body>
+</html>

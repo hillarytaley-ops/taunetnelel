@@ -271,6 +271,36 @@ function buildAdminInviteMail({ actionLink, fullName = '' }) {
   };
 }
 
+function buildElectionBoardInviteMail({ actionLink, fullName = '' }) {
+  const name = String(fullName || '').trim() || 'there';
+  const subject = 'Set your Taunet Nelel election board password';
+  const lead =
+    'You have been appointed to the Taunet Nelel election board. The board runs Expression of Interest, Nomination, and Voting. Use the button below to create your password, then sign in on the election board portal.';
+  const shell = brandedShell({
+    eyebrow: 'Election board',
+    title: 'Create your election board password',
+    greeting: name,
+    lead,
+    ctaLabel: 'Set my password',
+    actionLink,
+    extraHtml:
+      '<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#666;">Open the link, then tap <strong>Continue</strong> on the website and choose a password (at least 8 characters). After that, sign in at the election board portal. The link stays usable until you set a password (or until it expires — usually up to 24 hours). If you were not expecting this, ignore the email and tell the committee.</p>',
+    extraText:
+      'Open the link, then tap Continue on the website and choose a password (at least 8 characters). ' +
+      'After that, sign in at the election board portal. ' +
+      'The link stays usable until you set a password (or until it expires — usually up to 24 hours). ' +
+      'If you were not expecting this, ignore the email and tell the committee.',
+  });
+
+  return {
+    subject,
+    html: shell.html,
+    text: shell.text,
+    tags: [{ name: 'category', value: 'election_board_invite' }],
+    refId: `taunet-election-board-invite-${Date.now()}`,
+  };
+}
+
 /**
  * Join / email confirmation (branded — replaces spammy Supabase default template).
  * @param {{ actionLink: string, fullName?: string }} opts
@@ -369,6 +399,7 @@ module.exports = {
   sendMemberMail,
   buildPasswordMail,
   buildAdminInviteMail,
+  buildElectionBoardInviteMail,
   buildConfirmMail,
   buildCampaignMail,
   brandedShell,

@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=22">
   <link rel="stylesheet" href="../assets/css/members.css?v=32">
-  <link rel="stylesheet" href="../assets/css/elections.css?v=2">
+  <link rel="stylesheet" href="../assets/css/elections.css?v=3">
 </head>
 <body class="elections-page">
   <header class="elections-bar">
@@ -52,7 +52,7 @@
     <section class="elections-card" id="elections-closed" hidden>
       <div class="elections-closed">
         <h2 id="elections-closed-title">This stage is closed</h2>
-        <p class="elections-muted" id="elections-closed-text">The committee has not opened this cycle yet, or the window has ended.</p>
+        <p class="elections-muted" id="elections-closed-text">The election board has not opened this cycle yet, or the window has ended.</p>
       </div>
       <div id="elections-results" hidden></div>
     </section>
@@ -60,7 +60,7 @@
     <section class="elections-card" id="elections-form-card" hidden>
       <p id="elections-member" class="elections-muted"></p>
       <p class="elections-status" id="elections-status" hidden></p>
-      <p class="elections-muted">Tell the committee which office you wish to vie for. Nomination and voting come next, and only people on this list can be nominated or voted for.</p>
+      <p class="elections-muted">Tell the election board which office you wish to vie for. Nomination and voting come next, and only people on this list can be nominated or voted for.</p>
       <form id="elections-form" class="elections-form" novalidate>
         <div class="elections-boards">
           <div>
@@ -100,7 +100,7 @@
     <section class="elections-card" id="elections-vote-card" hidden>
       <p id="elections-vote-member" class="elections-muted"></p>
       <p class="elections-status" id="elections-vote-status" hidden></p>
-      <p class="elections-muted">Vote among nominated candidates. Vote totals are hidden until the committee closes the election.</p>
+      <p class="elections-muted">Vote among nominated candidates. Vote totals are hidden until the election board closes the election.</p>
       <div id="elections-vote-boards" class="elections-boards"></div>
       <div class="elections-actions">
         <button type="button" class="btn btn--ghost" id="elections-vote-signout">Sign out</button>
@@ -111,6 +111,6 @@
   <script src="../assets/js/supabase-config.js"></script>
   <script src="../assets/js/supabase-init.js"></script>
   <script src="../assets/js/members-auth.js?v=18"></script>
-  <script src="../assets/js/elections.js?v=2"></script>
+  <script src="../assets/js/elections.js?v=3"></script>
 </body>
 </html>

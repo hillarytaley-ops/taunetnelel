@@ -259,3 +259,77 @@
 #elections-results {
   margin-top: 1rem;
 }
+
+.elections-wrap--wide {
+  width: min(1120px, calc(100% - 2rem));
+}
+
+.elections-actions--wrap {
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.elections-table-wrap {
+  overflow: auto;
+  border: 1px solid rgba(139, 69, 19, 0.15);
+  border-radius: 12px;
+}
+
+.elections-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.elections-table th,
+.elections-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.12);
+}
+
+.elections-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.elections-analytics {
+  margin: 0 0 1.1rem;
+}
+
+.elections-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.elections-stats div {
+  border: 1px solid rgba(139, 69, 19, 0.15);
+  border-radius: 10px;
+  padding: 0.65rem 0.55rem;
+  text-align: center;
+}
+
+.elections-stats strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.elections-stats span {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.elections-table-wrap--compact {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 800px) {
+  .elections-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

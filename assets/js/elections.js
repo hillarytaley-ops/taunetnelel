@@ -340,7 +340,7 @@
       closedCard.hidden = false;
       document.getElementById('elections-closed-title').textContent = 'Elections are paused';
       document.getElementById('elections-closed-text').textContent =
-        'The committee has paused this cycle. Sign in later to continue.';
+        'The election board has paused this cycle. Sign in later to continue.';
       return;
     }
 
@@ -348,7 +348,7 @@
       closedCard.hidden = false;
       document.getElementById('elections-closed-title').textContent = 'Elections are closed';
       document.getElementById('elections-closed-text').textContent =
-        'The committee has closed this cycle. Results are below if voting has finished.';
+        'The election board has closed this cycle. Results are below if voting has finished.';
       renderResults();
       return;
     }

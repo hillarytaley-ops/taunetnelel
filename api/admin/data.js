@@ -54,15 +54,26 @@ try {
 }
 
 let sendCommitteeAdminInvite;
+let sendElectionBoardInvite;
 let adminInviteOrigin;
+let buildElectionAnalytics;
+let buildElectionAnalyticsCsv;
 try {
   ({
     sendCommitteeAdminInvite,
+    sendElectionBoardInvite,
     requestOrigin: adminInviteOrigin
   } = require('../lib/admin-invite'));
 } catch (_) {
   sendCommitteeAdminInvite = null;
+  sendElectionBoardInvite = null;
   adminInviteOrigin = null;
+}
+try {
+  ({ buildElectionAnalytics, buildElectionAnalyticsCsv } = require('../lib/election-analytics'));
+} catch (_) {
+  buildElectionAnalytics = null;
+  buildElectionAnalyticsCsv = null;
 }
 
 let twilioConfigured;
@@ -1912,90 +1923,109 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      if (resource === 'elections') {
-        let cycle = null;
-        let positions = [];
-        let rows = [];
-        let nominationCounts = {};
-        let voteCounts = {};
+      if (resource === 'election-board') {
+        let data;
+        try {
+          ({ data } = await sb(
+            'election_board?select=email,full_name,created_at,invited_at&order=full_name.asc,email.asc&limit=200'
+          ));
+        } catch (err) {
+          return json(res, 200, {
+            rows: [],
+            warning:
+              err.message ||
+              'Election board table is missing. Run docs/supabase/APPLY-ELECTION-BOARD.sql in the SQL Editor.'
+          });
+        }
+        const rows = (data || []).map((row) => ({
+          email: String(row.email || '')
+            .toLowerCase()
+            .trim(),
+          full_name: row.full_name || '',
+          created_at: row.created_at || null,
+          invited_at: row.invited_at || null
+        }));
+        return json(res, 200, { rows });
+      }
+
+      if (resource === 'elections-analytics') {
+        if (!buildElectionAnalytics) {
+          return json(res, 500, { error: 'Election analytics are not available on this server.' });
+        }
         try {
           let cycles;
-          let pos;
           try {
-            [{ data: cycles }, { data: pos }] = await Promise.all([
-              sb(
-                'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open,phase&limit=1'
-              ),
-              sb(
-                'election_positions?select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc'
-              )
-            ]);
+            ({ data: cycles } = await sb(
+              'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open,phase&limit=1'
+            ));
           } catch (_) {
-            [{ data: cycles }, { data: pos }] = await Promise.all([
-              sb(
-                'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
-              ),
-              sb(
-                'election_positions?select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc'
-              )
-            ]);
+            ({ data: cycles } = await sb(
+              'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
+            ));
           }
-          cycle = Array.isArray(cycles) ? cycles[0] : cycles;
-          if (cycle && !cycle.phase) cycle.phase = cycle.is_open ? 'eoi' : 'closed';
-          positions = pos || [];
-          if (cycle?.id) {
-            let expressions = [];
-            try {
-              const { data } = await sb(
-                `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,nominated,created_at&order=created_at.desc&limit=500`
-              );
-              expressions = data || [];
-            } catch (_) {
-              const { data } = await sb(
-                `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,created_at&order=created_at.desc&limit=500`
-              );
-              expressions = data || [];
-            }
-            try {
-              const { data: noms } = await sb(
-                `election_nominations?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=position_id,expression_id`
-              );
-              (noms || []).forEach((row) => {
-                const key = `${row.position_id}:${row.expression_id}`;
-                nominationCounts[key] = (nominationCounts[key] || 0) + 1;
-              });
-            } catch (_) {
-              nominationCounts = {};
-            }
-            try {
-              const { data: votes } = await sb(
-                `election_votes?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=position_id,expression_id`
-              );
-              (votes || []).forEach((row) => {
-                const key = `${row.position_id}:${row.expression_id}`;
-                voteCounts[key] = (voteCounts[key] || 0) + 1;
-              });
-            } catch (_) {
-              voteCounts = {};
-            }
-            rows = expressions.map((row) => ({
-              ...row,
-              nominated: Boolean(row.nominated),
-              nomination_count: nominationCounts[`${row.position_id}:${row.id}`] || 0,
-              vote_count: voteCounts[`${row.position_id}:${row.id}`] || 0
-            }));
+          const cycle = Array.isArray(cycles) ? cycles[0] : cycles;
+          if (!cycle) {
+            return json(res, 200, {
+              cycle: null,
+              positions: [],
+              analytics: null,
+              warning: 'Elections are not set up yet. Run docs/supabase/APPLY-ELECTIONS.sql.'
+            });
           }
+          if (!cycle.phase) cycle.phase = cycle.is_open ? 'eoi' : 'closed';
+          const { data: positions } = await sb(
+            `election_positions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc`
+          );
+          let expressions = [];
+          try {
+            const { data } = await sb(
+              `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,nominated,created_at&order=created_at.desc&limit=500`
+            );
+            expressions = data || [];
+          } catch (_) {
+            const { data } = await sb(
+              `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,created_at&order=created_at.desc&limit=500`
+            );
+            expressions = data || [];
+          }
+          let nominations = [];
+          let votes = [];
+          try {
+            const { data: noms } = await sb(
+              `election_nominations?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=position_id,expression_id,nominator_email`
+            );
+            nominations = noms || [];
+          } catch (_) {
+            nominations = [];
+          }
+          try {
+            const { data: voteRows } = await sb(
+              `election_votes?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=position_id,expression_id,voter_email`
+            );
+            votes = voteRows || [];
+          } catch (_) {
+            votes = [];
+          }
+          const analytics = buildElectionAnalytics({
+            cycle,
+            positions: positions || [],
+            expressions,
+            nominations,
+            votes
+          });
+          return json(res, 200, {
+            cycle,
+            positions: positions || [],
+            analytics
+          });
         } catch (err) {
           return json(res, 200, {
             cycle: null,
             positions: [],
-            rows: [],
-            warning:
-              err.message ||
-              'Elections tables are missing. Run docs/supabase/APPLY-ELECTIONS.sql in the SQL Editor.'
+            analytics: null,
+            warning: err.message || 'Could not load election analytics.'
           });
         }
-        return json(res, 200, { cycle, positions, rows });
       }
 
       if (resource === 'announcements') {
@@ -2227,72 +2257,88 @@ module.exports = async function handler(req, res) {
     if (req.method === 'POST') {
       const body = await readBody(req);
 
-      if (resource === 'elections-cycle') {
-        const cycleId = String(body.id || '').trim();
-        if (!cycleId) return json(res, 400, { error: 'Cycle id required' });
-        const patch = {};
-        if (Object.prototype.hasOwnProperty.call(body, 'is_open')) {
-          patch.is_open = body.is_open !== false;
+      if (resource === 'invite-election-board') {
+        const email = String(body.email || '')
+          .trim()
+          .toLowerCase();
+        const fullName = String(body.full_name || '').trim().slice(0, 120);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+          return json(res, 400, { error: 'Enter a valid email address.' });
         }
-        if (body.phase) {
-          const phase = String(body.phase || '').trim();
-          if (!['eoi', 'nomination', 'voting', 'closed'].includes(phase)) {
-            return json(res, 400, { error: 'Phase must be eoi, nomination, voting, or closed.' });
+        if (!fullName || fullName.length < 2) {
+          return json(res, 400, { error: 'Enter the election board member’s full name.' });
+        }
+        if (!sendElectionBoardInvite) {
+          return json(res, 500, {
+            error: 'Election board invite email is not available on this server. Contact IT.'
+          });
+        }
+        const { data: existingRows } = await sb(
+          `election_board?email=eq.${encodeURIComponent(email)}&select=email,full_name&limit=1`
+        );
+        const existing = Array.isArray(existingRows) ? existingRows[0] : null;
+        const invitedAt = new Date().toISOString();
+        const withInviteTime = { full_name: fullName, invited_at: invitedAt };
+        const nameOnly = { full_name: fullName };
+        if (existing) {
+          try {
+            await sb(`election_board?email=eq.${encodeURIComponent(email)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify(withInviteTime)
+            });
+          } catch (_) {
+            await sb(`election_board?email=eq.${encodeURIComponent(email)}`, {
+              method: 'PATCH',
+              prefer: 'return=minimal',
+              body: JSON.stringify(nameOnly)
+            });
           }
-          patch.phase = phase;
-          patch.is_open = phase !== 'closed';
+        } else {
+          try {
+            await sb('election_board', {
+              method: 'POST',
+              prefer: 'return=minimal',
+              body: JSON.stringify({ email, ...withInviteTime })
+            });
+          } catch (err) {
+            return json(res, 500, {
+              error:
+                err.message ||
+                'Could not add the election board member. Run docs/supabase/APPLY-ELECTION-BOARD.sql.'
+            });
+          }
         }
-        if (!Object.keys(patch).length) {
-          return json(res, 400, { error: 'Nothing to update' });
-        }
-        await sb(`election_cycles?id=eq.${encodeURIComponent(cycleId)}`, {
-          method: 'PATCH',
-          prefer: 'return=minimal',
-          body: JSON.stringify(patch)
+        const origin = adminInviteOrigin ? adminInviteOrigin(req) : '';
+        const sent = await sendElectionBoardInvite({ email, fullName, origin });
+        return json(res, 200, {
+          ok: true,
+          email,
+          full_name: fullName,
+          resent: Boolean(existing),
+          link_type: sent.linkType || null,
+          message: existing
+            ? `Invitation re-sent to ${email}. They can create or reset their password from the email, then open the election board portal.`
+            : `Invitation sent to ${email}. They can create their password from the email, then sign in at /elections/board/.`
         });
-        if (patch.phase === 'voting') {
-          const { data: already } = await sb(
-            `election_expressions?cycle_id=eq.${encodeURIComponent(cycleId)}&nominated=eq.true&status=neq.withdrawn&select=id&limit=1`
-          );
-          if (!already?.length) {
-            await sb(
-              `election_expressions?cycle_id=eq.${encodeURIComponent(cycleId)}&status=neq.withdrawn`,
-              {
-                method: 'PATCH',
-                prefer: 'return=minimal',
-                body: JSON.stringify({ nominated: true, updated_at: new Date().toISOString() })
-              }
-            );
-          }
-        }
-        return json(res, 200, { ok: true, ...patch });
       }
 
-      if (resource === 'elections-ballot') {
-        const id = String(body.id || '').trim();
-        if (!id) return json(res, 400, { error: 'Expression id required' });
-        const nominated = body.nominated !== false;
-        await sb(`election_expressions?id=eq.${encodeURIComponent(id)}`, {
-          method: 'PATCH',
-          prefer: 'return=minimal',
-          body: JSON.stringify({ nominated, updated_at: new Date().toISOString() })
-        });
-        return json(res, 200, { ok: true, nominated });
-      }
-
-      if (resource === 'elections-status') {
-        const id = String(body.id || '').trim();
-        const status = String(body.status || '').trim();
-        if (!id) return json(res, 400, { error: 'Expression id required' });
-        if (!['submitted', 'withdrawn', 'noted'].includes(status)) {
-          return json(res, 400, { error: 'Invalid status' });
+      if (resource === 'remove-election-board') {
+        const email = String(body.email || '')
+          .trim()
+          .toLowerCase();
+        if (!email) return json(res, 400, { error: 'Choose an election board member to remove.' });
+        const { data: target } = await sb(
+          `election_board?email=eq.${encodeURIComponent(email)}&select=email&limit=1`
+        );
+        if (!Array.isArray(target) || !target.length) {
+          return json(res, 404, { error: 'That election board member was not found.' });
         }
-        await sb(`election_expressions?id=eq.${encodeURIComponent(id)}`, {
-          method: 'PATCH',
-          prefer: 'return=minimal',
-          body: JSON.stringify({ status, updated_at: new Date().toISOString() })
+        await sb(`election_board?email=eq.${encodeURIComponent(email)}`, {
+          method: 'DELETE',
+          prefer: 'return=minimal'
         });
-        return json(res, 200, { ok: true, status });
+        return json(res, 200, { ok: true, email });
       }
 
       if (resource === 'it-help-reply') {

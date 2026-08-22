@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=22">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260822e">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260822g">
 </head>
 <body data-page="site-admin">
 
@@ -73,7 +73,7 @@
         <button type="button" data-admin-nav="business">Business Hub</button>
         <button type="button" data-admin-nav="gallery">Gallery</button>
         <button type="button" data-admin-nav="admins">Onboard admins</button>
-        <button type="button" data-admin-nav="elections">Elections</button>
+        <button type="button" data-admin-nav="elections">Election board</button>
         <button type="button" data-admin-nav="newsletter">Newsletter</button>
         <button type="button" data-admin-nav="announcements">Announcements</button>
         <button type="button" data-admin-nav="pages">Pages &amp; tools</button>
@@ -1018,36 +1018,44 @@
       </section>
 
       <section class="site-admin__panel" data-admin-panel="elections">
-        <p class="admin-muted" id="admin-elections-cycle"></p>
-        <div class="admin-toolbar admin-elections-phases" id="admin-elections-phases">
-          <span>Stage</span>
-          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="eoi">EOI</button>
-          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="nomination">Nomination</button>
-          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="voting">Voting</button>
-          <button type="button" class="btn btn--sm btn--ghost" data-elections-phase="closed">Closed</button>
-        </div>
+        <p class="admin-muted">
+          The election board runs Expression of Interest, Nomination, and Voting.
+          Committee admin only onboards board members here. They sign in at
+          <strong>/elections/board/</strong> — not this dashboard.
+        </p>
         <div class="admin-toolbar">
-          <a class="btn btn--sm btn--primary" href="../elections/index.html" target="_blank" rel="noopener">Open member portal</a>
-          <button type="button" class="btn btn--sm btn--ghost" id="admin-elections-toggle">Pause elections</button>
-          <button type="button" class="btn btn--ghost btn--sm" id="admin-elections-refresh">Refresh</button>
+          <a class="btn btn--sm btn--primary" href="../elections/board/index.html" target="_blank" rel="noopener">Open election board portal</a>
+          <a class="btn btn--sm btn--ghost" href="../elections/index.html" target="_blank" rel="noopener">Open member portal</a>
+          <button type="button" class="btn btn--sm btn--ghost" id="admin-elections-export">Export analytics CSV</button>
         </div>
-        <p class="admin-muted" id="admin-elections-count" hidden></p>
+        <div class="admin-stats admin-stats--elections" id="admin-elections-analytics" hidden></div>
+        <p class="admin-muted" id="admin-elections-analytics-note" hidden></p>
+        <form id="admin-election-board-form" class="admin-card admin-invite-form">
+          <div class="admin-invite-form__grid">
+            <div class="form-group">
+              <label for="admin-election-board-name">Full name</label>
+              <input id="admin-election-board-name" name="full_name" type="text" required maxlength="120" placeholder="e.g. Jane Kiprotich" autocomplete="name">
+            </div>
+            <div class="form-group">
+              <label for="admin-election-board-email">Email</label>
+              <input id="admin-election-board-email" name="email" type="email" required maxlength="254" placeholder="board@example.com" autocomplete="off">
+            </div>
+          </div>
+          <button type="submit" class="btn btn--primary btn--sm">Send invitation</button>
+          <p id="admin-election-board-status" class="admin-muted" hidden></p>
+        </form>
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
               <tr>
-                <th>When</th>
-                <th>Member</th>
-                <th>Position</th>
-                <th>Statement</th>
-                <th>Nominations</th>
-                <th>Votes</th>
-                <th>Ballot</th>
-                <th></th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Added</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="admin-elections-body">
-              <tr><td colspan="8" class="admin-empty">Open this tab to load expressions of interest.</td></tr>
+            <tbody id="admin-election-board-body">
+              <tr><td colspan="4" class="admin-empty">Open this tab to load the election board.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1055,7 +1063,8 @@
 
       <section class="site-admin__panel" data-admin-panel="pages">
         <div class="admin-links">
-          <a href="../elections/index.html">Elections portal<span>EOI, nomination, then voting</span></a>
+          <a href="../elections/board/index.html">Election board portal<span>Board runs EOI, nomination, and voting</span></a>
+          <a href="../elections/index.html">Elections portal<span>Members express interest, nominate, and vote</span></a>
           <a href="../community.html#business">Community / Business<span>Public business hub</span></a>
           <a href="../contact.html">Contact<span>Public enquiry form</span></a>
           <a href="../membership.html">Membership<span>Public join page</span></a>
@@ -1083,6 +1092,7 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260822e"></script>
+  <script src="../assets/js/election-analytics.js?v=1"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260822g"></script>
 </body>
 </html>

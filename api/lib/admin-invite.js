@@ -1,7 +1,7 @@
 /**
  * Invite a committee admin: Auth invite/recovery link + Resend email.
  */
-const { sendMemberMail, buildAdminInviteMail } = require('./member-mail');
+const { sendMemberMail, buildAdminInviteMail, buildElectionBoardInviteMail } = require('./member-mail');
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -16,16 +16,17 @@ function requestOrigin(req) {
   return PUBLIC_SITE_URL || 'https://taunetnelel.vercel.app';
 }
 
-function portalAuthLink(linkPayload, origin, type) {
+function portalAuthLink(linkPayload, origin, type, nextPath) {
   const props = linkPayload?.properties || {};
   const hashed = linkPayload?.hashed_token || props.hashed_token || '';
   const linkType = type === 'invite' ? 'invite' : 'recovery';
+  const next = nextPath || '../admin/';
   if (hashed) {
     const u = new URL(`${origin}/members/auth.html`);
     u.searchParams.set('tab', 'signin');
     u.searchParams.set('type', linkType);
     u.searchParams.set('token_hash', String(hashed));
-    u.searchParams.set('next', '../admin/');
+    u.searchParams.set('next', next);
     return u.toString();
   }
   const raw =
@@ -38,7 +39,7 @@ function portalAuthLink(linkPayload, origin, type) {
     const u = new URL(raw);
     u.searchParams.set(
       'redirect_to',
-      `${origin}/members/auth.html?tab=signin&type=${linkType}&next=${encodeURIComponent('../admin/')}`
+      `${origin}/members/auth.html?tab=signin&type=${linkType}&next=${encodeURIComponent(next)}`
     );
     return u.toString();
   } catch {
@@ -89,7 +90,7 @@ function alreadyRegistered(err) {
   );
 }
 
-async function sendCommitteeAdminInvite({ email, fullName, origin }) {
+async function sendPortalInvite({ email, fullName, origin, nextPath, buildMail }) {
   if (!SUPABASE_URL || !SERVICE_KEY) {
     const err = new Error('Server missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.');
     err.status = 500;
@@ -97,8 +98,9 @@ async function sendCommitteeAdminInvite({ email, fullName, origin }) {
   }
 
   const site = String(origin || '').replace(/\/$/, '') || requestOrigin({ headers: {} });
-  const inviteRedirect = `${site}/members/auth.html?tab=signin&type=invite&next=${encodeURIComponent('../admin/')}`;
-  const recoveryRedirect = `${site}/members/auth.html?tab=signin&type=recovery&next=${encodeURIComponent('../admin/')}`;
+  const next = nextPath || '../admin/';
+  const inviteRedirect = `${site}/members/auth.html?tab=signin&type=invite&next=${encodeURIComponent(next)}`;
+  const recoveryRedirect = `${site}/members/auth.html?tab=signin&type=recovery&next=${encodeURIComponent(next)}`;
 
   let linkType = 'invite';
   let payload;
@@ -110,14 +112,14 @@ async function sendCommitteeAdminInvite({ email, fullName, origin }) {
     payload = await generateAuthLink(email, 'recovery', recoveryRedirect);
   }
 
-  const actionLink = portalAuthLink(payload, site, linkType);
+  const actionLink = portalAuthLink(payload, site, linkType, next);
   if (!actionLink) {
     const err = new Error('Could not create a password link. Try again or contact IT.');
     err.status = 502;
     throw err;
   }
 
-  const mail = buildAdminInviteMail({ actionLink, fullName });
+  const mail = buildMail({ actionLink, fullName });
   await sendMemberMail({
     to: email,
     subject: mail.subject,
@@ -130,7 +132,28 @@ async function sendCommitteeAdminInvite({ email, fullName, origin }) {
   return { ok: true, linkType };
 }
 
+async function sendCommitteeAdminInvite({ email, fullName, origin }) {
+  return sendPortalInvite({
+    email,
+    fullName,
+    origin,
+    nextPath: '../admin/',
+    buildMail: buildAdminInviteMail,
+  });
+}
+
+async function sendElectionBoardInvite({ email, fullName, origin }) {
+  return sendPortalInvite({
+    email,
+    fullName,
+    origin,
+    nextPath: '../elections/board/',
+    buildMail: buildElectionBoardInviteMail,
+  });
+}
+
 module.exports = {
   requestOrigin,
   sendCommitteeAdminInvite,
+  sendElectionBoardInvite,
 };
