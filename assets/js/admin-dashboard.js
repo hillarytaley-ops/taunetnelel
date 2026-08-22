@@ -32,7 +32,8 @@
     'association-list': { panel: 'imports', group: 'association', scope: 'association' },
     events: { panel: 'events', group: 'association' },
     'association-invoices': { panel: 'invoices', group: 'association', scope: 'association' },
-    sponsors: { panel: 'sponsors', group: 'association' }
+    sponsors: { panel: 'sponsors', group: 'association' },
+    elections: { panel: 'elections', group: 'general' }
   };
 
   const NAV_TITLES = {
@@ -56,7 +57,8 @@
     'association-list': 'Association list',
     events: 'Events',
     'association-invoices': 'Association invoices',
-    sponsors: 'Sponsors'
+    sponsors: 'Sponsors',
+    elections: 'Elections'
   };
 
   const NAV_BLURBS = {
@@ -80,7 +82,8 @@
     'association-list': 'Mambo Mob General / Association Contacts list. The first number is every Association member (including people also on Welfare).',
     events: 'Published events for the public site and members.',
     'association-invoices': '$50 Association invoices and event fees — mark paid when the deposit lands.',
-    sponsors: 'Sponsor listings for the public sponsorship page.'
+    sponsors: 'Sponsor listings for the public sponsorship page.',
+    elections: 'Members who expressed interest to vie for a committee position. This is not the ballot.'
   };
 
   const BOOTSTRAP_PIN_KEY = 'taunet_admin_bootstrap_pin';
@@ -1830,6 +1833,58 @@
       .join('');
   }
 
+  let electionsCycle = null;
+
+  async function loadElections() {
+    const data = await adminApi('elections');
+    const body = document.getElementById('admin-elections-body');
+    const cycleEl = document.getElementById('admin-elections-cycle');
+    const countEl = document.getElementById('admin-elections-count');
+    const toggle = document.getElementById('admin-elections-toggle');
+    if (data.warning && cycleEl) cycleEl.textContent = data.warning;
+    electionsCycle = data.cycle || null;
+    const titles = Object.fromEntries((data.positions || []).map((p) => [p.id, `${p.board === 'welfare' ? 'Welfare' : 'Association'} · ${p.title}`]));
+    if (cycleEl && electionsCycle) {
+      cycleEl.textContent = `${electionsCycle.title} — expressions ${electionsCycle.is_open ? 'OPEN' : 'CLOSED'}. Share /elections/ with members.`;
+    }
+    if (toggle) toggle.textContent = electionsCycle?.is_open ? 'Close expressions' : 'Open expressions';
+    const rows = data.rows || [];
+    if (countEl) {
+      countEl.hidden = false;
+      countEl.textContent = `${rows.length} expression(s) of interest`;
+    }
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(data.warning || 'No expressions of interest yet.')}</td></tr>`;
+      return;
+    }
+    body.innerHTML = rows
+      .map((row) => {
+        const when = row.created_at ? new Date(row.created_at).toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }) : '—';
+        return `<tr>
+          <td>${escapeHtml(when)}</td>
+          <td>${escapeHtml(row.full_name || '—')}<div class="admin-detail">${escapeHtml(row.email || '')}${row.phone ? ` · ${escapeHtml(row.phone)}` : ''}</div></td>
+          <td>${escapeHtml(titles[row.position_id] || row.position_id)}</td>
+          <td>${escapeHtml(row.statement || '')}</td>
+          <td>${escapeHtml(row.status || '')}</td>
+          <td>
+            <button type="button" class="btn btn--sm btn--ghost" data-elections-status="${escapeHtml(row.id)}" data-next="noted">Mark noted</button>
+            <button type="button" class="btn btn--sm btn--ghost" data-elections-status="${escapeHtml(row.id)}" data-next="withdrawn">Withdraw</button>
+          </td>
+        </tr>`;
+      })
+      .join('');
+    body.querySelectorAll('[data-elections-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        await adminApi('elections-status', {
+          method: 'POST',
+          body: { id: btn.dataset.electionsStatus, status: btn.dataset.next }
+        });
+        await loadElections();
+      });
+    });
+  }
+
   async function loadGallery() {
     const body = document.getElementById('admin-gallery-body');
     if (!body) return;
@@ -3095,6 +3150,7 @@
       if (panelId === 'invoices') await loadInvoices();
       if (panelId === 'claims') await loadClaims();
       if (panelId === 'sponsors') await loadSponsors();
+      if (panelId === 'elections') await loadElections();
       if (panelId === 'gallery') await loadGallery();
       if (panelId === 'admins') await loadSiteAdmins();
       if (panelId === 'newsletter') await loadNewsletter();
@@ -3106,7 +3162,9 @@
         status.hidden = false;
         status.classList.add('is-error');
         status.textContent =
-          panelId === 'crm' || panelId === 'followup' || panelId === 'claims' || panelId === 'inbox'
+          panelId === 'elections'
+            ? `${err.message || 'Could not load elections.'} Run docs/supabase/APPLY-ELECTIONS.sql in the SQL Editor, then refresh.`
+            : panelId === 'crm' || panelId === 'followup' || panelId === 'claims' || panelId === 'inbox'
             ? `${err.message || 'Could not load this panel.'} If tables are missing, run docs/supabase/APPLY-WELFARE-INBOX.sql (inbox/attachments) or APPLY-WELFARE-CLAIMS.sql (claims) or APPLY-CRM-FOLLOWUP.sql (follow-up) in the Supabase SQL Editor, then refresh.`
             : err.message ||
               'Could not load data. Confirm migration 011 is applied and your committee email is in site_admins.';
@@ -3508,6 +3566,18 @@
 
   async function init() {
     bindNav();
+
+    document.getElementById('admin-elections-refresh')?.addEventListener('click', () => {
+      loadElections().catch(() => {});
+    });
+    document.getElementById('admin-elections-toggle')?.addEventListener('click', async () => {
+      if (!electionsCycle?.id) return;
+      await adminApi('elections-cycle', {
+        method: 'POST',
+        body: { id: electionsCycle.id, is_open: !electionsCycle.is_open }
+      });
+      await loadElections();
+    });
 
     els.logoutBtn?.addEventListener('click', async () => {
       stopItHelpPoll();

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elections | Taunet Nelel</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="Members express interest to vie for a Taunet Nelel committee position.">
+  <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css?v=22">
+  <link rel="stylesheet" href="../assets/css/members.css?v=32">
+  <link rel="stylesheet" href="../assets/css/elections.css?v=1">
+</head>
+<body class="elections-page">
+  <header class="elections-bar">
+    <a href="./index.html">
+      <img src="../wp-content/uploads/2025/09/taunet_nelel_logo-preview.png" alt="Taunet Nelel">
+    </a>
+    <a href="../members/auth.html">Member sign in</a>
+  </header>
+
+  <div class="elections-wrap">
+    <div class="elections-hero">
+      <p class="eyebrow">Members only</p>
+      <h1 id="elections-title">Taunet Nelel Elections</h1>
+      <p class="lede" id="elections-lede">Financial members can express interest to vie for a committee position. This is not the ballot — the committee records your interest and will follow the constitution for nominations and voting.</p>
+    </div>
+
+    <section class="elections-card" id="elections-login" hidden>
+      <h2>Sign in to continue</h2>
+      <p class="elections-muted">Use the same email and password as the member portal. Forgot password? Use Members sign in, then return here.</p>
+      <form class="login-form" id="elections-login-form" novalidate>
+        <p class="auth-form__message" id="elections-login-msg" role="status" hidden></p>
+        <div class="form-group">
+          <label for="elections-email">Email</label>
+          <input type="email" id="elections-email" name="email" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="elections-password">Password</label>
+          <input type="password" id="elections-password" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn--primary login-submit">Sign in</button>
+      </form>
+    </section>
+
+    <section class="elections-card" id="elections-closed" hidden>
+      <div class="elections-closed">
+        <h2>Expressions of interest are closed</h2>
+        <p class="elections-muted" id="elections-closed-text">The committee has not opened this cycle yet, or the window has ended.</p>
+      </div>
+    </section>
+
+    <section class="elections-card" id="elections-form-card" hidden>
+      <p id="elections-member" class="elections-muted"></p>
+      <p class="elections-status" id="elections-status" hidden></p>
+      <form id="elections-form" class="elections-form" novalidate>
+        <div class="elections-boards">
+          <div>
+            <h3>Association</h3>
+            <div id="elections-assoc"></div>
+          </div>
+          <div>
+            <h3>Social Welfare</h3>
+            <div id="elections-welfare"></div>
+          </div>
+        </div>
+        <label for="elections-phone">Phone (optional)</label>
+        <input type="tel" id="elections-phone" name="phone" autocomplete="tel">
+        <label for="elections-statement">Why you wish to serve</label>
+        <textarea id="elections-statement" name="statement" maxlength="2000" required placeholder="A short statement for the committee (at least a few sentences)."></textarea>
+        <div class="elections-actions">
+          <button type="submit" class="btn btn--primary">Submit interest</button>
+          <button type="button" class="btn btn--ghost" id="elections-signout">Sign out</button>
+        </div>
+      </form>
+      <div class="elections-mine" id="elections-mine" hidden>
+        <h3>Your submissions</h3>
+        <ul id="elections-mine-list"></ul>
+      </div>
+    </section>
+  </div>
+
+  <script src="../assets/js/supabase-config.js"></script>
+  <script src="../assets/js/supabase-init.js"></script>
+  <script src="../assets/js/members-auth.js?v=18"></script>
+  <script src="../assets/js/elections.js?v=1"></script>
+</body>
+</html>

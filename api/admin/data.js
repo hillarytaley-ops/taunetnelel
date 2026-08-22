@@ -1912,6 +1912,40 @@ module.exports = async function handler(req, res) {
         }
       }
 
+      if (resource === 'elections') {
+        let cycle = null;
+        let positions = [];
+        let rows = [];
+        try {
+          const [{ data: cycles }, { data: pos }] = await Promise.all([
+            sb(
+              'election_cycles?slug=eq.2026-agm&select=id,slug,title,summary,opens_at,closes_at,is_open&limit=1'
+            ),
+            sb(
+              'election_positions?select=id,board,title,seats,eligibility,sort_order,is_open&order=sort_order.asc'
+            )
+          ]);
+          cycle = Array.isArray(cycles) ? cycles[0] : cycles;
+          positions = pos || [];
+          if (cycle?.id) {
+            const { data } = await sb(
+              `election_expressions?cycle_id=eq.${encodeURIComponent(cycle.id)}&select=id,position_id,email,full_name,phone,statement,status,created_at&order=created_at.desc&limit=500`
+            );
+            rows = data || [];
+          }
+        } catch (err) {
+          return json(res, 200, {
+            cycle: null,
+            positions: [],
+            rows: [],
+            warning:
+              err.message ||
+              'Elections tables are missing. Run docs/supabase/APPLY-ELECTIONS.sql in the SQL Editor.'
+          });
+        }
+        return json(res, 200, { cycle, positions, rows });
+      }
+
       if (resource === 'announcements') {
         const { data } = await sb(
           'announcements?select=id,title,body,audience,is_published,published_at&order=published_at.desc&limit=50'
@@ -2140,6 +2174,33 @@ module.exports = async function handler(req, res) {
 
     if (req.method === 'POST') {
       const body = await readBody(req);
+
+      if (resource === 'elections-cycle') {
+        const cycleId = String(body.id || '').trim();
+        if (!cycleId) return json(res, 400, { error: 'Cycle id required' });
+        const isOpen = body.is_open !== false;
+        await sb(`election_cycles?id=eq.${encodeURIComponent(cycleId)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ is_open: isOpen })
+        });
+        return json(res, 200, { ok: true, is_open: isOpen });
+      }
+
+      if (resource === 'elections-status') {
+        const id = String(body.id || '').trim();
+        const status = String(body.status || '').trim();
+        if (!id) return json(res, 400, { error: 'Expression id required' });
+        if (!['submitted', 'withdrawn', 'noted'].includes(status)) {
+          return json(res, 400, { error: 'Invalid status' });
+        }
+        await sb(`election_expressions?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          prefer: 'return=minimal',
+          body: JSON.stringify({ status, updated_at: new Date().toISOString() })
+        });
+        return json(res, 200, { ok: true, status });
+      }
 
       if (resource === 'it-help-reply') {
         const threadId = String(body.thread_id || '').trim();

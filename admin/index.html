@@ -7,7 +7,7 @@
   <link rel="icon" href="../wp-content/uploads/2025/08/cropped-taunet_nelel_logo-32x32.jpeg">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/main.css?v=22">
-  <link rel="stylesheet" href="../assets/css/admin.css?v=20260821a">
+  <link rel="stylesheet" href="../assets/css/admin.css?v=20260821b">
 </head>
 <body data-page="site-admin">
 
@@ -73,6 +73,7 @@
         <button type="button" data-admin-nav="business">Business Hub</button>
         <button type="button" data-admin-nav="gallery">Gallery</button>
         <button type="button" data-admin-nav="admins">Onboard admins</button>
+        <button type="button" data-admin-nav="elections">Elections</button>
         <button type="button" data-admin-nav="newsletter">Newsletter</button>
         <button type="button" data-admin-nav="announcements">Announcements</button>
         <button type="button" data-admin-nav="pages">Pages &amp; tools</button>
@@ -1016,8 +1017,36 @@
         </div>
       </section>
 
+      <section class="site-admin__panel" data-admin-panel="elections">
+        <p class="admin-muted" id="admin-elections-cycle"></p>
+        <div class="admin-toolbar">
+          <a class="btn btn--sm btn--primary" href="../elections/index.html" target="_blank" rel="noopener">Open member portal</a>
+          <button type="button" class="btn btn--sm btn--ghost" id="admin-elections-toggle">Close expressions</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="admin-elections-refresh">Refresh</button>
+        </div>
+        <p class="admin-muted" id="admin-elections-count" hidden></p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Member</th>
+                <th>Position</th>
+                <th>Statement</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="admin-elections-body">
+              <tr><td colspan="6" class="admin-empty">Open this tab to load expressions of interest.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section class="site-admin__panel" data-admin-panel="pages">
         <div class="admin-links">
+          <a href="../elections/index.html">Elections portal<span>Members express interest to vie for a position</span></a>
           <a href="../community.html#business">Community / Business<span>Public business hub</span></a>
           <a href="../contact.html">Contact<span>Public enquiry form</span></a>
           <a href="../membership.html">Membership<span>Public join page</span></a>
@@ -1045,6 +1074,6 @@
   <script src="../assets/js/business-admin.js?v=4"></script>
   <script src="../assets/js/gallery-data.js?v=2"></script>
   <script src="../assets/js/crm-fields.js?v=2"></script>
-  <script src="../assets/js/admin-dashboard.js?v=20260821a"></script>
+  <script src="../assets/js/admin-dashboard.js?v=20260821b"></script>
 </body>
 </html>

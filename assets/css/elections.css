@@ -1,0 +1,177 @@
+/* Standalone elections portal — not the public marketing site. */
+.elections-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(210, 105, 30, 0.18), transparent 55%),
+    linear-gradient(180deg, #2a160c 0%, #4a2a14 42%, #f8f5f0 42%);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.elections-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  color: #fff;
+}
+
+.elections-bar a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.elections-bar img {
+  height: 44px;
+  filter: brightness(0) invert(1);
+}
+
+.elections-wrap {
+  width: min(920px, calc(100% - 2rem));
+  margin: 0 auto 3rem;
+}
+
+.elections-hero {
+  color: #fff;
+  padding: 0.5rem 0 1.75rem;
+}
+
+.elections-hero p.eyebrow {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.8;
+  margin: 0 0 0.4rem;
+}
+
+.elections-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 0 0 0.6rem;
+}
+
+.elections-hero .lede {
+  max-width: 38rem;
+  opacity: 0.92;
+  line-height: 1.5;
+}
+
+.elections-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 1.4rem 1.35rem 1.6rem;
+}
+
+.elections-card h2 {
+  font-family: var(--font-display);
+  margin: 0 0 0.4rem;
+}
+
+.elections-muted {
+  color: var(--color-text-muted);
+  margin: 0 0 1rem;
+}
+
+.elections-status {
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  background: #f4eee6;
+  margin-bottom: 1rem;
+}
+
+.elections-status.is-error {
+  background: #fff1ee;
+  color: #8a1f11;
+}
+
+.elections-status.is-ok {
+  background: #eef8ee;
+  color: #1b5e20;
+}
+
+.elections-boards {
+  display: grid;
+  gap: 1.1rem;
+}
+
+@media (min-width: 720px) {
+  .elections-boards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.elections-board h3 {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+}
+
+.elections-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem 0.7rem;
+  align-items: start;
+  border: 1px solid rgba(139, 69, 19, 0.18);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.elections-option.is-disabled {
+  opacity: 0.55;
+}
+
+.elections-option strong {
+  display: block;
+}
+
+.elections-option small {
+  color: var(--color-text-muted);
+}
+
+.elections-form label {
+  display: block;
+  font-weight: 600;
+  margin: 0.85rem 0 0.35rem;
+}
+
+.elections-form textarea,
+.elections-form input {
+  width: 100%;
+  border: 1px solid rgba(139, 69, 19, 0.25);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+}
+
+.elections-form textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.elections-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.elections-mine {
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(139, 69, 19, 0.15);
+}
+
+.elections-mine li {
+  margin: 0.35rem 0;
+}
+
+.elections-closed {
+  text-align: center;
+  padding: 2rem 1rem;
+}
